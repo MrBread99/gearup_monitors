@@ -30,10 +30,9 @@ def send_popo_alert(webhook_url, issues_list):
             md_content += f"| **{item['game']}** | {region_display} | {item['issue']} | {source_display} |\n"
 
     headers = {'Content-Type': 'application/json'}
-    # POPO 官方群机器人标准的 JSON 结构
+    # 根据 POPO 官方群机器人要求，最基础且一定能识别的字段名为 "message"
     payload = {
-        "title": "全球游戏网络监控报告",
-        "content": md_content
+        "message": md_content
     }
     
     if not webhook_url:
