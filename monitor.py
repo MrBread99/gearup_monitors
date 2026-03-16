@@ -9,25 +9,25 @@ POPO_WEBHOOK_URL = os.environ.get("POPO_WEBHOOK_URL")
 def send_popo_alert(webhook_url, issues_list):
     """
     将问题列表格式化为 Markdown 表格，并发送至 NetEase POPO Webhook。
+    如果列表为空，发送一切正常的通知。
     """
-    if not issues_list:
-        print("当前未检测到服务器异常。")
-        return
-        
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    # 构造 Markdown 表格
-    md_content = f"🚨 **全球游戏网络监控警报** 🚨\n*监控时间: {current_time} (过去4小时)*\n\n"
-    md_content += "| 游戏 | 地区/国家 | 问题反馈 | 数据来源 |\n"
-    md_content += "| :--- | :--- | :--- | :--- |\n"
-    
-    for item in issues_list:
-        # 处理国家/地区的展示
-        region_display = f"{item['region']} ({item['country']})" if item.get('country') else item['region']
-        # 处理带有可点击链接的数据来源
-        source_display = f"[{item['source_name']}]({item['source_url']})" if item.get('source_url') else item['source_name']
+
+    if not issues_list:
+        md_content = f"✅ **全球游戏网络监控报告** ✅\n*监控时间: {current_time} (过去4小时)*\n\n目前各大热门 PC 游戏（Valorant, LOL, APEX, CS2, Fortnite）各服务器网络状态平稳，未检测到大规模丢包或宕机异常，请放心游玩！"
+    else:
+        # 构造 Markdown 表格
+        md_content = f"🚨 **全球游戏网络监控警报** 🚨\n*监控时间: {current_time} (过去4小时)*\n\n"
+        md_content += "| 游戏 | 地区/国家 | 问题反馈 | 数据来源 |\n"
+        md_content += "| :--- | :--- | :--- | :--- |\n"
         
-        md_content += f"| **{item['game']}** | {region_display} | {item['issue']} | {source_display} |\n"
+        for item in issues_list:
+            # 处理国家/地区的展示
+            region_display = f"{item['region']} ({item['country']})" if item.get('country') else item['region']
+            # 处理带有可点击链接的数据来源
+            source_display = f"[{item['source_name']}]({item['source_url']})" if item.get('source_url') else item['source_name']
+            
+            md_content += f"| **{item['game']}** | {region_display} | {item['issue']} | {source_display} |\n"
 
     headers = {'Content-Type': 'application/json'}
     payload = {
@@ -44,7 +44,7 @@ def send_popo_alert(webhook_url, issues_list):
 
     try:
         response = requests.post(webhook_url, headers=headers, data=json.dumps(payload), timeout=10)
-        response.raise_status_code()
+        response.raise_for_status()
         print("成功发送警报至 POPO Webhook。")
     except Exception as e:
         print(f"发送 POPO 警报失败: {e}")
