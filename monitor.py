@@ -31,7 +31,7 @@ def send_popo_alert(webhook_url, issues_list):
 
     headers = {'Content-Type': 'application/json'}
     payload = {
-        "msg_type": "markdown",
+        "msg_type": "text",
         "content": {
             "text": md_content
         }
