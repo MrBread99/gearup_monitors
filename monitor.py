@@ -30,11 +30,10 @@ def send_popo_alert(webhook_url, issues_list):
             md_content += f"| **{item['game']}** | {region_display} | {item['issue']} | {source_display} |\n"
 
     headers = {'Content-Type': 'application/json'}
+    # POPO 官方群机器人标准的 JSON 结构
     payload = {
-        "msg_type": "markdown",
-        "content": {
-            "text": md_content
-        }
+        "title": "全球游戏网络监控报告",
+        "content": md_content
     }
     
     if not webhook_url:
