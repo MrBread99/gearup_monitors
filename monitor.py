@@ -31,7 +31,7 @@ def send_popo_alert(webhook_url, issues_list):
 
     headers = {'Content-Type': 'application/json'}
     payload = {
-        "msg_type": "text",
+        "msg_type": "markdown",
         "content": {
             "text": md_content
         }
@@ -44,8 +44,11 @@ def send_popo_alert(webhook_url, issues_list):
 
     try:
         response = requests.post(webhook_url, headers=headers, data=json.dumps(payload), timeout=10)
+        # 无论成功还是失败，打印 POPO 的真实返回内容，方便排查原因
+        print(f"POPO 接口返回 HTTP 状态码: {response.status_code}")
+        print(f"POPO 接口返回详细内容: {response.text}")
         response.raise_for_status()
-        print("成功发送警报至 POPO Webhook。")
+        print("代码执行：成功发送请求至 POPO Webhook。")
     except Exception as e:
         print(f"发送 POPO 警报失败: {e}")
 
