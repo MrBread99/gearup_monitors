@@ -23,7 +23,7 @@ def send_popo_alert(webhook_url, issues_list):
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if not issues_list:
-        md_content = f"✅ **全球游戏网络监控报告** ✅\n*监控时间: {current_time} (过去4小时)*\n\n目前各大热门 PC 游戏（Valorant, LOL, APEX, CS2, Fortnite）各服务器网络状态平稳，未检测到大规模丢包或宕机异常，请放心游玩！"
+        md_content = f"✅ **全球游戏网络监控报告** ✅\n*监控时间: {current_time} (过去4小时)*\n\n目前各大热门 PC 游戏（Valorant, LOL, APEX, CS2, Fortnite, PUBG, OW2, R6S 等）各服务器网络状态平稳，未检测到大规模丢包或宕机异常，请放心游玩！"
     else:
         # 构造 Markdown 表格
         md_content = f"🚨 **全球游戏网络监控警报** 🚨\n*监控时间: {current_time} (过去4小时)*\n\n"
@@ -181,6 +181,31 @@ def check_apac_osint_for_game(game_name):
             'tw_bsn': '32675',
             'jp_search': 'Fortnite',
             'kr_dc': 'fortnite'
+        },
+        'PUBG': {
+            'tw_bsn': '31733',
+            'jp_search': 'PUBG',
+            'kr_dc': 'battlegrounds'
+        },
+        'Overwatch 2': {
+            'tw_bsn': '27362',
+            'jp_search': 'OW2',
+            'kr_dc': 'overwatch'
+        },
+        'Rainbow Six Siege': {
+            'tw_bsn': '27202',
+            'jp_search': 'R6S',
+            'kr_dc': 'r6'
+        },
+        'Dota 2': {
+            'tw_bsn': '8905',
+            'jp_search': 'Dota2',
+            'kr_dc': 'dota2'
+        },
+        'Call of Duty': {
+            'tw_bsn': '5371',
+            'jp_search': 'CoD',
+            'kr_dc': 'callofduty'
         }
     }
     
@@ -230,6 +255,26 @@ def main():
     all_issues.extend(check_epic_games_status())
     all_issues.extend(check_reddit_osint('Fortnite', 'FortNiteBR'))
     all_issues.extend(check_apac_osint_for_game('Fortnite'))
+    
+    print("正在检测 PUBG...")
+    all_issues.extend(check_reddit_osint('PUBG', 'PUBATTLEGROUNDS'))
+    all_issues.extend(check_apac_osint_for_game('PUBG'))
+
+    print("正在检测 Overwatch 2...")
+    all_issues.extend(check_reddit_osint('Overwatch 2', 'Overwatch'))
+    all_issues.extend(check_apac_osint_for_game('Overwatch 2'))
+
+    print("正在检测 Rainbow Six Siege...")
+    all_issues.extend(check_reddit_osint('Rainbow Six Siege', 'Rainbow6'))
+    all_issues.extend(check_apac_osint_for_game('Rainbow Six Siege'))
+
+    print("正在检测 Dota 2...")
+    all_issues.extend(check_reddit_osint('Dota 2', 'DotA2'))
+    all_issues.extend(check_apac_osint_for_game('Dota 2'))
+
+    print("正在检测 Call of Duty...")
+    all_issues.extend(check_reddit_osint('Call of Duty', 'CallOfDuty'))
+    all_issues.extend(check_apac_osint_for_game('Call of Duty'))
     
     # 发送通知汇总
     send_popo_alert(POPO_WEBHOOK_URL, all_issues)
