@@ -81,14 +81,23 @@ def check_reddit_osint(game_name, subreddit):
             countries_mentioned = set()
             
             # 关键字映射，用于提取细粒度的国家与大区
-            region_map = {"NA": "NA", "EU": "EU", "APAC": "APAC", "SA": "SA", "LATAM": "SA", "ASIA": "APAC"}
+            region_map = {
+                "NA": "NA", "NORTH AMERICA": "NA",
+                "EU": "EU", "EUROPE": "EU", 
+                "APAC": "APAC", "ASIA": "APAC", "SEA": "APAC",
+                "SA": "SA", "LATAM": "SA", "SOUTH AMERICA": "SA",
+                "MIDDLE EAST": "MENA", "MENA": "MENA", "ME": "MENA" # 新增中东大区
+            }
             country_map = {
                 "JAPAN": "Japan", "TOKYO": "Japan", 
                 "KOREA": "South Korea", "SEOUL": "South Korea",
                 "BRAZIL": "Brazil", "SAO PAULO": "Brazil",
                 "GERMANY": "Germany", "FRANKFURT": "Germany",
                 "SYDNEY": "Australia", "AUSTRALIA": "Australia",
-                "SINGAPORE": "Singapore"
+                "SINGAPORE": "Singapore",
+                # 新增中东地区细分
+                "SAUDI": "Saudi Arabia", "KSA": "Saudi Arabia", "STC": "Saudi Arabia (ISP)",
+                "BAHRAIN": "Bahrain", "DUBAI": "UAE", "UAE": "UAE"
             }
             
             for post in posts:
@@ -103,12 +112,18 @@ def check_reddit_osint(game_name, subreddit):
                     content = title + " " + text
                     
                     for key, val in region_map.items():
-                        if key in content.split(): regions_mentioned.add(val)
+                        if key in content: regions_mentioned.add(val) # 改为直接包含匹配，不再强制要求 split 分词
                     for key, val in country_map.items():
-                        if key in content.split(): countries_mentioned.add(val)
+                        if key in content: countries_mentioned.add(val)
             
-            # 如果 4 小时内有 5 个以上的集中反馈，则触发警报 (阈值可调)
-            if recent_complaints >= 5:
+            # 如果 4 小时内有相关的反馈，则根据地区调整触发阈值
+            # 欧美大区发帖量大，阈值为 5；其他小区域发帖量小，阈值降为 3
+            threshold = 5
+            is_minor_region = bool(regions_mentioned.intersection({"MENA", "SA", "APAC"})) or bool(countries_mentioned)
+            if is_minor_region:
+                threshold = 3
+
+            if recent_complaints >= threshold:
                 detected_region = ", ".join(regions_mentioned) if regions_mentioned else "Global/Unknown"
                 detected_country = ", ".join(countries_mentioned) if countries_mentioned else ""
                 
