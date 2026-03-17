@@ -1,7 +1,16 @@
 import requests
 import json
 import os
+import sys
 from datetime import datetime, timezone, timedelta
+import apac_osint # 引入亚太区域本地化 OSINT 模块
+
+# 解决 Windows 控制台输出 Emoji 时的编码问题
+if sys.stdout.encoding.lower() != 'utf-8':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except AttributeError:
+        pass
 
 # 从环境变量中获取 POPO Webhook URL
 POPO_WEBHOOK_URL = os.environ.get("POPO_WEBHOOK_URL")
@@ -140,24 +149,87 @@ def check_epic_games_status():
         print(f"[Fortnite] 获取 Epic 状态 API 时出错: {e}")
     return issues
 
+def check_apac_osint_for_game(game_name):
+    """
+    针对给定的游戏执行亚太地区 (TW, JP, KR) 的本地化监控
+    """
+    issues = []
+    
+    # 游戏到各个社区板块 ID 或本地化搜索词的映射字典
+    game_configs = {
+        'Valorant': {
+            'tw_bsn': '37714',
+            'jp_search': 'Valorant',
+            'kr_dc': 'valorant'
+        },
+        'League of Legends': {
+            'tw_bsn': '17532',
+            'jp_search': 'LoL',
+            'kr_dc': 'leagueoflegends1'
+        },
+        'APEX Legends': {
+            'tw_bsn': '36072',
+            'jp_search': 'APEX',
+            'kr_dc': 'apexlegends'
+        },
+        'CS2': {
+            'tw_bsn': '11464',
+            'jp_search': 'CS2',
+            'kr_dc': 'counterstrike'
+        },
+        'Fortnite': {
+            'tw_bsn': '32675',
+            'jp_search': 'Fortnite',
+            'kr_dc': 'fortnite'
+        }
+    }
+    
+    config = game_configs.get(game_name)
+    if not config:
+        return issues
+        
+    print(f"    - 正在扫描亚太社区本地化反馈 ({game_name})...")
+    
+    # 1. 台湾 - 巴哈姆特
+    tw_res = apac_osint.check_taiwan_bahamut(game_name, config['tw_bsn'])
+    if tw_res: issues.append(tw_res)
+        
+    # 2. 日本 - Yahoo 实时推特
+    jp_res = apac_osint.check_japan_yahoo_realtime(config['jp_search'])
+    # 因为函数内游戏名被替换成了日文搜索词，为了报警美观统一改回原英文游戏名
+    if jp_res:
+        jp_res['game'] = game_name
+        issues.append(jp_res)
+        
+    # 3. 韩国 - DC Inside
+    kr_res = apac_osint.check_korea_dcinside(game_name, config['kr_dc'])
+    if kr_res: issues.append(kr_res)
+        
+    return issues
+
 def main():
     all_issues = []
     
     print("正在检测 Valorant...")
     all_issues.extend(check_reddit_osint('Valorant', 'VALORANT'))
+    all_issues.extend(check_apac_osint_for_game('Valorant'))
     
     print("正在检测 League of Legends...")
     all_issues.extend(check_reddit_osint('League of Legends', 'leagueoflegends'))
+    all_issues.extend(check_apac_osint_for_game('League of Legends'))
     
     print("正在检测 APEX Legends...")
     all_issues.extend(check_reddit_osint('APEX Legends', 'apexlegends'))
+    all_issues.extend(check_apac_osint_for_game('APEX Legends'))
     
     print("正在检测 CS2...")
     all_issues.extend(check_reddit_osint('CS2', 'GlobalOffensive'))
+    all_issues.extend(check_apac_osint_for_game('CS2'))
     
     print("正在检测 Fortnite...")
     all_issues.extend(check_epic_games_status())
     all_issues.extend(check_reddit_osint('Fortnite', 'FortNiteBR'))
+    all_issues.extend(check_apac_osint_for_game('Fortnite'))
     
     # 发送通知汇总
     send_popo_alert(POPO_WEBHOOK_URL, all_issues)
