@@ -122,16 +122,97 @@ def check_reddit_osint(game_name, subreddit):
             is_minor_region = bool(regions_mentioned.intersection({"MENA", "SA", "APAC"})) or bool(countries_mentioned)
             if is_minor_region:
                 threshold = 3
+            
+            # ======== 商业化优化 3: 热度预测 (Velocity Tracking) ========
+            total_upvotes = 0
+            total_comments = 0
+            for post in posts:
+                post_data = post['data']
+                post_time = datetime.fromtimestamp(post_data['created_utc'], timezone.utc)
+                if post_time > four_hours_ago:
+                    total_upvotes += post_data.get('ups', 0)
+                    total_comments += post_data.get('num_comments', 0)
+                    
+            # 降低热度报警门槛：点赞 > 20 或 评论 > 10
+            is_viral = total_upvotes > 20 or total_comments > 10
+            if is_viral:
+                # 即使没达到发帖数量阈值，但单贴热度极高，也强制降低阈值到 1 触发警报
+                threshold = 1
+            # =========================================================
 
             if recent_complaints >= threshold:
                 detected_region = ", ".join(regions_mentioned) if regions_mentioned else "Global/Unknown"
                 detected_country = ", ".join(countries_mentioned) if countries_mentioned else ""
                 
+                # ======== 商业化优化 1 & 2: 区分故障类型并提取 ISP ========
+                # 初始化为通用故障
+                issue_desc = f"玩家社区反馈集中 ({recent_complaints}篇帖子/4h) 涉及网络问题"
+                
+                # 定义 ISP 和路由相关的关键字库 (扩充全球主流与母语别名)
+                isp_keywords = [
+                    # 俄罗斯 & 独联体
+                    "ROSTELECOM", "DOM.RU", "ER-TELECOM", "MTS", "BEELINE", "РОСТЕЛЕКОМ", "БИЛАЙН",
+                    # 越南
+                    "VIETTEL", "VNPT", "FPT",
+                    # 台湾
+                    "HINET", "中华电信", "中華電信", "凯擘", "凱擘", "KRO", "台湾大哥大", "台灣大哥大", "远传", "遠傳",
+                    # 印尼
+                    "INDIHOME", "TELKOMSEL", "BIZNET", "MYREPUBLIC", "FIRST MEDIA",
+                    # 菲律宾
+                    "PLDT", "CONVERGE", "GLOBE",
+                    # 日本
+                    "KDDI", "AU HIKARI", "NTT", "FLET", "NURO", "SONY", "JCOM", "SOFTBANK",
+                    # 韩国
+                    "KT", "KOREA TELECOM", "SK", "SKB", "SK BROADBAND", "LG", "LG U+", "LGU+",
+                    # 北美
+                    "COMCAST", "XFINITY", "CHARTER", "SPECTRUM", "AT&T", "ATT", "VERIZON", "FIOS", "COX", "CENTURYLINK", "BELL", "ROGERS",
+                    # 墨西哥
+                    "TOTALPLAY", "TELMEX", "IZZI", "MEGACABLE",
+                    # 南美 (巴西/阿根廷/智利等)
+                    "VIVO", "CLARO", "OI", "MOVISTAR", "MUNDO", "VTR", "PERSONAL", "FIBERTEL",
+                    # 欧洲
+                    "BT", "EE", "VIRGIN", "VIRGIN MEDIA", "TELEKOM", "DEUTSCHE TELEKOM", "VODAFONE", "ORANGE", "FREE", "SFR", "MASORANGE", "DIGI", "HYPEROPTIC",
+                    # 中东
+                    "STC", "MOBILY", "ZAIN", "ETISALAT", "DU"
+                ]
+                routing_keywords = ["PING", "LAG", "PACKET LOSS", "ROUTING", "LATENCY", "SPIKE", "PACKETLOSS"]
+                down_keywords = ["DOWN", "OFFLINE", "LOGIN FAILED", "CRASH", "MAINTENANCE"]
+
+                found_isps = []
+                is_routing_issue = False
+                is_down_issue = False
+                
+                # 重新扫描合并后的文本以判断问题性质和提取ISP
+                for post in posts:
+                    post_data = post['data']
+                    post_time = datetime.fromtimestamp(post_data['created_utc'], timezone.utc)
+                    if post_time > four_hours_ago:
+                        content = (post_data.get('title', '') + " " + post_data.get('selftext', '')).upper()
+                        
+                        for kw in isp_keywords:
+                            if kw in content and kw not in found_isps:
+                                found_isps.append(kw)
+                        for kw in routing_keywords:
+                            if kw in content: is_routing_issue = True
+                        for kw in down_keywords:
+                            if kw in content: is_down_issue = True
+
+                # 根据分析结果重写 issue 描述
+                if is_down_issue and not is_routing_issue:
+                    issue_desc = "❌ 疑似官方宕机/维护 (加速器可能无效)"
+                elif is_routing_issue:
+                    isp_str = f"涉及ISP: {', '.join(found_isps)} " if found_isps else ""
+                    # 追加热度标志
+                    viral_tag = "🔥 [热度飙升]" if is_viral else ""
+                    issue_desc = f"{viral_tag} ⭐⭐⭐ 绝佳营销时机 (路由/高Ping故障) - {isp_str}(共{recent_complaints}篇反馈)"
+                
+                # =========================================================
+
                 issues.append({
                     'game': game_name,
                     'region': detected_region,
                     'country': detected_country,
-                    'issue': f"玩家社区反馈集中 ({recent_complaints}篇帖子/4h) 涉及延迟或丢包",
+                    'issue': issue_desc,
                     'source_name': f'r/{subreddit}',
                     'source_url': f'https://www.reddit.com/r/{subreddit}/search?q=server+OR+ping+OR+lag+OR+packet+loss+OR+down&restrict_sr=on&sort=new&t=day'
                 })
