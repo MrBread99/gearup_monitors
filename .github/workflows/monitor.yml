@@ -18,11 +18,17 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4
-
-      - name: Run Monitor Script
+        run: pip install requests beautifulsoup4 feedparser openai
+        
+      - name: Run Game Monitor Script
         env:
           # 在 GitHub Repository -> Settings -> Secrets and variables -> Actions 中
           # 新建 POPO_WEBHOOK_URL，填入你的 POPO 机器人 Webhook 链接
           POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
-        run: python monitor.py
+        run: python game_monitor/monitor.py
+        
+      - name: Run Competitor Radar Script
+        env:
+          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
+          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+        run: python competitor_radar/competitor_radar.py
