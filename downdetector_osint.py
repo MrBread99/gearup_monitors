@@ -54,13 +54,22 @@ def check_downdetector_global(game_name):
             if status_element:
                 status_text = status_element.text.strip().lower()
                 
-                # 如果包含 problems 但没有 no，说明有异常
-                if "problems" in status_text and "no problems" not in status_text:
+                # 优化报警门槛：排除 "Possible problems" (轻微波动)，只在明确出现大规模故障时报警
+                # istheservicedown 的典型文案有:
+                # "No problems at ..." (无问题)
+                # "Possible problems at ..." (轻微波动/少数人报错)
+                # "Problems at ..." (明确的大面积故障)
+                
+                has_definite_problems = ("problems" in status_text and 
+                                       "no problems" not in status_text and 
+                                       "possible problems" not in status_text)
+                
+                if has_definite_problems:
                     return {
                         'game': game_name,
                         'region': 'Global (Outage Aggregator)',
                         'country': 'Multiple',
-                        'issue': f"🔥 [热度飙升] 🚨 玩家报错聚合网侦测到大量网络问题！",
+                        'issue': f"🔥 [热度飙升] 🚨 玩家报错聚合网侦测到大量网络问题！(已过滤轻微波动)",
                         'source_name': 'IsTheServiceDown',
                         'source_url': url
                     }
@@ -71,9 +80,16 @@ def check_downdetector_global(game_name):
     return None
 
 if __name__ == "__main__":
+    import sys
+    if sys.stdout.encoding.lower() != 'utf-8':
+        try:
+            sys.stdout.reconfigure(encoding='utf-8')
+        except AttributeError:
+            pass
+            
     # 测试脚本
     print("Testing Downdetector OSINT...")
     res = check_downdetector_global("Valorant")
     print("Valorant:", res)
-    res2 = check_downdetector_global("League of Legends")
-    print("LOL:", res2)
+    res2 = check_downdetector_global("Call of Duty")
+    print("COD:", res2)
