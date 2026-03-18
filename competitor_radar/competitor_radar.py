@@ -39,6 +39,15 @@ COMPETITORS = {
         'url': 'https://www.gearupbooster.com/blog/',
         'type': 'scraping',
         'selector': '.blog-card'
+    },
+    'Mudfish': {
+        'url': 'https://mudfish.net/forums/6/rss', # Mudfish 的公告论坛通常有 RSS
+        'type': 'rss'
+    },
+    'NoPing': {
+        'url': 'https://noping.com/en/blog',
+        'type': 'scraping',
+        'selector': '.post-item' # 预留的选择器，后续可根据 Noping 真实官网微调
     }
 }
 
@@ -72,6 +81,7 @@ def fetch_rss_feed(competitor_name, feed_url):
     
     # 设定只看过去 24 小时的内容
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
+    # yesterday = datetime.now(timezone.utc) - timedelta(days=365)
     
     for entry in feed.entries:
         try:
