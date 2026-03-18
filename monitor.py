@@ -4,6 +4,8 @@ import os
 import sys
 from datetime import datetime, timezone, timedelta
 import apac_osint # 引入亚太区域本地化 OSINT 模块
+import downdetector_osint # 引入聚合报错监控模块
+import cis_osint # 引入独联体/俄语区 OSINT 模块
 
 # 解决 Windows 控制台输出 Emoji 时的编码问题
 if sys.stdout.encoding.lower() != 'utf-8':
@@ -328,49 +330,61 @@ def check_apac_osint_for_game(game_name):
         
     return issues
 
+def check_all_channels_for_game(game_name, reddit_sub, apac_name):
+    """
+    统一入口：一次性检查某个游戏的所有渠道 (Reddit, APAC, CIS, 聚合报错)
+    """
+    issues = []
+    
+    # 1. 检查 Reddit
+    issues.extend(check_reddit_osint(game_name, reddit_sub))
+    
+    # 2. 检查亚太本土社区
+    issues.extend(check_apac_osint_for_game(apac_name or game_name))
+    
+    # 3. 检查独联体/俄语区 (VK.com)
+    cis_res = cis_osint.check_cis_vk(game_name)
+    if cis_res: issues.append(cis_res)
+    
+    # 4. 检查全球故障聚合网站 (替代 Downdetector)
+    dd_res = downdetector_osint.check_downdetector_global(game_name)
+    if dd_res: issues.append(dd_res)
+        
+    return issues
+
 def main():
     all_issues = []
     
     print("正在检测 Valorant...")
-    all_issues.extend(check_reddit_osint('Valorant', 'VALORANT'))
-    all_issues.extend(check_apac_osint_for_game('Valorant'))
+    all_issues.extend(check_all_channels_for_game('Valorant', 'VALORANT', 'Valorant'))
     
     print("正在检测 League of Legends...")
-    all_issues.extend(check_reddit_osint('League of Legends', 'leagueoflegends'))
-    all_issues.extend(check_apac_osint_for_game('League of Legends'))
+    all_issues.extend(check_all_channels_for_game('League of Legends', 'leagueoflegends', 'League of Legends'))
     
     print("正在检测 APEX Legends...")
-    all_issues.extend(check_reddit_osint('APEX Legends', 'apexlegends'))
-    all_issues.extend(check_apac_osint_for_game('APEX Legends'))
+    all_issues.extend(check_all_channels_for_game('APEX Legends', 'apexlegends', 'APEX Legends'))
     
     print("正在检测 CS2...")
-    all_issues.extend(check_reddit_osint('CS2', 'GlobalOffensive'))
-    all_issues.extend(check_apac_osint_for_game('CS2'))
+    all_issues.extend(check_all_channels_for_game('CS2', 'GlobalOffensive', 'CS2'))
     
     print("正在检测 Fortnite...")
     all_issues.extend(check_epic_games_status())
-    all_issues.extend(check_reddit_osint('Fortnite', 'FortNiteBR'))
-    all_issues.extend(check_apac_osint_for_game('Fortnite'))
+    all_issues.extend(check_all_channels_for_game('Fortnite', 'FortNiteBR', 'Fortnite'))
     
     print("正在检测 PUBG...")
-    all_issues.extend(check_reddit_osint('PUBG', 'PUBATTLEGROUNDS'))
-    all_issues.extend(check_apac_osint_for_game('PUBG'))
+    all_issues.extend(check_all_channels_for_game('PUBG', 'PUBATTLEGROUNDS', 'PUBG'))
 
     print("正在检测 Overwatch 2...")
-    all_issues.extend(check_reddit_osint('Overwatch 2', 'Overwatch'))
-    all_issues.extend(check_apac_osint_for_game('Overwatch 2'))
+    all_issues.extend(check_all_channels_for_game('Overwatch 2', 'Overwatch', 'Overwatch 2'))
 
     print("正在检测 Rainbow Six Siege...")
-    all_issues.extend(check_reddit_osint('Rainbow Six Siege', 'Rainbow6'))
-    all_issues.extend(check_apac_osint_for_game('Rainbow Six Siege'))
+    all_issues.extend(check_all_channels_for_game('Rainbow Six Siege', 'Rainbow6', 'Rainbow Six Siege'))
 
     print("正在检测 Dota 2...")
-    all_issues.extend(check_reddit_osint('Dota 2', 'DotA2'))
-    all_issues.extend(check_apac_osint_for_game('Dota 2'))
+    all_issues.extend(check_all_channels_for_game('Dota 2', 'DotA2', 'Dota 2'))
 
     print("正在检测 Call of Duty...")
-    all_issues.extend(check_reddit_osint('Call of Duty', 'CallOfDuty'))
-    all_issues.extend(check_apac_osint_for_game('Call of Duty'))
+    all_issues.extend(check_all_channels_for_game('Call of Duty', 'CallOfDuty', 'Call of Duty'))
     
     # 发送通知汇总
     send_popo_alert(POPO_WEBHOOK_URL, all_issues)
