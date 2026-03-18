@@ -18,7 +18,7 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4 feedparser openai
+        run: pip install requests beautifulsoup4 feedparser openai discord.py
         
       - name: Run Game Monitor Script
         env:
@@ -27,8 +27,10 @@ jobs:
           POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
         run: python game_monitor/monitor.py
         
-      - name: Run Competitor Radar Script
+      - name: Run Discord Intelligence Listener
         env:
-          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          TARGET_CHANNEL_ID: ${{ secrets.TARGET_CHANNEL_ID }}
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
-        run: python competitor_radar/competitor_radar.py
+          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
+        run: python competitor_radar/discord_listener.py
