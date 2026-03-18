@@ -9,25 +9,26 @@ POPO_WEBHOOK_URL = os.environ.get("POPO_WEBHOOK_URL")
 def send_popo_alert(webhook_url, issues_list):
     """
     将问题列表格式化为 Markdown 表格，并发送至 NetEase POPO Webhook。
-    如果列表为空，发送一切正常的通知。
+    【重要修改】：为了减少打扰，如果 issues_list 为空，直接静默退出，不再发送“一切正常”的通知。
     """
+    if not issues_list:
+        print("未检测到异常或情报，静默退出，不发送打扰信息。")
+        return
+
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    if not issues_list:
-        md_content = f"✅ **全球游戏网络监控报告** ✅\n*监控时间: {current_time} (过去4小时)*\n\n目前各大热门 PC 游戏各服务器网络状态平稳，未检测到大规模丢包或宕机异常，请放心游玩！"
-    else:
-        # 构造 Markdown 表格
-        md_content = f"🚨 **全球监控商机雷达警报** 🚨\n*监控时间: {current_time}*\n\n"
-        md_content += "| 监控项 | 地区/国家 | 情报反馈 | 数据来源 |\n"
-        md_content += "| :--- | :--- | :--- | :--- |\n"
+    # 构造 Markdown 表格
+    md_content = f"🚨 **全球监控商机雷达警报** 🚨\n*监控时间: {current_time}*\n\n"
+    md_content += "| 监控项 | 地区/国家 | 情报反馈 | 数据来源 |\n"
+    md_content += "| :--- | :--- | :--- | :--- |\n"
         
-        for item in issues_list:
-            # 处理国家/地区的展示
-            region_display = f"{item['region']} ({item['country']})" if item.get('country') else item['region']
-            # 处理带有可点击链接的数据来源
-            source_display = f"[{item['source_name']}]({item['source_url']})" if item.get('source_url') else item['source_name']
-            
-            md_content += f"| **{item['game']}** | {region_display} | {item['issue']} | {source_display} |\n"
+    for item in issues_list:
+        # 处理国家/地区的展示
+        region_display = f"{item['region']} ({item['country']})" if item.get('country') else item['region']
+        # 处理带有可点击链接的数据来源
+        source_display = f"[{item['source_name']}]({item['source_url']})" if item.get('source_url') else item['source_name']
+        
+        md_content += f"| **{item['game']}** | {region_display} | {item['issue']} | {source_display} |\n"
 
     headers = {'Content-Type': 'application/json'}
     # 根据 POPO 官方群机器人要求，最基础且一定能识别的字段名为 "message"
