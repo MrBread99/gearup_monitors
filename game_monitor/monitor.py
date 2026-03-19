@@ -10,6 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import apac_osint # 引入亚太区域本地化 OSINT 模块
 import downdetector_osint # 引入聚合报错监控模块
 import cis_osint # 引入独联体/俄语区 OSINT 模块
+import steam_osint # 引入 Steam 差评监控模块
 from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
 
 # 解决 Windows 控制台输出 Emoji 时的编码问题
@@ -307,6 +308,10 @@ def check_all_channels_for_game(game_name, reddit_sub, apac_name):
     # 4. 检查全球故障聚合网站 (替代 Downdetector)
     dd_res = downdetector_osint.check_downdetector_global(game_name)
     if dd_res: issues.append(dd_res)
+    
+    # 5. 检查 Steam 近期差评中的网络问题
+    steam_res = steam_osint.check_steam_reviews(game_name)
+    if steam_res: issues.append(steam_res)
         
     return issues
 

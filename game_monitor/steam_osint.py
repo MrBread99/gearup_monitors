@@ -1,0 +1,163 @@
+import requests
+import time
+from datetime import datetime, timezone, timedelta
+
+# ==========================================
+# Steam 近期差评监控模块
+# ==========================================
+# 利用 Steam Store API 拉取指定游戏的近期差评，
+# 匹配网络故障相关关键词（lag, ping, packet loss 等），
+# 作为 game-network-radar 的一个全球性数据渠道。
+#
+# Steam Store Reviews API 文档:
+# https://partner.steamgames.com/doc/store/getreviews
+# 此接口无需 API Key，直接可用。
+# ==========================================
+
+# Steam AppID 映射（10 款监控游戏）
+STEAM_APP_MAP = {
+    'Valorant': None,           # Valorant 不在 Steam 上
+    'League of Legends': None,  # LOL 不在 Steam 上
+    'APEX Legends': 1172470,
+    'CS2': 730,
+    'Fortnite': None,           # Fortnite 不在 Steam 上
+    'PUBG': 578080,
+    'Overwatch 2': None,        # OW2 不在 Steam 上
+    'Rainbow Six Siege': 359550,
+    'Dota 2': 570,
+    'Call of Duty': None        # COD 主要在 Battle.net，Steam 版本号频繁变动暂不追踪
+}
+
+# 网络故障相关关键词（多语言）
+NETWORK_KEYWORDS_EN = [
+    "LAG", "PING", "LATENCY", "PACKET LOSS", "PACKETLOSS",
+    "DISCONNECT", "DISCONNECTED", "RUBBER BAND", "RUBBERBANDING",
+    "DESYNC", "HIGH PING", "SPIKE", "STUTTERING", "NETWORK",
+    "SERVER", "SERVERS DOWN", "CANT CONNECT", "CONNECTION",
+    "TIMEOUT", "ROUTING", "JITTER"
+]
+
+# 中文关键词（Steam 有大量中文评论）
+NETWORK_KEYWORDS_ZH = [
+    "延迟", "卡顿", "丢包", "掉线", "断线", "高PING", "网络",
+    "连不上", "服务器", "橡皮筋", "回弹", "抖动"
+]
+
+# 俄语关键词
+NETWORK_KEYWORDS_RU = [
+    "ПИНГ", "ЛАГ", "ЛАГИ", "ЗАДЕРЖКА", "ПОТЕРЯ ПАКЕТОВ",
+    "ДИСКОННЕКТ", "СЕРВЕР"
+]
+
+ALL_KEYWORDS = NETWORK_KEYWORDS_EN + NETWORK_KEYWORDS_ZH + NETWORK_KEYWORDS_RU
+
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) OSINT-Monitor/2.1'
+}
+
+
+def check_steam_reviews(game_name, hours_window=4, threshold=5):
+    """
+    通过 Steam Store Reviews API 拉取指定游戏的近期差评，
+    筛选网络问题相关关键词，判断是否达到报警阈值。
+
+    :param game_name: 游戏名
+    :param hours_window: 时间窗口（小时），默认 4 小时
+    :param threshold: 匹配到的差评数量阈值，默认 5 条
+    :return: issue dict 或 None
+    """
+    app_id = STEAM_APP_MAP.get(game_name)
+    if not app_id:
+        return None
+
+    # Steam Reviews API 参数说明:
+    # review_type=negative  只拉差评
+    # purchase_type=all     包含免费游戏玩家
+    # num_per_page=100      一次最多 100 条
+    # filter=recent         按最近排序
+    # language=all          所有语言
+    url = (
+        f"https://store.steampowered.com/appreviews/{app_id}"
+        f"?json=1&filter=recent&language=all&review_type=negative"
+        f"&purchase_type=all&num_per_page=100"
+    )
+
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=15)
+        if response.status_code != 200:
+            print(f"[Steam] {game_name}: HTTP {response.status_code}")
+            return None
+
+        data = response.json()
+        if not data.get('success'):
+            print(f"[Steam] {game_name}: API returned success=false")
+            return None
+
+        reviews = data.get('reviews', [])
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours_window)
+
+        network_complaints = 0
+        matched_keywords = set()
+        total_upvotes = 0
+
+        for review in reviews:
+            # 过滤时间窗口
+            created = datetime.fromtimestamp(
+                review.get('timestamp_created', 0), timezone.utc
+            )
+            if created < cutoff:
+                continue
+
+            # 只处理差评（API 已过滤，但 double check）
+            if review.get('voted_up', True):
+                continue
+
+            text = review.get('review', '').upper()
+
+            for kw in ALL_KEYWORDS:
+                if kw in text:
+                    network_complaints += 1
+                    matched_keywords.add(kw)
+                    total_upvotes += review.get('votes_up', 0)
+                    break  # 一条评论只计一次
+
+        # 热度飙升：单条差评被大量点赞
+        is_viral = total_upvotes > 30
+
+        if is_viral:
+            threshold = 1
+
+        if network_complaints >= threshold:
+            viral_tag = "🔥 [热度飙升] " if is_viral else ""
+            return {
+                'game': game_name,
+                'region': 'Global',
+                'country': '',
+                'issue': (
+                    f"{viral_tag}⭐⭐⭐ Steam 差评涌现网络问题 "
+                    f"(匹配词: {', '.join(list(matched_keywords)[:5])}, "
+                    f"共{network_complaints}条差评/{hours_window}h)"
+                ),
+                'source_name': 'Steam Reviews',
+                'source_url': f'https://store.steampowered.com/app/{app_id}/#app_reviews_hash'
+            }
+
+    except Exception as e:
+        print(f"[Steam] 检测 {game_name} 差评时发生异常: {e}")
+
+    return None
+
+
+if __name__ == "__main__":
+    import sys
+    if sys.stdout.encoding.lower() != 'utf-8':
+        try:
+            sys.stdout.reconfigure(encoding='utf-8')
+        except AttributeError:
+            pass
+
+    print("Testing Steam OSINT...")
+    for game in STEAM_APP_MAP:
+        if STEAM_APP_MAP[game]:
+            res = check_steam_reviews(game)
+            print(f"{game}: {res}")
