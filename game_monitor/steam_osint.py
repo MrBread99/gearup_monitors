@@ -37,10 +37,28 @@ NETWORK_KEYWORDS_EN = [
     "TIMEOUT", "ROUTING", "JITTER"
 ]
 
-# 中文关键词（Steam 有大量中文评论）
+# 中文关键词（Steam 以繁体中文玩家为主，兼顾简中）
 NETWORK_KEYWORDS_ZH = [
-    "延迟", "卡顿", "丢包", "掉线", "断线", "高PING", "网络",
+    # 繁体中文（台港澳玩家）
+    "斷線", "爆PING", "卡頓", "連不上", "進不去", "伺服器",
+    "馬鈴薯", "延遲", "丟包", "掉線", "高PING", "網路",
+    "回彈", "抖動", "橡皮筋",
+    # 简体中文
+    "延迟", "卡顿", "丢包", "掉线", "断线", "网络",
     "连不上", "服务器", "橡皮筋", "回弹", "抖动"
+]
+
+# 日语关键词
+NETWORK_KEYWORDS_JP = [
+    "鯖落ち", "ラグい", "ラグ", "繋がらない", "落ちた",
+    "通信エラー", "マッチしない", "回線落ち", "回線", "切断",
+    "ピング", "パケロス", "パケットロス", "重い", "カクカク"
+]
+
+# 韩语关键词
+NETWORK_KEYWORDS_KR = [
+    "섭터짐", "핑", "렉", "접속불가", "튕김", "서버 다운",
+    "서버", "끊김", "패킷로스", "지연", "랙", "디스코"
 ]
 
 # 俄语关键词
@@ -49,7 +67,11 @@ NETWORK_KEYWORDS_RU = [
     "ДИСКОННЕКТ", "СЕРВЕР"
 ]
 
-ALL_KEYWORDS = NETWORK_KEYWORDS_EN + NETWORK_KEYWORDS_ZH + NETWORK_KEYWORDS_RU
+ALL_KEYWORDS = (
+    NETWORK_KEYWORDS_EN + NETWORK_KEYWORDS_ZH +
+    NETWORK_KEYWORDS_JP + NETWORK_KEYWORDS_KR +
+    NETWORK_KEYWORDS_RU
+)
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) OSINT-Monitor/2.1'
