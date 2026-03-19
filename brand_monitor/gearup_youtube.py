@@ -36,6 +36,13 @@ SEARCH_QUERIES = [
     # 阿拉伯语
     "GearUP Booster مراجعة",
     "مسرع العاب GearUP",
+    # 越南语
+    "GearUP Booster đánh giá",
+    "giảm ping GearUP",
+    # 印尼语
+    "GearUP Booster review indonesia",
+    # 菲律宾语
+    "GearUP Booster review tagalog",
 ]
 
 # 情感关键词（用于分析视频标题和描述）
@@ -47,6 +54,12 @@ NEGATIVE_KEYWORDS = [
     "骗子", "垃圾", "差评", "别买", "坑", "真相", "曝光",
     # 阿拉伯语
     "نصب", "احتيال", "سيء", "فيروس", "ما ينفع", "لا تشتري",
+    # 越南语
+    "LỪA ĐẢO", "DỞ", "TỆ", "KHÔNG NÊN MUA", "PHÍ TIỀN",
+    # 印尼语
+    "PENIPUAN", "JELEK", "SAMPAH", "JANGAN BELI", "BUANG UANG",
+    # 菲律宾语
+    "SCAM", "PANGIT", "BASURA", "HUWAG BILHIN",
 ]
 
 POSITIVE_KEYWORDS = [
@@ -56,6 +69,12 @@ POSITIVE_KEYWORDS = [
     "好用", "推荐", "测评", "教程", "降低延迟",
     # 阿拉伯语
     "ممتاز", "أفضل", "مراجعة", "أنصح", "يستاهل", "رهيب",
+    # 越南语
+    "HAY", "TỐT", "ĐÁNG MUA", "GIẢM PING", "MƯỢT",
+    # 印尼语
+    "BAGUS", "MANTAP", "RECOMMENDED", "WORTH IT", "LANCAR",
+    # 菲律宾语
+    "MAGANDA", "SULIT", "GANDA", "WORTH IT",
 ]
 
 HEADERS = {

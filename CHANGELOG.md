@@ -4,7 +4,24 @@
 
 ---
 
-## [v2.4.0] - 中东/阿拉伯语区覆盖补齐 (Current)
+## [v2.5.0] - 东南亚区域覆盖 (Current)
+
+### 🌏 东南亚区域覆盖 (SEA Coverage)
+- **新增东南亚品牌舆情监控模块 (`brand_monitor/southeast_asia_monitor.py`)**:
+  - 越南: Tinhte.vn 科技论坛搜索 + Google 越南语搜索。
+  - 菲律宾: Reddit r/Philippines, r/PHGamers + Google 菲律宾语搜索。
+  - 印尼: Reddit r/indonesia, r/IndoGaming + Google 印尼语搜索（覆盖 Kaskus 等论坛）。
+  - 泰国: Reddit r/Thailand + Google 泰语搜索。
+  - 马来西亚/新加坡: Reddit r/Malaysia, r/MalaysianGamers, r/singapore。
+  - 越南语/菲律宾语/印尼语/泰语 4 语种情感分析关键词库。
+
+### 🔤 东南亚语言关键词扩充
+- **Steam 差评监控 (`steam_osint.py`)**: 新增越南语、菲律宾语（他加禄语）、印尼语网络故障关键词，语言覆盖从 6 种扩充至 **9 种**。
+- **YouTube 舆情监控 (`gearup_youtube.py`)**: 新增越南语、印尼语、菲律宾语搜索词和情感分析关键词。
+
+---
+
+## [v2.4.0] - 中东/阿拉伯语区覆盖补齐
 
 ### 🌍 中东区域覆盖 (MENA Coverage)
 - **新增中东品牌舆情监控模块 (`brand_monitor/mideast_monitor.py`)**:
