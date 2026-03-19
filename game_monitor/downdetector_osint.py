@@ -54,22 +54,41 @@ def check_downdetector_global(game_name):
             if status_element:
                 status_text = status_element.text.strip().lower()
                 
-                # 优化报警门槛：排除 "Possible problems" (轻微波动)，只在明确出现大规模故障时报警
                 # istheservicedown 的典型文案有:
                 # "No problems at ..." (无问题)
                 # "Possible problems at ..." (轻微波动/少数人报错)
                 # "Problems at ..." (明确的大面积故障)
+                # "Massive outage at ..." (大规模宕机，有时会用这个词)
                 
-                has_definite_problems = ("problems" in status_text and 
-                                       "no problems" not in status_text and 
-                                       "possible problems" not in status_text)
+                # 为了极致降低误报，要求页面不仅显示 "problems"，还必须出现 "outage" 或 "massive" 这种高强度词汇
+                # 或者它页面上的状态栏颜色（如果能抓到的话）是最高级别。
                 
-                if has_definite_problems:
+                has_definite_problems = (
+                    "problems" in status_text and 
+                    "no problems" not in status_text and 
+                    "possible problems" not in status_text
+                )
+                
+                # istheservicedown 的典型文案有:
+                # "Problems detected" - 此时意味着有故障，但有时可能也只是小故障
+                # 我们通过检查页面上的图表数据，或者更严格的短语来过滤
+                
+                # 进一步提升门槛：只有当状态文案明确包含 "massive" 或 "outage" 时才报警
+                # 或者要求状态栏带有 'alert-danger' 这种红色的 class
+                is_severe_outage = False
+                
+                if status_element.has_attr('class') and 'alert-danger' in status_element['class']:
+                    is_severe_outage = True
+                    
+                if "massive" in status_text or "outage" in status_text:
+                    is_severe_outage = True
+                
+                if has_definite_problems and is_severe_outage:
                     return {
                         'game': game_name,
-                        'region': 'Global (Outage Aggregator)',
+                        'region': 'Global',
                         'country': 'Multiple',
-                        'issue': f"🔥 [热度飙升] 🚨 玩家报错聚合网侦测到大量网络问题！(已过滤轻微波动)",
+                        'issue': f"🔥 玩家报错聚合网确认发生大面积宕机/拥堵！(已应用极高阈值)",
                         'source_name': 'IsTheServiceDown',
                         'source_url': url
                     }
