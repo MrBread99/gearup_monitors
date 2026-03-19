@@ -185,6 +185,7 @@ def check_reddit_osint(game_name, subreddit):
 def check_epic_games_status():
     """
     检查 Epic Games 官方 API 获取 Fortnite 服务器状态。
+    同一状态的多个组件会合并为一条报警，避免刷屏。
     """
     issues = []
     url = "https://status.epicgames.com/api/v2/components.json"
@@ -192,16 +193,30 @@ def check_epic_games_status():
         response = requests.get(url, timeout=10)
         if response.status_code == 200:
             components = response.json().get('components', [])
+            
+            # 按状态分组聚合异常组件
+            status_groups = {}
             for comp in components:
                 if "Fortnite" in comp['name'] and comp['status'] != 'operational':
-                    issues.append({
-                        'game': 'Fortnite',
-                        'region': 'Global',
-                        'country': '',
-                        'issue': f"{comp['name']} 官方状态: {comp['status'].replace('_', ' ').title()}",
-                        'source_name': 'Epic Status API',
-                        'source_url': 'https://status.epicgames.com/'
-                    })
+                    status_label = comp['status'].replace('_', ' ').title()
+                    if status_label not in status_groups:
+                        status_groups[status_label] = []
+                    status_groups[status_label].append(comp['name'])
+            
+            # 每种状态只生成一条合并报警
+            for status_label, comp_names in status_groups.items():
+                if len(comp_names) == 1:
+                    desc = f"{comp_names[0]} 官方状态: {status_label}"
+                else:
+                    desc = f"{len(comp_names)} 个组件异常 ({', '.join(comp_names)}) 官方状态: {status_label}"
+                issues.append({
+                    'game': 'Fortnite',
+                    'region': 'Global',
+                    'country': '',
+                    'issue': desc,
+                    'source_name': 'Epic Status API',
+                    'source_url': 'https://status.epicgames.com/'
+                })
     except Exception as e:
         print(f"[Fortnite] 获取 Epic 状态 API 时出错: {e}")
     return issues
