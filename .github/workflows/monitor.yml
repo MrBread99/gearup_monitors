@@ -22,8 +22,6 @@ jobs:
         
       - name: Run Game Monitor Script
         env:
-          # 在 GitHub Repository -> Settings -> Secrets and variables -> Actions 中
-          # 新建 POPO_WEBHOOK_URL，填入你的 POPO 机器人 Webhook 链接
           POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
         run: python game_monitor/monitor.py
         
@@ -34,3 +32,19 @@ jobs:
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
           POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
         run: python competitor_radar/discord_listener.py
+
+      - name: Run ExitLag Pricing Monitor
+        env:
+          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
+        run: python competitor_radar/exitlag_pricing.py
+
+      - name: Run GearUP Reddit Monitor
+        env:
+          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
+        run: python brand_monitor/gearup_reddit.py
+
+      - name: Run GearUP YouTube Monitor
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
+        run: python brand_monitor/gearup_youtube.py

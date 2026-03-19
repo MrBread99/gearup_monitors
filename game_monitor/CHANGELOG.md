@@ -4,7 +4,30 @@
 
 ---
 
-## [v2.1.0] - Steam 差评渠道接入 (Current)
+## [v2.2.0] - 竞品定价监控 + 品牌舆情体系 (Current)
+
+### 🚀 新增功能 (New Features)
+- **新增 ExitLag 多地区定价监控 (`competitor_radar/exitlag_pricing.py`)**:
+  - 抓取 ExitLag 官网 9 个语言/地区版本的定价页面（EN, 繁中, JP, KR, PT, RU, ES, AR, DE）。
+  - 自动保存定价快照，每次运行与上次对比，检测价格变动、折扣调整和套餐结构变化。
+  - 首次运行保存基线，不触发报警。
+- **新增 GearUP Booster Reddit 全站舆情监控 (`brand_monitor/gearup_reddit.py`)**:
+  - 通过 Reddit 全站搜索（绕过已封禁的 r/GearUPBooster），抓取所有提及 GearUP Booster 的帖子。
+  - 内置正面/负面关键词情感分析（中英双语），输出最热帖子和负面帖子预警。
+- **新增 GearUP Booster YouTube 舆情监控 (`brand_monitor/gearup_youtube.py`)**:
+  - 通过 YouTube Data API v3 搜索 GearUP Booster 相关视频（7 天窗口）。
+  - 获取视频播放量、点赞数、评论数等统计数据。
+  - 情感分析分类，输出最热视频和负面视频预警。
+
+### 📁 项目结构扩充
+- 新增 `brand_monitor/` 目录，用于品牌舆情监控模块。
+- `competitor_radar/` 目录新增 ExitLag 定价监控。
+- GitHub Actions 工作流新增 3 个 step，集成所有新模块。
+- 新增环境变量: `YOUTUBE_API_KEY`（需在 GitHub Secrets 中配置）。
+
+---
+
+## [v2.1.0] - Steam 差评渠道接入
 
 ### 🌍 监控渠道扩充 (Channel Expansions)
 - **新增 Steam 近期差评监控模块 (`steam_osint.py`)**:
