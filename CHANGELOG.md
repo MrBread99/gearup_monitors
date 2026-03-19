@@ -4,7 +4,23 @@
 
 ---
 
-## [v2.5.0] - 东南亚区域覆盖 (Current)
+## [v2.6.0] - 日本区覆盖补齐 (Current)
+
+### 🇯🇵 日本区覆盖补齐 (Japan Coverage)
+- **新增日本品牌舆情监控模块 (`brand_monitor/japan_monitor.py`)**:
+  - 5ch（旧2ch）: 通过 Google site search 间接搜索日本最大匿名论坛。
+  - Google 日语搜索: 覆盖 4Gamer、GameWith、Price.com 等日本本土游戏媒体和评价网站。
+  - Reddit 日本 subreddit（r/japan, r/japanlife, r/japangaming）。
+  - 加速器通用日语搜索词（VPN おすすめ、ping下げる ツール 等）。
+  - 日语情感分析关键词库（詐欺/ゴミ/最悪 vs おすすめ/神/最高）。
+
+### 🔤 日语覆盖增强
+- **亚太故障监控 (`apac_osint.py`)**: 日语关键词从 6 个扩充至 **15 个**，与 steam_osint.py 对齐（新增 ラグ、回線落ち、切断、ピング、パケロス 等）。
+- **YouTube 舆情 (`gearup_youtube.py`)**: 新增日语情感分析关键词（正面 8 个 + 负面 8 个），补齐了之前的日语情感分析空白。
+
+---
+
+## [v2.5.0] - 东南亚区域覆盖
 
 ### 🌏 东南亚区域覆盖 (SEA Coverage)
 - **新增东南亚品牌舆情监控模块 (`brand_monitor/southeast_asia_monitor.py`)**:

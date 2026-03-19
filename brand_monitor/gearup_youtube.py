@@ -60,6 +60,8 @@ NEGATIVE_KEYWORDS = [
     "PENIPUAN", "JELEK", "SAMPAH", "JANGAN BELI", "BUANG UANG",
     # 菲律宾语
     "SCAM", "PANGIT", "BASURA", "HUWAG BILHIN",
+    # 日语
+    "詐欺", "ゴミ", "最悪", "微妙", "ダメ", "使えない", "意味ない", "ウイルス",
 ]
 
 POSITIVE_KEYWORDS = [
@@ -75,6 +77,8 @@ POSITIVE_KEYWORDS = [
     "BAGUS", "MANTAP", "RECOMMENDED", "WORTH IT", "LANCAR",
     # 菲律宾语
     "MAGANDA", "SULIT", "GANDA", "WORTH IT",
+    # 日语
+    "おすすめ", "神", "最高", "良い", "便利", "安定", "効果あり", "快適",
 ]
 
 HEADERS = {
