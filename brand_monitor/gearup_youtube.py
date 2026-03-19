@@ -33,6 +33,9 @@ SEARCH_QUERIES = [
     "GearUP 게임 부스터 리뷰",
     # 俄语
     "GearUP Booster обзор",
+    # 阿拉伯语
+    "GearUP Booster مراجعة",
+    "مسرع العاب GearUP",
 ]
 
 # 情感关键词（用于分析视频标题和描述）
@@ -42,6 +45,8 @@ NEGATIVE_KEYWORDS = [
     "TRUTH", "AVOID", "UNINSTALL",
     # 中文
     "骗子", "垃圾", "差评", "别买", "坑", "真相", "曝光",
+    # 阿拉伯语
+    "نصب", "احتيال", "سيء", "فيروس", "ما ينفع", "لا تشتري",
 ]
 
 POSITIVE_KEYWORDS = [
@@ -49,6 +54,8 @@ POSITIVE_KEYWORDS = [
     "WORKS", "IMPROVED", "RECOMMEND", "LEGIT", "FIX LAG",
     # 中文
     "好用", "推荐", "测评", "教程", "降低延迟",
+    # 阿拉伯语
+    "ممتاز", "أفضل", "مراجعة", "أنصح", "يستاهل", "رهيب",
 ]
 
 HEADERS = {

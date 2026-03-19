@@ -67,10 +67,18 @@ NETWORK_KEYWORDS_RU = [
     "ДИСКОННЕКТ", "СЕРВЕР"
 ]
 
+# 阿拉伯语关键词
+NETWORK_KEYWORDS_AR = [
+    "لاق", "تأخير", "بنق", "بينق", "تقطيع", "قطع",
+    "سيرفر", "انقطاع", "مشكلة اتصال", "فقدان حزم",
+    "تعليق", "هنق", "ضعف الاتصال", "السيرفر طاح",
+    "مشكلة بالنت", "نت", "تهنيق"
+]
+
 ALL_KEYWORDS = (
     NETWORK_KEYWORDS_EN + NETWORK_KEYWORDS_ZH +
     NETWORK_KEYWORDS_JP + NETWORK_KEYWORDS_KR +
-    NETWORK_KEYWORDS_RU
+    NETWORK_KEYWORDS_RU + NETWORK_KEYWORDS_AR
 )
 
 HEADERS = {
