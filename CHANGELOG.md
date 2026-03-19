@@ -4,7 +4,25 @@
 
 ---
 
-## [v2.2.0] - 竞品定价监控 + 品牌舆情体系 (Current)
+## [v2.3.0] - 全球品牌舆情多渠道覆盖 (Current)
+
+### 🚀 新增功能 (New Features)
+- **新增 Trustpilot 品牌评价监控 (`brand_monitor/trustpilot_monitor.py`)**:
+  - 同时监控 GearUP 及 5 家竞品（ExitLag, LagoFast, NoPing, Hone.gg, wtfast）的 Trustpilot 评分和评论。
+  - 自动快照对比，检测评分变动、新增评论数和 1 星差评占比变化。
+- **新增台湾区品牌舆情监控 (`brand_monitor/taiwan_monitor.py`)**:
+  - 搜索巴哈姆特和 PTT 上关于 GearUP 及竞品的讨论，繁体中文情感分析。
+- **新增韩国区品牌舆情监控 (`brand_monitor/korea_monitor.py`)**:
+  - 搜索 Naver 和 DC Inside 上关于加速器的讨论，韩语情感分析。
+- **新增俄语区品牌舆情监控 (`brand_monitor/russia_monitor.py`)**:
+  - 搜索 VK 和 Otzovik（俄罗斯最大评价网站）上的加速器讨论，俄语情感分析。
+
+### 🌍 小语种覆盖增强
+- **YouTube 搜索关键词多语言扩展**: 新增繁体中文、日语、韩语、俄语搜索词，覆盖非英语区的视频评测。
+
+---
+
+## [v2.2.0] - 竞品定价监控 + 品牌舆情体系
 
 ### 🚀 新增功能 (New Features)
 - **新增 ExitLag 多地区定价监控 (`competitor_radar/exitlag_pricing.py`)**:

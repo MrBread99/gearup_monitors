@@ -18,9 +18,21 @@ from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
 YOUTUBE_API_KEY = os.environ.get('YOUTUBE_API_KEY', '')
 
 SEARCH_QUERIES = [
+    # 英文
     "GearUP Booster",
     "GearUP Booster review",
     "GearUP game booster",
+    # 繁体中文
+    "GearUP 加速器",
+    "GearUP 遊戲加速器 評測",
+    # 日语
+    "GearUP ゲームブースター",
+    "GearUP レビュー",
+    # 韩语
+    "GearUP 부스터",
+    "GearUP 게임 부스터 리뷰",
+    # 俄语
+    "GearUP Booster обзор",
 ]
 
 # 情感关键词（用于分析视频标题和描述）
