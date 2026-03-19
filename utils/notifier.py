@@ -8,8 +8,8 @@ POPO_WEBHOOK_URL = os.environ.get("POPO_WEBHOOK_URL")
 
 def send_popo_alert(webhook_url, issues_list):
     """
-    将问题列表格式化为 Markdown 表格，并发送至 NetEase POPO Webhook。
-    【重要修改】：为了减少打扰，如果 issues_list 为空，直接静默退出，不再发送“一切正常”的通知。
+    将问题列表格式化为纯文本，并发送至 NetEase POPO Webhook。
+    为了减少打扰，如果 issues_list 为空，直接静默退出，不再发送“一切正常”的通知。
     """
     if not issues_list:
         print("未检测到异常或情报，静默退出，不发送打扰信息。")
@@ -17,28 +17,34 @@ def send_popo_alert(webhook_url, issues_list):
 
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # 构造 Markdown 表格
-    md_content = f"🚨 **全球监控商机雷达警报** 🚨\n*监控时间: {current_time}*\n\n"
-    md_content += "| 监控项 | 地区/国家 | 情报反馈 | 数据来源 |\n"
-    md_content += "| :--- | :--- | :--- | :--- |\n"
-        
+    # 构造极简纯文本格式，移除所有的 Markdown 星号和表格语法
+    plain_content = f"【全球监控商机雷达警报】\n时间: {current_time}\n\n"
+    
     for item in issues_list:
-        # 处理国家/地区的展示
         region_display = f"{item['region']} ({item['country']})" if item.get('country') else item['region']
-        # 处理带有可点击链接的数据来源
-        source_display = f"[{item['source_name']}]({item['source_url']})" if item.get('source_url') else item['source_name']
         
-        md_content += f"| **{item['game']}** | {region_display} | {item['issue']} | {source_display} |\n"
+        # 去掉 issue 中可能包含的粗体和红灯 emoji
+        clean_issue = item['issue'].replace('**', '').replace('__', '')
+        
+        plain_content += f"[{item['game']}]\n"
+        plain_content += f"地区: {region_display}\n"
+        plain_content += f"情报: {clean_issue}\n"
+        
+        if item.get('source_url'):
+            plain_content += f"来源: {item['source_name']} ({item['source_url']})\n"
+        else:
+            plain_content += f"来源: {item['source_name']}\n"
+            
+        plain_content += "-" * 30 + "\n"
 
     headers = {'Content-Type': 'application/json'}
-    # 根据 POPO 官方群机器人要求，最基础且一定能识别的字段名为 "message"
     payload = {
-        "message": md_content
+        "message": plain_content
     }
     
     if not webhook_url:
         print("未配置 POPO_WEBHOOK_URL，控制台输出结果如下：\n")
-        print(md_content)
+        print(plain_content)
         return
 
     try:
