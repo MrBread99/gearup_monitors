@@ -536,8 +536,8 @@ def check_xbox_live_status():
 
 def check_whatsapp_connectivity():
     """
-    通过 Reddit 间接监控 WhatsApp 在中东/东南亚的连接问题。
-    重点关注 VoIP 限制地区（阿联酋、沙特等禁 WhatsApp 语音通话）。
+    通过 Reddit 间接监控 WhatsApp 在中东/东南亚/俄罗斯的连接问题。
+    重点关注 VoIP 限制地区（阿联酋、沙特等禁 WhatsApp 语音通话）和俄罗斯封锁风险。
     """
     issues = []
 
@@ -547,6 +547,11 @@ def check_whatsapp_connectivity():
         "WhatsApp call blocked UAE",
         "WhatsApp call Saudi",
         "WhatsApp VPN",
+        # 俄罗斯相关
+        "WhatsApp Russia",
+        "WhatsApp blocked Russia",
+        "WhatsApp не работает",      # 俄语：WhatsApp 不工作
+        "ватсап не работает",         # 俄语口语：ватсап 不工作
     ]
 
     total = 0
@@ -571,7 +576,7 @@ def check_whatsapp_connectivity():
             'game': 'WhatsApp',
             'region': 'MENA / SEA',
             'country': '',
-            'issue': f"🚨 WhatsApp 连接/封锁问题: 过去 24h 有 {total} 条相关讨论（中东 VoIP 限制或全球故障）",
+            'issue': f"🚨 WhatsApp 连接/封锁问题: 过去 24h 有 {total} 条相关讨论（中东 VoIP 限制/俄罗斯封锁或全球故障）",
             'source_name': 'Reddit Search',
             'source_url': 'https://www.reddit.com/search/?q=whatsapp+down&sort=new&t=day'
         })
