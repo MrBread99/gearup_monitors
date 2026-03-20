@@ -278,6 +278,32 @@ def check_apac_osint_for_game(game_name):
             'tw_bsn': '5371',
             'jp_search': 'CoD',
             'kr_dc': 'callofduty'
+        },
+        # 新增 5 款游戏
+        'Where Winds Meet': {
+            'tw_bsn': '77498',      # 燕云十六声巴哈姆特板
+            'jp_search': '燕雲十六声',
+            'kr_dc': 'wherewindsmeet'
+        },
+        'Aion 2': {
+            'tw_bsn': None,          # 永恒之塔2暂无巴哈板
+            'jp_search': 'AION2',
+            'kr_dc': 'aion'
+        },
+        'Escape from Tarkov': {
+            'tw_bsn': '35405',
+            'jp_search': 'タルコフ',
+            'kr_dc': 'tarkov'
+        },
+        'Arena Breakout Infinite': {
+            'tw_bsn': None,          # 暗区突围暂无巴哈板
+            'jp_search': 'ArenaBreakout',
+            'kr_dc': 'arenabreakout'
+        },
+        'Path of Exile 2': {
+            'tw_bsn': '18966',      # POE 巴哈姆特板
+            'jp_search': 'POE2',
+            'kr_dc': 'pathofexile'
         }
     }
     
@@ -288,8 +314,9 @@ def check_apac_osint_for_game(game_name):
     print(f"    - 正在扫描亚太社区本地化反馈 ({game_name})...")
     
     # 1. 台湾 - 巴哈姆特
-    tw_res = apac_osint.check_taiwan_bahamut(game_name, config['tw_bsn'])
-    if tw_res: issues.append(tw_res)
+    if config['tw_bsn']:
+        tw_res = apac_osint.check_taiwan_bahamut(game_name, config['tw_bsn'])
+        if tw_res: issues.append(tw_res)
         
     # 2. 日本 - Yahoo 实时推特
     jp_res = apac_osint.check_japan_yahoo_realtime(config['jp_search'])
@@ -363,6 +390,22 @@ def main():
 
     print("正在检测 Call of Duty...")
     all_issues.extend(check_all_channels_for_game('Call of Duty', 'CallOfDuty', 'Call of Duty'))
+
+    # 新增 5 款游戏
+    print("正在检测 Where Winds Meet (燕云十六声)...")
+    all_issues.extend(check_all_channels_for_game('Where Winds Meet', 'WhereWindsMeet', 'Where Winds Meet'))
+
+    print("正在检测 Aion 2 (永恒之塔2)...")
+    all_issues.extend(check_all_channels_for_game('Aion 2', 'aion', 'Aion 2'))
+
+    print("正在检测 Escape from Tarkov (逃离塔科夫)...")
+    all_issues.extend(check_all_channels_for_game('Escape from Tarkov', 'EscapefromTarkov', 'Escape from Tarkov'))
+
+    print("正在检测 Arena Breakout Infinite (暗区突围)...")
+    all_issues.extend(check_all_channels_for_game('Arena Breakout Infinite', 'ArenaBreakoutInfinite', 'Arena Breakout Infinite'))
+
+    print("正在检测 Path of Exile 2 (流亡黯道)...")
+    all_issues.extend(check_all_channels_for_game('Path of Exile 2', 'pathofexile', 'Path of Exile 2'))
     
     # 发送通知汇总
     send_popo_alert(POPO_WEBHOOK_URL, all_issues)

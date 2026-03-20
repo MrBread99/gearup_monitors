@@ -4,7 +4,23 @@
 
 ---
 
-## [v2.6.0] - 日本区覆盖补齐 (Current)
+## [v2.7.0] - 监控游戏扩充至 15 款 (Current)
+
+### 🎮 新增 5 款监控游戏
+- **Where Winds Meet (燕云十六声)**: Steam AppID 1928380, Reddit r/WhereWindsMeet, 巴哈姆特, Yahoo JP, DC Inside。国产武侠 MMO，跨服需求强。
+- **Aion 2 (永恒之塔2)**: 不在 Steam，Reddit r/aion, Yahoo JP, DC Inside。韩服为主，加速器刚需。
+- **Escape from Tarkov (逃离塔科夫)**: Steam AppID 1422440, Reddit r/EscapefromTarkov, 巴哈姆特, Yahoo JP, DC Inside。硬核射击，网络敏感度极高。
+- **Arena Breakout: Infinite (暗区突围)**: Steam AppID 2073620, Reddit r/ArenaBreakoutInfinite, Yahoo JP, DC Inside。腾讯出品，对标塔科夫。
+- **Path of Exile 2 (流亡黯道)**: Steam AppID 2694490 (台港澳版), Reddit r/pathofexile, 巴哈姆特, Yahoo JP, DC Inside。
+
+### 📊 覆盖统计
+- 监控游戏总数从 10 款扩充至 **15 款**。
+- 其中 9 款有 Steam 差评监控（新增 3 款），6 款不在 Steam 靠 Reddit + 亚太社区覆盖。
+- 新增游戏均重点关注非大陆地区服务器问题（亚太、欧美、中东）。
+
+---
+
+## [v2.6.0] - 日本区覆盖补齐
 
 ### 🇯🇵 日本区覆盖补齐 (Japan Coverage)
 - **新增日本品牌舆情监控模块 (`brand_monitor/japan_monitor.py`)**:
