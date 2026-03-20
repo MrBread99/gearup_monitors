@@ -4,7 +4,28 @@
 
 ---
 
-## [v2.7.0] - 监控游戏扩充至 15 款 (Current)
+## [v2.8.0] - 通讯与游戏平台全球连接监控 (Current)
+
+### 🌐 新增平台状态监控模块 (`game_monitor/platform_status_monitor.py`)
+- **Discord 全球状态监控**:
+  - 官方 Status API，监控 15 个区域 Voice 服务器状态（含俄罗斯、日本、新加坡、香港、韩国等）。
+  - 核心服务状态（API、Gateway、Push Notifications）。
+  - 活跃事件实时报警。
+  - 俄罗斯区域异常时特殊标注 `🚨 [俄罗斯受影响]`。
+- **Telegram 俄罗斯连接监控**:
+  - 通过 Reddit 搜索（英文 + 俄语关键词）间接检测 Telegram 在俄罗斯/CIS 的封锁或干扰。
+- **Steam 全球状态监控**:
+  - steamstat.us API 检测 Steam CM 和 Store 服务状态。
+  - Reddit r/Steam 辅助检测连接问题讨论激增。
+- **Epic Games 平台状态监控**:
+  - 官方 Status API，监控 EGS、Epic Online Services、Rocket League、Fall Guys 等。
+  - 活跃事件实时报警。
+- **Battle.net 状态监控**:
+  - Reddit 间接检测 Battle.net/Blizzard 服务器连接问题。
+
+---
+
+## [v2.7.0] - 监控游戏扩充至 15 款
 
 ### 🎮 新增 5 款监控游戏
 - **Where Winds Meet (燕云十六声)**: Steam AppID 1928380, Reddit r/WhereWindsMeet, 巴哈姆特, Yahoo JP, DC Inside。国产武侠 MMO，跨服需求强。
