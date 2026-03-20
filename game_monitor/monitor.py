@@ -107,7 +107,7 @@ def check_reddit_osint(game_name, subreddit):
                 
                 # ======== 商业化优化 1 & 2: 区分故障类型并提取 ISP ========
                 # 初始化为通用故障
-                issue_desc = f"玩家社区反馈集中 ({recent_complaints}篇帖子/4h) 涉及网络问题"
+                issue_desc = f"玩家社区反馈集中 ({recent_complaints}篇帖子/2h) 涉及网络问题"
                 
                 # 定义 ISP 和路由相关的关键字库 (扩充全球主流与母语别名)
                 isp_keywords = [
@@ -158,14 +158,16 @@ def check_reddit_osint(game_name, subreddit):
                         for kw in down_keywords:
                             if kw in content: is_down_issue = True
 
-                # 根据分析结果重写 issue 描述
+                # 根据分析结果重写 issue 描述，标注加速器是否可解决
                 if is_down_issue and not is_routing_issue:
-                    issue_desc = "❌ 疑似官方宕机/维护 (加速器可能无效)"
+                    issue_desc = "🔴 [加速器无效] 疑似官方宕机/维护"
                 elif is_routing_issue:
                     isp_str = f"涉及ISP: {', '.join(found_isps)} " if found_isps else ""
                     # 追加热度标志
                     viral_tag = "🔥 [热度飙升]" if is_viral else ""
-                    issue_desc = f"{viral_tag} ⭐⭐⭐ 绝佳营销时机 (路由/高Ping故障) - {isp_str}(共{recent_complaints}篇反馈)"
+                    issue_desc = f"🟢 [加速器可解决] {viral_tag} ⭐⭐⭐ 绝佳营销时机 (路由/高Ping故障) - {isp_str}(共{recent_complaints}篇反馈/2h)"
+                else:
+                    issue_desc = f"🟡 [待确认] 玩家社区反馈集中 ({recent_complaints}篇帖子/2h) 涉及网络问题，需人工判断"
                 
                 # =========================================================
 
@@ -206,9 +208,9 @@ def check_epic_games_status():
             # 每种状态只生成一条合并报警
             for status_label, comp_names in status_groups.items():
                 if len(comp_names) == 1:
-                    desc = f"{comp_names[0]} 官方状态: {status_label}"
+                    desc = f"🔴 [加速器无效] {comp_names[0]} 官方状态: {status_label}"
                 else:
-                    desc = f"{len(comp_names)} 个组件异常 ({', '.join(comp_names)}) 官方状态: {status_label}"
+                    desc = f"🔴 [加速器无效] {len(comp_names)} 个组件异常 ({', '.join(comp_names)}) 官方状态: {status_label}"
                 issues.append({
                     'game': 'Fortnite',
                     'region': 'Global',

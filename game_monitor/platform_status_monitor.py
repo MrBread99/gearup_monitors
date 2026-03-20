@@ -79,14 +79,17 @@ def check_discord_status():
                 degraded_regions.append(f"{region_name}: {status}")
 
         if degraded_regions:
-            # 俄罗斯特殊标注
+            # 区域性问题 = 加速器可解决（尤其俄罗斯封锁）
             russia_affected = any('Russia' in r for r in degraded_regions)
-            prefix = "🚨 [俄罗斯受影响] " if russia_affected else ""
+            if russia_affected:
+                prefix = "🟢 [加速器可解决] 🚨 [俄罗斯受影响] "
+            else:
+                prefix = "🟡 [待确认] "
             issues.append({
                 'game': 'Discord',
                 'region': 'Global',
                 'country': '',
-                'issue': f"{prefix}⚡ Discord Voice 服务器异常: {', '.join(degraded_regions)}",
+                'issue': f"{prefix}Discord Voice 服务器异常: {', '.join(degraded_regions)}",
                 'source_name': 'Discord Status API',
                 'source_url': 'https://discordstatus.com/'
             })
@@ -104,7 +107,7 @@ def check_discord_status():
                 'game': 'Discord',
                 'region': 'Global',
                 'country': '',
-                'issue': f"⚡ Discord 核心服务异常: {', '.join(degraded_core)}",
+                'issue': f"🔴 [加速器无效] Discord 核心服务异常（官方故障）: {', '.join(degraded_core)}",
                 'source_name': 'Discord Status API',
                 'source_url': 'https://discordstatus.com/'
             })
@@ -120,7 +123,7 @@ def check_discord_status():
                     'game': 'Discord',
                     'region': 'Global',
                     'country': '',
-                    'issue': f"🔴 Discord 事件 [{impact}]: {name} (状态: {status})",
+                    'issue': f"🔴 [加速器无效] Discord 事件 [{impact}]: {name} (状态: {status})",
                     'source_name': 'Discord Status API',
                     'source_url': incident.get('shortlink', 'https://discordstatus.com/')
                 })
@@ -172,7 +175,7 @@ def check_telegram_russia():
             'game': 'Telegram',
             'region': 'Russia / CIS',
             'country': 'Russia',
-            'issue': f"🚨 Telegram 连接问题: 过去 24h 在 Reddit 发现 {total_complaints} 条相关讨论，疑似俄罗斯/CIS 区域封锁或干扰",
+            'issue': f"🟢 [加速器可解决] Telegram 连接问题: 过去 24h 在 Reddit 发现 {total_complaints} 条相关讨论，疑似俄罗斯/CIS 区域封锁或干扰",
             'source_name': 'Reddit Search',
             'source_url': 'https://www.reddit.com/search/?q=telegram+down+russia&sort=new&t=day'
         })
@@ -211,7 +214,7 @@ def check_steam_status():
                     'game': 'Steam',
                     'region': 'Global',
                     'country': '',
-                    'issue': f"⚡ Steam 平台异常: {', '.join(degraded[:5])}",
+                    'issue': f"🔴 [加速器无效] Steam 平台异常（官方服务故障）: {', '.join(degraded[:5])}",
                     'source_name': 'steamstat.us',
                     'source_url': 'https://steamstat.us/'
                 })
@@ -237,7 +240,7 @@ def check_steam_status():
                     'game': 'Steam',
                     'region': 'Global',
                     'country': '',
-                    'issue': f"📊 Steam 社区异常讨论激增: 过去 24h 有 {len(posts)} 条连接问题帖子",
+                    'issue': f"🟡 [待确认] Steam 社区异常讨论激增: 过去 24h 有 {len(posts)} 条连接问题帖子",
                     'source_name': 'r/Steam',
                     'source_url': 'https://www.reddit.com/r/Steam/search?q=steam+down&sort=new&t=day'
                 })
@@ -281,7 +284,7 @@ def check_epic_platform_status():
                 'game': 'Epic Games',
                 'region': 'Global',
                 'country': '',
-                'issue': f"⚡ Epic 平台异常: {', '.join(egs_issues)}",
+                    'issue': f"🔴 [加速器无效] Epic 平台异常（官方服务故障）: {', '.join(egs_issues)}",
                 'source_name': 'Epic Status API',
                 'source_url': 'https://status.epicgames.com/'
             })
@@ -296,7 +299,7 @@ def check_epic_platform_status():
                     'game': 'Epic Games',
                     'region': 'Global',
                     'country': '',
-                    'issue': f"🔴 Epic 事件: {name} (状态: {status})",
+                    'issue': f"🔴 [加速器无效] Epic 事件: {name} (状态: {status})",
                     'source_name': 'Epic Status API',
                     'source_url': 'https://status.epicgames.com/'
                 })
@@ -331,7 +334,7 @@ def check_battlenet_status():
                     'game': 'Battle.net',
                     'region': 'Global',
                     'country': '',
-                    'issue': f"📊 Battle.net 连接问题讨论激增: 过去 24h 有 {len(posts)} 条相关帖子",
+                    'issue': f"🟡 [待确认] Battle.net 连接问题讨论激增: 过去 24h 有 {len(posts)} 条相关帖子",
                     'source_name': 'Reddit Search',
                     'source_url': 'https://www.reddit.com/search/?q=battle.net+down&sort=new&t=day'
                 })
@@ -365,7 +368,7 @@ def check_faceit_status():
                 'game': 'FACEIT',
                 'region': 'Global',
                 'country': '',
-                'issue': f"🔴 FACEIT 事件: {name}",
+                'issue': f"🔴 [加速器无效] FACEIT 事件: {name}",
                 'source_name': 'FACEIT Status',
                 'source_url': 'https://www.faceitstatus.com/'
             })
@@ -378,7 +381,7 @@ def check_faceit_status():
                 'game': 'FACEIT',
                 'region': 'Global',
                 'country': '',
-                'issue': f"🔧 FACEIT 维护中: {name}",
+                'issue': f"🔴 [加速器无效] FACEIT 维护中: {name}",
                 'source_name': 'FACEIT Status',
                 'source_url': 'https://www.faceitstatus.com/'
             })
@@ -401,7 +404,7 @@ def check_faceit_status():
                         'game': 'FACEIT',
                         'region': 'Global',
                         'country': '',
-                        'issue': f"📊 FACEIT 社区异常讨论: 过去 24h r/FACEITcom 有 {len(posts)} 条服务问题帖子",
+                        'issue': f"🟡 [待确认] FACEIT 社区异常讨论: 过去 24h r/FACEITcom 有 {len(posts)} 条服务问题帖子",
                         'source_name': 'r/FACEITcom',
                         'source_url': 'https://www.reddit.com/r/FACEITcom/'
                     })
@@ -468,7 +471,7 @@ def check_riot_status():
                 'game': f'Riot ({game})',
                 'region': 'Global',
                 'country': '',
-                'issue': f"🔴 {game} 事件: {'; '.join(incidents_found[:3])}",
+                'issue': f"🔴 [加速器无效] {game} 事件: {'; '.join(incidents_found[:3])}",
                 'source_name': 'Riot Status API',
                 'source_url': 'https://status.riotgames.com/'
             })
@@ -478,7 +481,7 @@ def check_riot_status():
                 'game': f'Riot ({game})',
                 'region': 'Global',
                 'country': '',
-                'issue': f"🔧 {game} 维护: {'; '.join(maintenances_found[:3])}",
+                'issue': f"🔴 [加速器无效] {game} 维护: {'; '.join(maintenances_found[:3])}",
                 'source_name': 'Riot Status API',
                 'source_url': 'https://status.riotgames.com/'
             })
@@ -524,7 +527,7 @@ def check_xbox_live_status():
                         'game': platform,
                         'region': 'Global',
                         'country': '',
-                        'issue': f"📊 {platform} 连接问题讨论: 过去 24h 有 {len(posts)} 条相关帖子",
+                        'issue': f"🟡 [待确认] {platform} 连接问题讨论: 过去 24h 有 {len(posts)} 条相关帖子",
                         'source_name': f'r/{config["subreddit"]}',
                         'source_url': f'https://www.reddit.com/r/{config["subreddit"]}/'
                     })
@@ -576,7 +579,7 @@ def check_whatsapp_connectivity():
             'game': 'WhatsApp',
             'region': 'MENA / SEA',
             'country': '',
-            'issue': f"🚨 WhatsApp 连接/封锁问题: 过去 24h 有 {total} 条相关讨论（中东 VoIP 限制/俄罗斯封锁或全球故障）",
+            'issue': f"🟢 [加速器可解决] WhatsApp 连接/封锁问题: 过去 24h 有 {total} 条相关讨论（中东 VoIP 限制/俄罗斯封锁或全球故障）",
             'source_name': 'Reddit Search',
             'source_url': 'https://www.reddit.com/search/?q=whatsapp+down&sort=new&t=day'
         })
@@ -607,7 +610,7 @@ def check_ea_status():
                     'game': 'EA App',
                     'region': 'Global',
                     'country': '',
-                    'issue': f"📊 EA 服务器连接问题: 过去 24h 有 {len(posts)} 条相关讨论",
+                    'issue': f"🟡 [待确认] EA 服务器连接问题: 过去 24h 有 {len(posts)} 条相关讨论",
                     'source_name': 'Reddit Search',
                     'source_url': 'https://www.reddit.com/search/?q=EA+servers+down&sort=new&t=day'
                 })
@@ -640,7 +643,7 @@ def check_ubisoft_status():
                     'game': 'Ubisoft Connect',
                     'region': 'Global',
                     'country': '',
-                    'issue': f"📊 Ubisoft 服务器连接问题: 过去 24h 有 {len(posts)} 条相关讨论",
+                    'issue': f"🟡 [待确认] Ubisoft 服务器连接问题: 过去 24h 有 {len(posts)} 条相关讨论",
                     'source_name': 'Reddit Search',
                     'source_url': 'https://www.reddit.com/search/?q=ubisoft+servers+down&sort=new&t=day'
                 })
@@ -673,7 +676,7 @@ def check_garena_status():
                     'game': 'Garena',
                     'region': 'Southeast Asia',
                     'country': '',
-                    'issue': f"📊 Garena 平台问题: 过去 24h 有 {len(posts)} 条相关讨论",
+                    'issue': f"🟡 [待确认] Garena 平台问题: 过去 24h 有 {len(posts)} 条相关讨论",
                     'source_name': 'Reddit Search',
                     'source_url': 'https://www.reddit.com/search/?q=garena+down&sort=new&t=day'
                 })
@@ -717,7 +720,7 @@ def check_line_connectivity():
             'game': 'LINE',
             'region': 'APAC',
             'country': '',
-            'issue': f"🚨 LINE 连接问题: 过去 24h 有 {total} 条相关讨论（日本/泰国/台湾）",
+            'issue': f"🟢 [加速器可解决] LINE 连接问题: 过去 24h 有 {total} 条相关讨论（日本/泰国/台湾）",
             'source_name': 'Reddit Search',
             'source_url': 'https://www.reddit.com/search/?q=line+app+down&sort=new&t=day'
         })

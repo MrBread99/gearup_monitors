@@ -194,7 +194,7 @@ def check_steam_reviews(game_name, hours_window=2, threshold=5):
                 'region': 'Global',
                 'country': '',
                 'issue': (
-                    f"{viral_tag}⭐⭐⭐ Steam 差评涌现网络问题 "
+                    f"🟢 [加速器可解决] {viral_tag}Steam 差评涌现网络问题 "
                     f"(匹配词: {', '.join(list(matched_keywords)[:5])}, "
                     f"共{network_complaints}条差评/{hours_window}h)"
                 ),
