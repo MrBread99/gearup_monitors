@@ -29,6 +29,11 @@ jobs:
         env:
           POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
         run: python game_monitor/platform_status_monitor.py
+
+      - name: Run Game Calendar Monitor
+        env:
+          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
+        run: python game_monitor/game_calendar_monitor.py
         
       - name: Run Discord Intelligence Listener
         env:

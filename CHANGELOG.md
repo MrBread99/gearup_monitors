@@ -4,7 +4,24 @@
 
 ---
 
-## [v2.9.0] - 平台监控扩充至 13 个 (Current)
+## [v3.0.0] - 新游上线与热游更新监控 (Current)
+
+### 🎮 新增游戏日历监控模块 (`game_monitor/game_calendar_monitor.py`)
+- **已追踪游戏大版本更新检测**:
+  - 通过 Steam News API 检测 9 款有 AppID 的游戏的官方公告（patch notes、新赛季、大版本更新）。
+  - 通过 Reddit 检测 6 款非 Steam 游戏的更新（Valorant/LOL/Fortnite/OW2/CoD/Aion2），基于 flair 和热度过滤。
+  - 快照去重机制，同一条新闻只报一次。
+- **Steam 热门新游上线检测**:
+  - 自动抓取 Steam Top Sellers 和 New Releases 榜单。
+  - 通过 appdetails API 过滤出有联机需求的游戏（Multi-player/Online PvP/Online Co-op/MMO）。
+  - 最多推送 5 条，避免刷屏。
+- **商业价值**:
+  - 大版本更新当天 = 用户量暴增 = 营销推送最佳窗口。
+  - 热门新游上线 = 提前准备加速支持 = 抢占先机。
+
+---
+
+## [v2.9.0] - 平台监控扩充至 13 个
 
 ### 🌐 平台状态监控扩充
 新增 7 个平台/通讯工具，`platform_status_monitor.py` 总覆盖从 6 个扩充至 **13 个**：
