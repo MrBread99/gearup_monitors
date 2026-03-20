@@ -4,7 +4,29 @@
 
 ---
 
-## [v3.0.0] - 新游上线与热游更新监控 (Current)
+## [v3.1.0] - 全平台新游/更新覆盖 (Current)
+
+### 🎮 游戏日历监控扩展至全平台
+在 v3.0.0 Steam 基础上新增 4 个非 Steam 平台的新游上线和热游更新检测：
+
+- **Epic Games Store**: 通过 Reddit r/EpicGamesPC、r/FreeGameFindings、r/GameDeals 检测新游独占、免费游戏赠送。Epic 免费送联机大作时加速需求暴增。
+- **PlayStation (PS5/PS4)**: 通过 Reddit r/PS5、r/PS4 检测主机新游首发和重大更新。
+- **Xbox / Game Pass**: 通过 Reddit r/XboxGamePass、r/XboxSeriesX 检测 Game Pass 上新和 Xbox 新游。Game Pass Day One 上新 = 大量玩家零成本涌入。
+- **Battle.net (暴雪系)**: 通过 Reddit r/Overwatch、r/wow、r/diablo4、r/hearthstone 检测 OW2/WoW/Diablo 4/炉石的赛季更新、大版本补丁和新扩展包。
+
+### 📊 游戏日历监控覆盖总览
+| 平台 | 数据源 | 检测内容 |
+|------|--------|---------|
+| Steam | Steam News API + Featured API | 大版本更新 + 热门新游上线 |
+| Epic Games Store | Reddit (3 个子版块) | 新游独占 + 免费游戏赠送 |
+| PlayStation | Reddit (PS5/PS4) | 主机新游首发 + 更新 |
+| Xbox / Game Pass | Reddit (2 个子版块) | Game Pass 上新 + Xbox 新游 |
+| Battle.net | Reddit (4 款暴雪游戏) | 赛季更新 + 扩展包 + 大版本补丁 |
+| Riot / 非 Steam 游戏 | Reddit (6 款游戏) | 赛季/版本更新 |
+
+---
+
+## [v3.0.0] - 新游上线与热游更新监控
 
 ### 🎮 新增游戏日历监控模块 (`game_monitor/game_calendar_monitor.py`)
 - **已追踪游戏大版本更新检测**:

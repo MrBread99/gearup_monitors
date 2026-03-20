@@ -287,6 +287,250 @@ def check_hot_new_releases():
         return []
 
 
+def check_epic_new_releases():
+    """
+    通过 Reddit 检测 Epic Games Store 的新游上线和免费游戏赠送。
+    Epic 免费送联机大作时 = 大量玩家涌入 = 加速需求暴增。
+    """
+    issues = []
+
+    reddit_sources = [
+        {
+            'subreddit': 'EpicGamesPC',
+            'query': 'free+game+OR+new+release+OR+exclusive+OR+launch',
+            'label': 'Epic 新游/独占',
+        },
+        {
+            'subreddit': 'FreeGameFindings',
+            'query': 'epic+free',
+            'label': 'Epic 免费游戏',
+        },
+        {
+            'subreddit': 'GameDeals',
+            'query': 'epic+free+OR+epic+launch',
+            'label': 'Epic 促销/上线',
+        }
+    ]
+
+    for source in reddit_sources:
+        try:
+            url = (
+                f"https://www.reddit.com/r/{source['subreddit']}/search.json"
+                f"?q={source['query']}&restrict_sr=on&sort=new&t=day&limit=10"
+            )
+            response = requests.get(
+                url,
+                headers={'User-Agent': 'OSINT-Monitor/2.1'},
+                timeout=10
+            )
+            if response.status_code != 200:
+                continue
+
+            posts = response.json().get('data', {}).get('children', [])
+
+            for post in posts:
+                pd = post.get('data', {})
+                title = pd.get('title', '')
+                score = pd.get('ups', 0)
+
+                # 只报热帖（score > 50）
+                if score > 50:
+                    # 检查是否联机相关
+                    title_upper = title.upper()
+                    online_hints = ['MULTIPLAYER', 'ONLINE', 'CO-OP', 'PVP', 'MMO',
+                                   'BATTLE ROYALE', 'FPS', 'SHOOTER', 'FREE']
+                    if any(kw in title_upper for kw in online_hints) or 'FREE' in title_upper:
+                        issues.append({
+                            'game': 'Epic Games Store',
+                            'region': 'Global',
+                            'country': '',
+                            'issue': f"🆕 [{source['label']}] {title} (↑{score})",
+                            'source_name': f"r/{source['subreddit']}",
+                            'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
+                        })
+                        break  # 每个 source 最多报一条
+
+        except Exception:
+            pass
+
+    return issues
+
+
+def check_playstation_releases():
+    """
+    通过 Reddit 检测 PlayStation 新游上线和重大更新。
+    """
+    issues = []
+
+    subreddits = [
+        {'sub': 'PS5', 'query': 'new+release+OR+launch+OR+update+OR+season', 'label': 'PS5'},
+        {'sub': 'PS4', 'query': 'new+release+OR+launch+OR+update', 'label': 'PS4'},
+    ]
+
+    for config in subreddits:
+        try:
+            url = (
+                f"https://www.reddit.com/r/{config['sub']}/search.json"
+                f"?q={config['query']}&restrict_sr=on&sort=hot&t=day&limit=10"
+            )
+            response = requests.get(
+                url,
+                headers={'User-Agent': 'OSINT-Monitor/2.1'},
+                timeout=10
+            )
+            if response.status_code != 200:
+                continue
+
+            posts = response.json().get('data', {}).get('children', [])
+
+            for post in posts:
+                pd = post.get('data', {})
+                title = pd.get('title', '')
+                score = pd.get('ups', 0)
+                flair = (pd.get('link_flair_text', '') or '').upper()
+
+                title_upper = title.upper()
+                is_game_news = any(kw in title_upper for kw in
+                    ['LAUNCH', 'RELEASE', 'AVAILABLE NOW', 'OUT NOW', 'UPDATE', 'SEASON', 'PATCH'])
+                is_online = any(kw in title_upper for kw in
+                    ['MULTIPLAYER', 'ONLINE', 'CO-OP', 'PVP', 'MMO', 'FPS', 'SERVERS'])
+                is_official = 'NEWS' in flair or 'OFFICIAL' in flair or 'GAME' in flair
+                is_hot = score > 200
+
+                if is_game_news and (is_online or is_hot) and (is_official or is_hot):
+                    issues.append({
+                        'game': f'PlayStation ({config["label"]})',
+                        'region': 'Global',
+                        'country': '',
+                        'issue': f"🎮 [PS 新游/更新] {title} (↑{score})",
+                        'source_name': f"r/{config['sub']}",
+                        'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
+                    })
+                    break
+
+        except Exception:
+            pass
+
+    return issues
+
+
+def check_xbox_gamepass_releases():
+    """
+    通过 Reddit 检测 Xbox / Game Pass 上新和重大更新。
+    Game Pass 上新联机游戏 = 大量玩家零成本涌入 = 加速需求暴增。
+    """
+    issues = []
+
+    subreddits = [
+        {'sub': 'XboxGamePass', 'query': 'coming+soon+OR+new+OR+available+today+OR+day+one', 'label': 'Game Pass 上新'},
+        {'sub': 'XboxSeriesX', 'query': 'new+release+OR+launch+OR+update+OR+season', 'label': 'Xbox 新游/更新'},
+    ]
+
+    for config in subreddits:
+        try:
+            url = (
+                f"https://www.reddit.com/r/{config['sub']}/search.json"
+                f"?q={config['query']}&restrict_sr=on&sort=hot&t=day&limit=10"
+            )
+            response = requests.get(
+                url,
+                headers={'User-Agent': 'OSINT-Monitor/2.1'},
+                timeout=10
+            )
+            if response.status_code != 200:
+                continue
+
+            posts = response.json().get('data', {}).get('children', [])
+
+            for post in posts:
+                pd = post.get('data', {})
+                title = pd.get('title', '')
+                score = pd.get('ups', 0)
+
+                title_upper = title.upper()
+                is_gamepass = any(kw in title_upper for kw in
+                    ['GAME PASS', 'GAMEPASS', 'DAY ONE', 'COMING SOON', 'AVAILABLE NOW', 'LAUNCH'])
+                is_online = any(kw in title_upper for kw in
+                    ['MULTIPLAYER', 'ONLINE', 'CO-OP', 'PVP', 'MMO', 'FPS'])
+                is_hot = score > 100
+
+                if (is_gamepass or is_hot) and (is_online or is_hot):
+                    issues.append({
+                        'game': f'Xbox ({config["label"]})',
+                        'region': 'Global',
+                        'country': '',
+                        'issue': f"🎮 [{config['label']}] {title} (↑{score})",
+                        'source_name': f"r/{config['sub']}",
+                        'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
+                    })
+                    break
+
+        except Exception:
+            pass
+
+    return issues
+
+
+def check_battlenet_updates():
+    """
+    通过 Reddit 检测暴雪/Battle.net 系游戏的大版本更新。
+    覆盖 OW2、WoW、Diablo、Hearthstone 等。
+    """
+    issues = []
+
+    blizzard_games = [
+        {'sub': 'Overwatch', 'name': 'Overwatch 2', 'keywords': ['season', 'patch', 'update', 'new hero', 'event']},
+        {'sub': 'wow', 'name': 'World of Warcraft', 'keywords': ['patch', 'update', 'expansion', 'season', 'raid']},
+        {'sub': 'diablo4', 'name': 'Diablo 4', 'keywords': ['season', 'patch', 'update', 'expansion']},
+        {'sub': 'hearthstone', 'name': 'Hearthstone', 'keywords': ['expansion', 'patch', 'update', 'new set']},
+    ]
+
+    for game in blizzard_games:
+        query = '+OR+'.join(game['keywords'])
+        try:
+            url = (
+                f"https://www.reddit.com/r/{game['sub']}/search.json"
+                f"?q=flair%3Aofficial+OR+flair%3Anews+OR+flair%3Ablizzard+{query}"
+                f"&restrict_sr=on&sort=new&t=day&limit=5"
+            )
+            response = requests.get(
+                url,
+                headers={'User-Agent': 'OSINT-Monitor/2.1'},
+                timeout=10
+            )
+            if response.status_code != 200:
+                continue
+
+            posts = response.json().get('data', {}).get('children', [])
+
+            for post in posts:
+                pd = post.get('data', {})
+                title = pd.get('title', '')
+                score = pd.get('ups', 0)
+                flair = (pd.get('link_flair_text', '') or '').upper()
+
+                title_upper = title.upper()
+                is_update = any(kw.upper() in title_upper for kw in game['keywords'])
+                is_official = any(kw in flair for kw in ['OFFICIAL', 'NEWS', 'BLIZZARD', 'PATCH', 'UPDATE'])
+                is_hot = score > 200
+
+                if is_update and (is_official or is_hot):
+                    issues.append({
+                        'game': game['name'],
+                        'region': 'Global',
+                        'country': '',
+                        'issue': f"🎮 [Battle.net 更新] {title} (↑{score})",
+                        'source_name': f"r/{game['sub']}",
+                        'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
+                    })
+                    break
+
+        except Exception:
+            pass
+
+    return issues
+
+
 def check_game_calendar():
     """主检测函数"""
     all_issues = []
@@ -299,6 +543,18 @@ def check_game_calendar():
 
     print("正在检测 Steam 热门新游上线...")
     all_issues.extend(check_hot_new_releases())
+
+    print("正在检测 Epic Games Store 新游/免费游戏...")
+    all_issues.extend(check_epic_new_releases())
+
+    print("正在检测 PlayStation 新游/更新...")
+    all_issues.extend(check_playstation_releases())
+
+    print("正在检测 Xbox / Game Pass 上新...")
+    all_issues.extend(check_xbox_gamepass_releases())
+
+    print("正在检测 Battle.net 游戏更新...")
+    all_issues.extend(check_battlenet_updates())
 
     return all_issues
 
