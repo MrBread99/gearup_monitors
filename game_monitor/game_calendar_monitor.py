@@ -38,23 +38,30 @@ TRACKED_GAMES = {
     'Path of Exile 2': 2694490,
 }
 
-# 非 Steam 游戏通过 Reddit 检测更新
+# 非 Steam 游戏通过 Reddit 检测更新（含预告）
 NON_STEAM_GAMES = {
-    'Valorant': {'subreddit': 'VALORANT', 'keywords': ['patch', 'update', 'season', 'episode', 'act']},
-    'League of Legends': {'subreddit': 'leagueoflegends', 'keywords': ['patch', 'update', 'season', 'preseason']},
-    'Fortnite': {'subreddit': 'FortNiteBR', 'keywords': ['update', 'season', 'chapter', 'patch', 'downtime']},
-    'Overwatch 2': {'subreddit': 'Overwatch', 'keywords': ['patch', 'update', 'season', 'hero']},
-    'Call of Duty': {'subreddit': 'CallOfDuty', 'keywords': ['update', 'season', 'patch', 'warzone']},
-    'Aion 2': {'subreddit': 'aion', 'keywords': ['update', 'patch', 'maintenance', 'launch']},
+    'Valorant': {'subreddit': 'VALORANT', 'keywords': ['patch', 'update', 'season', 'episode', 'act', 'upcoming', 'preview', 'roadmap']},
+    'League of Legends': {'subreddit': 'leagueoflegends', 'keywords': ['patch', 'update', 'season', 'preseason', 'preview', 'upcoming', 'pbe']},
+    'Fortnite': {'subreddit': 'FortNiteBR', 'keywords': ['update', 'season', 'chapter', 'patch', 'downtime', 'upcoming', 'teaser', 'countdown']},
+    'Overwatch 2': {'subreddit': 'Overwatch', 'keywords': ['patch', 'update', 'season', 'hero', 'preview', 'ptr', 'upcoming']},
+    'Call of Duty': {'subreddit': 'CallOfDuty', 'keywords': ['update', 'season', 'patch', 'warzone', 'upcoming', 'roadmap', 'preview']},
+    'Aion 2': {'subreddit': 'aion', 'keywords': ['update', 'patch', 'maintenance', 'launch', 'upcoming', 'beta', 'release date']},
 }
 
-# 大版本更新关键词（出现在 Steam News 标题中）
+# 大版本更新 + 预告关键词（出现在 Steam News 标题中）
 UPDATE_KEYWORDS = [
+    # 已上线更新
     "UPDATE", "PATCH", "SEASON", "MAJOR", "RELEASE",
     "WIPE", "NEW MAP", "NEW AGENT", "NEW HERO",
     "CHAPTER", "EPISODE", "ACT", "EXPANSION",
     "LEAGUE", "RANKED", "NEW WEAPON", "REWORK",
     "OPERATION", "EVENT",
+    # 预告类关键词
+    "COMING SOON", "UPCOMING", "PREVIEW", "TEASER",
+    "ROADMAP", "ANNOUNCEMENT", "REVEAL", "COUNTDOWN",
+    "DEV UPDATE", "DEV BLOG", "DEVELOPER UPDATE",
+    "PLANNED", "SCHEDULED", "MAINTENANCE NOTICE",
+    "NEXT SEASON", "NEXT UPDATE", "WHAT'S NEXT",
 ]
 
 # 联机游戏的 Steam 标签（用于过滤新游）
@@ -126,19 +133,31 @@ def check_steam_news_updates():
 
                 new_seen.append(gid)
 
-                # 检测是否为大版本更新
+                # 检测是否为大版本更新或预告
                 title_upper = title.upper()
                 is_major = any(kw in title_upper for kw in UPDATE_KEYWORDS)
+
+                # 区分预告 vs 已上线
+                PREVIEW_HINTS = ["COMING SOON", "UPCOMING", "PREVIEW", "TEASER",
+                                "ROADMAP", "ANNOUNCEMENT", "REVEAL", "COUNTDOWN",
+                                "DEV UPDATE", "DEV BLOG", "PLANNED", "SCHEDULED",
+                                "NEXT SEASON", "NEXT UPDATE", "WHAT'S NEXT",
+                                "MAINTENANCE NOTICE"]
+                is_preview = any(kw in title_upper for kw in PREVIEW_HINTS)
 
                 # 优先看官方公告（Community Announcements）
                 is_official = feed in ('Community Announcements', 'steam_community_announcements')
 
                 if is_major and is_official:
+                    if is_preview:
+                        tag = "📢 [预告/即将更新]"
+                    else:
+                        tag = "🎮 [大版本更新]"
                     issues.append({
                         'game': game_name,
                         'region': 'Global',
                         'country': '',
-                        'issue': f"🎮 [大版本更新] {title}",
+                        'issue': f"{tag} {title}",
                         'source_name': 'Steam News',
                         'source_url': item.get('url', f'https://store.steampowered.com/news/app/{app_id}')
                     })
@@ -155,9 +174,14 @@ def check_steam_news_updates():
 
 def check_non_steam_updates():
     """
-    通过 Reddit 检测非 Steam 游戏的大版本更新/新赛季。
+    通过 Reddit 检测非 Steam 游戏的大版本更新/新赛季/预告。
+    时间窗口扩大到一周，以便提前捕获更新预告。
     """
     issues = []
+
+    PREVIEW_HINTS = ["UPCOMING", "PREVIEW", "TEASER", "ROADMAP", "REVEAL",
+                     "COUNTDOWN", "DEV UPDATE", "PBE", "PTR", "COMING SOON",
+                     "NEXT SEASON", "ANNOUNCED"]
 
     for game_name, config in NON_STEAM_GAMES.items():
         subreddit = config['subreddit']
@@ -167,7 +191,7 @@ def check_non_steam_updates():
         url = (
             f"https://www.reddit.com/r/{subreddit}/search.json"
             f"?q=flair%3Aofficial+OR+flair%3Anews+{query}"
-            f"&restrict_sr=on&sort=new&t=day&limit=10"
+            f"&restrict_sr=on&sort=new&t=week&limit=10"
         )
 
         try:
@@ -193,12 +217,19 @@ def check_non_steam_updates():
                 is_official = 'OFFICIAL' in flair or 'NEWS' in flair or 'PATCH' in flair
                 is_hot = score > 100
 
+                # 区分预告 vs 已上线
+                is_preview = any(kw in title_upper for kw in PREVIEW_HINTS)
+
                 if is_update and (is_official or is_hot):
+                    if is_preview:
+                        tag = f"📢 [预告/即将更新]"
+                    else:
+                        tag = f"🎮 [版本更新]"
                     issues.append({
                         'game': game_name,
                         'region': 'Global',
                         'country': '',
-                        'issue': f"🎮 [版本更新] {title} (↑{score})",
+                        'issue': f"{tag} {title} (↑{score})",
                         'source_name': f'r/{subreddit}',
                         'source_url': f"https://www.reddit.com{post_data.get('permalink', '')}"
                     })
@@ -531,18 +562,138 @@ def check_battlenet_updates():
     return issues
 
 
+def check_steam_coming_soon():
+    """
+    检查 Steam 即将发售的热门联机游戏。
+    通过 Featured Categories API 的 coming_soon 列表，
+    逐个检查是否为联机游戏，提前 1-4 周发出预警。
+    """
+    issues = []
+    url = "https://store.steampowered.com/api/featuredcategories?cc=us"
+
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=15)
+        if response.status_code != 200:
+            return issues
+
+        data = response.json()
+        coming_soon = data.get('coming_soon', {}).get('items', [])
+
+        for item in coming_soon[:10]:
+            name = item.get('name', '')
+            app_id = item.get('id', 0)
+
+            try:
+                detail_url = f"https://store.steampowered.com/api/appdetails?appids={app_id}"
+                detail_resp = requests.get(detail_url, headers=HEADERS, timeout=10)
+                if detail_resp.status_code != 200:
+                    continue
+
+                detail_data = detail_resp.json()
+                app_data = detail_data.get(str(app_id), {}).get('data', {})
+
+                categories = app_data.get('categories', [])
+                category_names = [c.get('description', '') for c in categories]
+
+                is_online = any(
+                    tag in category_names
+                    for tag in ['Multi-player', 'Online PvP', 'Online Co-op',
+                               'MMO', 'Massively Multiplayer', 'Co-op']
+                )
+
+                if is_online:
+                    release_date = app_data.get('release_date', {})
+                    date_str = release_date.get('date', 'TBD')
+                    issues.append({
+                        'game': name,
+                        'region': 'Global',
+                        'country': '',
+                        'issue': f"📢 [即将发售/联机] {name} 预计发售: {date_str}，有加速需求",
+                        'source_name': 'Steam Coming Soon',
+                        'source_url': f'https://store.steampowered.com/app/{app_id}'
+                    })
+
+            except Exception:
+                pass
+
+        # 去重，最多 3 条
+        seen = set()
+        unique = []
+        for issue in issues:
+            if issue['game'] not in seen:
+                seen.add(issue['game'])
+                unique.append(issue)
+        return unique[:3]
+
+    except Exception as e:
+        print(f"[Calendar] Steam Coming Soon 检测失败: {e}")
+        return []
+
+
+def check_gamepass_upcoming():
+    """
+    通过 Reddit 检测 Game Pass 即将上新的游戏（通常提前 1-2 周公布）。
+    """
+    issues = []
+    try:
+        url = (
+            "https://www.reddit.com/r/XboxGamePass/search.json"
+            "?q=coming+soon+OR+coming+to+game+pass+OR+leaving+game+pass+OR+second+half"
+            "&restrict_sr=on&sort=hot&t=week&limit=10"
+        )
+        response = requests.get(
+            url,
+            headers={'User-Agent': 'OSINT-Monitor/2.1'},
+            timeout=10
+        )
+        if response.status_code != 200:
+            return issues
+
+        posts = response.json().get('data', {}).get('children', [])
+
+        for post in posts:
+            pd = post.get('data', {})
+            title = pd.get('title', '')
+            score = pd.get('ups', 0)
+
+            title_upper = title.upper()
+            is_upcoming = any(kw in title_upper for kw in
+                ['COMING SOON', 'COMING TO GAME PASS', 'GAME PASS', 'SECOND HALF',
+                 'FIRST HALF', 'LEAVING SOON', 'ANNOUNCED'])
+            is_hot = score > 100
+
+            if is_upcoming and is_hot:
+                issues.append({
+                    'game': 'Xbox Game Pass',
+                    'region': 'Global',
+                    'country': '',
+                    'issue': f"📢 [Game Pass 即将上新] {title} (↑{score})",
+                    'source_name': 'r/XboxGamePass',
+                    'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
+                })
+                break
+
+    except Exception:
+        pass
+
+    return issues
+
+
 def check_game_calendar():
     """主检测函数"""
     all_issues = []
 
-    print("正在检测已追踪游戏的大版本更新 (Steam News)...")
+    print("正在检测已追踪游戏的大版本更新/预告 (Steam News)...")
     all_issues.extend(check_steam_news_updates())
 
-    print("正在检测非 Steam 游戏更新 (Reddit)...")
+    print("正在检测非 Steam 游戏更新/预告 (Reddit)...")
     all_issues.extend(check_non_steam_updates())
 
     print("正在检测 Steam 热门新游上线...")
     all_issues.extend(check_hot_new_releases())
+
+    print("正在检测 Steam 即将发售的联机热门...")
+    all_issues.extend(check_steam_coming_soon())
 
     print("正在检测 Epic Games Store 新游/免费游戏...")
     all_issues.extend(check_epic_new_releases())
@@ -552,6 +703,9 @@ def check_game_calendar():
 
     print("正在检测 Xbox / Game Pass 上新...")
     all_issues.extend(check_xbox_gamepass_releases())
+
+    print("正在检测 Game Pass 即将上新...")
+    all_issues.extend(check_gamepass_upcoming())
 
     print("正在检测 Battle.net 游戏更新...")
     all_issues.extend(check_battlenet_updates())

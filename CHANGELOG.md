@@ -4,7 +4,32 @@
 
 ---
 
-## [v3.1.0] - 全平台新游/更新覆盖 (Current)
+## [v3.2.0] - 提前预警：预告/即将更新检测 (Current)
+
+### 📢 游戏日历监控转向"提前获知"
+将检测重心从"已上线通知"转向"提前 1-4 周预警"：
+
+**预告检测增强**:
+- Steam News 和 Reddit 检测新增预告类关键词：`COMING SOON`, `UPCOMING`, `PREVIEW`, `TEASER`, `ROADMAP`, `DEV UPDATE`, `COUNTDOWN`, `NEXT SEASON`, `PBE`, `PTR` 等。
+- 报警区分两种标签：`📢 [预告/即将更新]` vs `🎮 [大版本更新]`，一眼看出是提前预警还是已上线。
+- Reddit 搜索时间窗口从 `t=day` (1天) 扩大到 `t=week` (7天)，确保提前一周的预告不被遗漏。
+
+**新增检测维度**:
+- **Steam Coming Soon 联机热门**: 检查 Steam 即将发售列表，过滤有联机标签的游戏，报告预计发售日期。
+- **Game Pass 即将上新**: 通过 Reddit r/XboxGamePass 检测提前公布的 Game Pass 上新名单（通常提前 1-2 周）。
+
+### 📊 预警时间线
+| 信息类型 | 提前时间 | 数据源 |
+|---------|---------|--------|
+| Steam 即将发售 | 1-4 周 | Steam Coming Soon API |
+| Game Pass 即将上新 | 1-2 周 | Reddit r/XboxGamePass |
+| 官方预告/Roadmap | 1-7 天 | Steam News + Reddit |
+| 维护公告 | 1-3 天 | Steam News + Reddit |
+| 已上线更新 | 实时 | Steam News + Reddit + 各平台 |
+
+---
+
+## [v3.1.0] - 全平台新游/更新覆盖
 
 ### 🎮 游戏日历监控扩展至全平台
 在 v3.0.0 Steam 基础上新增 4 个非 Steam 平台的新游上线和热游更新检测：
