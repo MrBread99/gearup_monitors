@@ -3,9 +3,17 @@ import json
 import os
 import sys
 from datetime import datetime, timezone, timedelta
+from openai import OpenAI
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+
+# 通义千问 API 客户端
+QWEN_API_KEY = os.environ.get("QWEN_API_KEY", "")
+qwen_client = OpenAI(
+    api_key=QWEN_API_KEY,
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+) if QWEN_API_KEY else None
 
 # ==========================================
 # 新游上线 / 热游大版本更新监控
@@ -77,6 +85,47 @@ SNAPSHOT_FILE = os.path.join(
 )
 
 
+def summarize_update(game_name, title, content):
+    """
+    调用通义千问对游戏更新内容做中文摘要，提取：
+    1. 更新/上线时间
+    2. 2-3 句内容总结
+    3. 对加速器的影响判断
+    """
+    if not qwen_client:
+        # AI 未配置，退化为截取前 200 字
+        snippet = content[:200].replace('\n', ' ').strip()
+        return f"(AI未配置) {snippet}..."
+
+    prompt = f"""你是一个游戏加速器产品经理的助手。请分析以下游戏更新公告，用纯文本输出（禁止 Markdown 格式）：
+
+【游戏】: {game_name}
+【标题】: {title}
+【内容】: {content[:1500]}
+
+请严格按以下格式输出：
+更新时间: （提取公告中提到的具体日期/时间，如果没有明确提到则写"未提及"）
+内容摘要: （2-3 句话概括核心更新内容，用中文）
+加速器影响: （简短判断：新地图/新赛季/新模式等会带来玩家涌入需提前准备加速支持；反作弊/UI更新等对加速器无直接影响）
+"""
+
+    try:
+        response = qwen_client.chat.completions.create(
+            model="qwen-plus",
+            messages=[
+                {"role": "system", "content": "你是一个专业的游戏行业分析助手，输出简洁的纯文本。"},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=300
+        )
+        return str(response.choices[0].message.content).strip()
+    except Exception as e:
+        print(f"[Calendar] AI 摘要失败: {e}")
+        snippet = content[:200].replace('\n', ' ').strip()
+        return f"(AI调用失败) {snippet}..."
+
+
 def load_snapshot():
     if os.path.exists(SNAPSHOT_FILE):
         try:
@@ -104,7 +153,7 @@ def check_steam_news_updates():
     for game_name, app_id in TRACKED_GAMES.items():
         url = (
             f"https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/"
-            f"?appid={app_id}&count=5&maxlength=300&format=json"
+            f"?appid={app_id}&count=5&maxlength=2000&format=json"
         )
 
         try:
@@ -120,6 +169,7 @@ def check_steam_news_updates():
             for item in news_items:
                 gid = item.get('gid', '')
                 title = item.get('title', '')
+                contents = item.get('contents', '')
                 date = datetime.fromtimestamp(item.get('date', 0), timezone.utc)
                 feed = item.get('feedlabel', '')
 
@@ -153,11 +203,15 @@ def check_steam_news_updates():
                         tag = "📢 [预告/即将更新]"
                     else:
                         tag = "🎮 [大版本更新]"
+
+                    # 调用 AI 生成内容摘要
+                    summary = summarize_update(game_name, title, contents)
+
                     issues.append({
                         'game': game_name,
                         'region': 'Global',
                         'country': '',
-                        'issue': f"{tag} {title}",
+                        'issue': f"{tag} {title}\n    {summary}",
                         'source_name': 'Steam News',
                         'source_url': item.get('url', f'https://store.steampowered.com/news/app/{app_id}')
                     })
@@ -209,6 +263,7 @@ def check_non_steam_updates():
             for post in posts:
                 post_data = post.get('data', {})
                 title = post_data.get('title', '')
+                selftext = post_data.get('selftext', '')
                 score = post_data.get('ups', 0)
                 flair = (post_data.get('link_flair_text', '') or '').upper()
 
@@ -225,11 +280,19 @@ def check_non_steam_updates():
                         tag = f"📢 [预告/即将更新]"
                     else:
                         tag = f"🎮 [版本更新]"
+
+                    # 调用 AI 生成内容摘要（如果帖子有正文内容）
+                    if selftext and len(selftext) > 50:
+                        summary = summarize_update(game_name, title, selftext)
+                        issue_text = f"{tag} {title} (↑{score})\n    {summary}"
+                    else:
+                        issue_text = f"{tag} {title} (↑{score})"
+
                     issues.append({
                         'game': game_name,
                         'region': 'Global',
                         'country': '',
-                        'issue': f"{tag} {title} (↑{score})",
+                        'issue': issue_text,
                         'source_name': f'r/{subreddit}',
                         'source_url': f"https://www.reddit.com{post_data.get('permalink', '')}"
                     })
