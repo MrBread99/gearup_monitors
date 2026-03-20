@@ -341,6 +341,79 @@ def check_battlenet_status():
     return issues
 
 
+def check_faceit_status():
+    """
+    检查 FACEIT（CS2 第三方对战平台）状态。
+    通过 incident.io Status API 检测活跃事件和维护。
+    """
+    issues = []
+    url = "https://www.faceitstatus.com/api/v1/summary"
+
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=10)
+        if response.status_code != 200:
+            print(f"[FACEIT] HTTP {response.status_code}")
+            return issues
+
+        data = response.json()
+
+        # 检查活跃事件
+        ongoing = data.get('ongoing_incidents', [])
+        for incident in ongoing:
+            name = incident.get('name', 'Unknown')
+            issues.append({
+                'game': 'FACEIT',
+                'region': 'Global',
+                'country': '',
+                'issue': f"🔴 FACEIT 事件: {name}",
+                'source_name': 'FACEIT Status',
+                'source_url': 'https://www.faceitstatus.com/'
+            })
+
+        # 检查进行中的维护
+        in_progress = data.get('in_progress_maintenances', [])
+        for maint in in_progress:
+            name = maint.get('name', 'Unknown')
+            issues.append({
+                'game': 'FACEIT',
+                'region': 'Global',
+                'country': '',
+                'issue': f"🔧 FACEIT 维护中: {name}",
+                'source_name': 'FACEIT Status',
+                'source_url': 'https://www.faceitstatus.com/'
+            })
+
+        # Reddit 辅助检测
+        reddit_url = (
+            "https://www.reddit.com/r/FACEITcom/search.json"
+            "?q=down+OR+servers+OR+not+working+OR+queue&restrict_sr=on&sort=new&t=day&limit=25"
+        )
+        try:
+            reddit_resp = requests.get(
+                reddit_url,
+                headers={'User-Agent': 'OSINT-Monitor/2.1'},
+                timeout=10
+            )
+            if reddit_resp.status_code == 200:
+                posts = reddit_resp.json().get('data', {}).get('children', [])
+                if len(posts) >= 5:
+                    issues.append({
+                        'game': 'FACEIT',
+                        'region': 'Global',
+                        'country': '',
+                        'issue': f"📊 FACEIT 社区异常讨论: 过去 24h r/FACEITcom 有 {len(posts)} 条服务问题帖子",
+                        'source_name': 'r/FACEITcom',
+                        'source_url': 'https://www.reddit.com/r/FACEITcom/'
+                    })
+        except Exception:
+            pass
+
+    except Exception as e:
+        print(f"[FACEIT] 检测失败: {e}")
+
+    return issues
+
+
 def check_all_platforms():
     """主检测函数：检查所有平台状态"""
     all_issues = []
@@ -359,6 +432,9 @@ def check_all_platforms():
 
     print("正在检测 Battle.net 状态...")
     all_issues.extend(check_battlenet_status())
+
+    print("正在检测 FACEIT 状态...")
+    all_issues.extend(check_faceit_status())
 
     return all_issues
 
