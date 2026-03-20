@@ -116,13 +116,13 @@ HEADERS = {
 }
 
 
-def check_steam_reviews(game_name, hours_window=4, threshold=5):
+def check_steam_reviews(game_name, hours_window=2, threshold=5):
     """
     通过 Steam Store Reviews API 拉取指定游戏的近期差评，
     筛选网络问题相关关键词，判断是否达到报警阈值。
 
     :param game_name: 游戏名
-    :param hours_window: 时间窗口（小时），默认 4 小时
+    :param hours_window: 时间窗口（小时），默认 2 小时
     :param threshold: 匹配到的差评数量阈值，默认 5 条
     :return: issue dict 或 None
     """

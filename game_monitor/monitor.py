@@ -22,7 +22,7 @@ if sys.stdout.encoding.lower() != 'utf-8':
 
 def check_reddit_osint(game_name, subreddit):
     """
-    通过 OSINT (Reddit) 抓取最近 4 小时内玩家关于服务器、延迟、丢包的集中反馈。
+    通过 OSINT (Reddit) 抓取最近 2 小时内玩家关于服务器、延迟、丢包的集中反馈。
     """
     issues = []
     # 搜索包含服务器、延迟、丢包等关键字的最新帖子
@@ -36,7 +36,7 @@ def check_reddit_osint(game_name, subreddit):
             posts = data.get('data', {}).get('children', [])
             
             recent_complaints = 0
-            four_hours_ago = datetime.now(timezone.utc) - timedelta(hours=4)
+            two_hours_ago = datetime.now(timezone.utc) - timedelta(hours=2)
             
             regions_mentioned = set()
             countries_mentioned = set()
@@ -65,8 +65,8 @@ def check_reddit_osint(game_name, subreddit):
                 post_data = post['data']
                 post_time = datetime.fromtimestamp(post_data['created_utc'], timezone.utc)
                 
-                # 仅统计过去 4 小时内的反馈
-                if post_time > four_hours_ago:
+                # 仅统计过去 2 小时内的反馈
+                if post_time > two_hours_ago:
                     recent_complaints += 1
                     title = post_data.get('title', '').upper()
                     text = post_data.get('selftext', '').upper()
@@ -77,7 +77,7 @@ def check_reddit_osint(game_name, subreddit):
                     for key, val in country_map.items():
                         if key in content: countries_mentioned.add(val)
             
-            # 如果 4 小时内有相关的反馈，则根据地区调整触发阈值
+            # 如果 2 小时内有相关的反馈，则根据地区调整触发阈值
             # 欧美大区发帖量大，阈值为 5；其他小区域发帖量小，阈值降为 3
             threshold = 5
             is_minor_region = bool(regions_mentioned.intersection({"MENA", "SA", "APAC"})) or bool(countries_mentioned)
@@ -90,7 +90,7 @@ def check_reddit_osint(game_name, subreddit):
             for post in posts:
                 post_data = post['data']
                 post_time = datetime.fromtimestamp(post_data['created_utc'], timezone.utc)
-                if post_time > four_hours_ago:
+                if post_time > two_hours_ago:
                     total_upvotes += post_data.get('ups', 0)
                     total_comments += post_data.get('num_comments', 0)
                     
@@ -147,7 +147,7 @@ def check_reddit_osint(game_name, subreddit):
                 for post in posts:
                     post_data = post['data']
                     post_time = datetime.fromtimestamp(post_data['created_utc'], timezone.utc)
-                    if post_time > four_hours_ago:
+                    if post_time > two_hours_ago:
                         content = (post_data.get('title', '') + " " + post_data.get('selftext', '')).upper()
                         
                         for kw in isp_keywords:

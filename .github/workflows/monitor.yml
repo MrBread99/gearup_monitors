@@ -2,7 +2,7 @@ name: Game Server Monitor
 
 on:
   schedule:
-    - cron: '0 */4 * * *' # 每 4 小时运行一次 (UTC时间)
+    - cron: '0 */2 * * *' # 每 2 小时运行一次 (UTC时间)
   workflow_dispatch: # 允许你在 GitHub Actions 页面手动触发运行
 
 jobs:
