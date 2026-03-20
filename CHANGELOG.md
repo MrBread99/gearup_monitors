@@ -4,7 +4,27 @@
 
 ---
 
-## [v2.8.0] - 通讯与游戏平台全球连接监控 (Current)
+## [v2.9.0] - 平台监控扩充至 13 个 (Current)
+
+### 🌐 平台状态监控扩充
+新增 7 个平台/通讯工具，`platform_status_monitor.py` 总覆盖从 6 个扩充至 **13 个**：
+
+**游戏平台 (新增 4 个)**:
+- **Riot Games (Valorant/LOL)**: 官方 CDN Status API，分区域（AP/EU/NA/KR/JP/SG/EUW）检测事件和维护。
+- **Xbox Live / PSN**: Reddit 社区间接检测主机联机服务状态。
+- **EA App**: Reddit 间接检测 EA 服务器连接问题（影响 Apex Legends/FIFA 等）。
+- **Ubisoft Connect**: Reddit 间接检测（影响 Rainbow Six Siege 等）。
+
+**通讯工具 (新增 2 个)**:
+- **WhatsApp**: Reddit 间接检测中东/东南亚 VoIP 封锁和全球故障。
+- **LINE**: Reddit 间接检测日本/泰国/台湾连接问题（日语/泰语关键词）。
+
+**地区平台 (新增 1 个)**:
+- **Garena**: Reddit 间接检测东南亚游戏平台状态（LOL 东南亚/Free Fire）。
+
+---
+
+## [v2.8.0] - 通讯与游戏平台全球连接监控
 
 ### 🌐 新增平台状态监控模块 (`game_monitor/platform_status_monitor.py`)
 - **Discord 全球状态监控**:
