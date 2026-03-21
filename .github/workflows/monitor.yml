@@ -23,6 +23,7 @@ jobs:
       - name: Run Game Monitor Script
         env:
           POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
+          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
         run: python game_monitor/monitor.py
 
       - name: Run Platform Status Monitor

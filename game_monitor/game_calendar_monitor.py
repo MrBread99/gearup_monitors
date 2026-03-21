@@ -212,6 +212,7 @@ def check_steam_news_updates():
                         'region': 'Global',
                         'country': '',
                         'issue': f"{tag} {title}\n    {summary}",
+                        'alert_type': 'game_calendar',
                         'source_name': 'Steam News',
                         'source_url': item.get('url', f'https://store.steampowered.com/news/app/{app_id}')
                     })
@@ -293,6 +294,7 @@ def check_non_steam_updates():
                         'region': 'Global',
                         'country': '',
                         'issue': issue_text,
+                        'alert_type': 'game_calendar',
                         'source_name': f'r/{subreddit}',
                         'source_url': f"https://www.reddit.com{post_data.get('permalink', '')}"
                     })
@@ -322,11 +324,11 @@ def check_hot_new_releases():
         for category_key in ['top_sellers', 'new_releases']:
             category = data.get(category_key, {})
             items = category.get('items', [])
+            category_label = 'Top Sellers' if category_key == 'top_sellers' else 'New Releases'
 
-            for item in items[:15]:  # 只看前 15
+            for rank, item in enumerate(items[:15], 1):  # 只看前 15，rank 从 1 开始
                 name = item.get('name', '')
                 app_id = item.get('id', 0)
-                price = item.get('final_price', 0)
 
                 # 检查是否为联机游戏（通过 appdetails API）
                 detail_url = f"https://store.steampowered.com/api/appdetails?appids={app_id}"
@@ -350,14 +352,17 @@ def check_hot_new_releases():
                         )
 
                         if is_online:
-                            # 检查是否为最近 7 天发售
+                            # 提取游戏类型
+                            genre_str = ', '.join(genre_names[:3]) if genre_names else '未知类型'
+
                             release_date = app_data.get('release_date', {})
                             if not release_date.get('coming_soon', True):
                                 issues.append({
                                     'game': name,
                                     'region': 'Global',
                                     'country': '',
-                                    'issue': f"🆕 [热门新游/联机] {name} 登上 Steam {category_key.replace('_', ' ').title()}，有加速需求",
+                                    'issue': f"🆕 [Steam {category_label} #{rank}] {name} ({genre_str})",
+                                    'alert_type': 'game_calendar',
                                     'source_name': 'Steam Store',
                                     'source_url': f'https://store.steampowered.com/app/{app_id}'
                                 })
@@ -439,6 +444,7 @@ def check_epic_new_releases():
                             'region': 'Global',
                             'country': '',
                             'issue': f"🆕 [{source['label']}] {title} (↑{score})",
+                            'alert_type': 'game_calendar',
                             'source_name': f"r/{source['subreddit']}",
                             'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
                         })
@@ -497,6 +503,7 @@ def check_playstation_releases():
                         'region': 'Global',
                         'country': '',
                         'issue': f"🎮 [PS 新游/更新] {title} (↑{score})",
+                        'alert_type': 'game_calendar',
                         'source_name': f"r/{config['sub']}",
                         'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
                     })
@@ -554,6 +561,7 @@ def check_xbox_gamepass_releases():
                         'region': 'Global',
                         'country': '',
                         'issue': f"🎮 [{config['label']}] {title} (↑{score})",
+                        'alert_type': 'game_calendar',
                         'source_name': f"r/{config['sub']}",
                         'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
                     })
@@ -614,6 +622,7 @@ def check_battlenet_updates():
                         'region': 'Global',
                         'country': '',
                         'issue': f"🎮 [Battle.net 更新] {title} (↑{score})",
+                        'alert_type': 'game_calendar',
                         'source_name': f"r/{game['sub']}",
                         'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
                     })
@@ -667,11 +676,18 @@ def check_steam_coming_soon():
                 if is_online:
                     release_date = app_data.get('release_date', {})
                     date_str = release_date.get('date', 'TBD')
+
+                    # 提取游戏类型
+                    genres = app_data.get('genres', [])
+                    genre_names = [g.get('description', '') for g in genres]
+                    genre_str = ', '.join(genre_names[:3]) if genre_names else '未知类型'
+
                     issues.append({
                         'game': name,
                         'region': 'Global',
                         'country': '',
-                        'issue': f"📢 [即将发售/联机] {name} 预计发售: {date_str}，有加速需求",
+                        'issue': f"📢 [即将发售] {name} ({genre_str}) 预计发售: {date_str}",
+                        'alert_type': 'game_calendar',
                         'source_name': 'Steam Coming Soon',
                         'source_url': f'https://store.steampowered.com/app/{app_id}'
                     })
@@ -731,6 +747,7 @@ def check_gamepass_upcoming():
                     'region': 'Global',
                     'country': '',
                     'issue': f"📢 [Game Pass 即将上新] {title} (↑{score})",
+                    'alert_type': 'game_calendar',
                     'source_name': 'r/XboxGamePass',
                     'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
                 })

@@ -3,6 +3,7 @@ import json
 import os
 import sys
 from datetime import datetime, timezone, timedelta
+from openai import OpenAI
 
 # 自动把根目录加入 path，以便找到 utils 模块
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -12,6 +13,47 @@ import downdetector_osint # 引入聚合报错监控模块
 import cis_osint # 引入独联体/俄语区 OSINT 模块
 import steam_osint # 引入 Steam 差评监控模块
 from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+
+# 通义千问 API 客户端（用于总结玩家反馈内容）
+QWEN_API_KEY = os.environ.get("QWEN_API_KEY", "")
+qwen_client = OpenAI(
+    api_key=QWEN_API_KEY,
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+) if QWEN_API_KEY else None
+
+
+def summarize_player_complaints(game_name, post_titles):
+    """
+    调用通义千问对玩家反馈帖子标题做中文摘要，
+    概括玩家具体在抱怨什么网络问题。
+    """
+    if not qwen_client or not post_titles:
+        return ""
+
+    titles_text = '\n'.join(post_titles[:10])  # 最多传 10 条标题
+
+    prompt = f"""你是一个游戏加速器产品经理的助手。以下是 {game_name} 玩家在社区集中反馈的帖子标题，请用 1-2 句中文概括玩家反馈的核心网络问题是什么（如：哪些地区受影响、什么类型的故障、哪个运营商等）。
+
+帖子标题:
+{titles_text}
+
+要求: 纯文本输出，不要 Markdown 格式，不要超过 2 句话。"""
+
+    try:
+        response = qwen_client.chat.completions.create(
+            model="qwen-plus",
+            messages=[
+                {"role": "system", "content": "你是一个游戏网络问题分析专家，输出简洁中文。"},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=150
+        )
+        return str(response.choices[0].message.content).strip()
+    except Exception as e:
+        print(f"[Monitor] AI 摘要失败: {e}")
+        return ""
+
 
 # 解决 Windows 控制台输出 Emoji 时的编码问题
 if sys.stdout.encoding.lower() != 'utf-8':
@@ -40,6 +82,7 @@ def check_reddit_osint(game_name, subreddit):
             
             regions_mentioned = set()
             countries_mentioned = set()
+            complaint_titles = []  # 收集帖子标题用于 AI 摘要
             
             # 关键字映射，用于提取细粒度的国家与大区
             region_map = {
@@ -71,6 +114,7 @@ def check_reddit_osint(game_name, subreddit):
                     title = post_data.get('title', '').upper()
                     text = post_data.get('selftext', '').upper()
                     content = title + " " + text
+                    complaint_titles.append(post_data.get('title', ''))  # 原始标题用于 AI
                     
                     for key, val in region_map.items():
                         if key in content: regions_mentioned.add(val) # 改为直接包含匹配，不再强制要求 split 分词
@@ -168,6 +212,11 @@ def check_reddit_osint(game_name, subreddit):
                     issue_desc = f"🟢 [加速器可解决] {viral_tag} ⭐⭐⭐ 绝佳营销时机 (路由/高Ping故障) - {isp_str}(共{recent_complaints}篇反馈/2h)"
                 else:
                     issue_desc = f"🟡 [待确认] 玩家社区反馈集中 ({recent_complaints}篇帖子/2h) 涉及网络问题，需人工判断"
+
+                # AI 总结玩家反馈内容
+                ai_summary = summarize_player_complaints(game_name, complaint_titles)
+                if ai_summary:
+                    issue_desc += f"\n    玩家反馈概要: {ai_summary}"
                 
                 # =========================================================
 

@@ -9,7 +9,8 @@ POPO_WEBHOOK_URL = os.environ.get("POPO_WEBHOOK_URL")
 def send_popo_alert(webhook_url, issues_list):
     """
     将问题列表格式化为纯文本，并发送至 NetEase POPO Webhook。
-    为了减少打扰，如果 issues_list 为空，直接静默退出，不再发送“一切正常”的通知。
+    支持按 alert_type 分组输出不同标题的报警。
+    为了减少打扰，如果 issues_list 为空，直接静默退出。
     """
     if not issues_list:
         print("未检测到异常或情报，静默退出，不发送打扰信息。")
@@ -17,25 +18,46 @@ def send_popo_alert(webhook_url, issues_list):
 
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # 构造极简纯文本格式，移除所有的 Markdown 星号和表格语法
-    plain_content = f"【全球监控商机雷达警报】\n时间: {current_time}\n\n"
-    
+    # 按 alert_type 分组
+    ALERT_TITLES = {
+        'game_monitor': '【全球监控商机雷达警报】',
+        'game_calendar': '【新游上线/热游更新预告】',
+        'platform_status': '【平台与通讯工具状态警报】',
+        'brand_monitor': '【品牌舆情监控报告】',
+        'competitor_radar': '【竞品情报警报】',
+    }
+
+    groups = {}
     for item in issues_list:
-        region_display = f"{item['region']} ({item['country']})" if item.get('country') else item['region']
-        
-        # 去掉 issue 中可能包含的粗体和红灯 emoji
-        clean_issue = item['issue'].replace('**', '').replace('__', '')
-        
-        plain_content += f"[{item['game']}]\n"
-        plain_content += f"地区: {region_display}\n"
-        plain_content += f"情报: {clean_issue}\n"
-        
-        if item.get('source_url'):
-            plain_content += f"来源: {item['source_name']} ({item['source_url']})\n"
-        else:
-            plain_content += f"来源: {item['source_name']}\n"
-            
-        plain_content += "-" * 30 + "\n"
+        alert_type = item.get('alert_type', 'game_monitor')
+        if alert_type not in groups:
+            groups[alert_type] = []
+        groups[alert_type].append(item)
+
+    # 构造极简纯文本格式
+    plain_content = ""
+    for alert_type, items in groups.items():
+        title = ALERT_TITLES.get(alert_type, '【监控警报】')
+        plain_content += f"{title}\n时间: {current_time}\n\n"
+
+        for item in items:
+            region_display = f"{item['region']} ({item['country']})" if item.get('country') else item['region']
+
+            # 去掉 issue 中可能包含的粗体和红灯 emoji
+            clean_issue = item['issue'].replace('**', '').replace('__', '')
+
+            plain_content += f"[{item['game']}]\n"
+            plain_content += f"地区: {region_display}\n"
+            plain_content += f"情报: {clean_issue}\n"
+
+            if item.get('source_url'):
+                plain_content += f"来源: {item['source_name']} ({item['source_url']})\n"
+            else:
+                plain_content += f"来源: {item['source_name']}\n"
+
+            plain_content += "-" * 30 + "\n"
+
+        plain_content += "\n"
 
     headers = {'Content-Type': 'application/json'}
     payload = {
