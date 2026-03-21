@@ -531,7 +531,7 @@ def check_steam_news_updates():
                         'game': game_name,
                         'region': 'Global',
                         'country': '',
-                        'issue': f"{tag} {title}\n    {summary}\n    加速需求: {accel_need}",
+                        'issue': f"{tag} {title}\n    加速需求: {accel_need}\n    {summary}",
                         'alert_type': 'game_update',
                         'update_priority': update_priority,
                         'source_name': 'Steam News',
@@ -603,16 +603,15 @@ def check_non_steam_updates():
                     else:
                         tag = f"🎮 [版本更新]"
 
+                    # 调用 AI 分析加速需求
+                    accel_need = analyze_acceleration_need(game_name, update_content=selftext or title)
+
                     # 调用 AI 生成内容摘要（如果帖子有正文内容）
                     if selftext and len(selftext) > 50:
                         summary = summarize_update(game_name, title, selftext)
-                        issue_text = f"{tag} {title} (↑{score})\n    {summary}"
+                        issue_text = f"{tag} {title} (↑{score})\n    加速需求: {accel_need}\n    {summary}"
                     else:
-                        issue_text = f"{tag} {title} (↑{score})"
-
-                    # 调用 AI 分析加速需求
-                    accel_need = analyze_acceleration_need(game_name, update_content=selftext or title)
-                    issue_text += f"\n    加速需求: {accel_need}"
+                        issue_text = f"{tag} {title} (↑{score})\n    加速需求: {accel_need}"
 
                     # 综合优先级
                     update_priority = estimate_update_priority(reddit_score=score, accel_need_text=accel_need)
@@ -686,6 +685,7 @@ def check_hot_new_releases():
 
                             release_date = app_data.get('release_date', {})
                             if not release_date.get('coming_soon', True):
+                                date_str = release_date.get('date', '未知')
                                 # 推算头部地区
                                 top_regions = infer_top_regions(app_data)
                                 # AI 新游玩法介绍
@@ -699,11 +699,12 @@ def check_hot_new_releases():
                                 hype_label = format_hype_label(hype_score)
 
                                 issue_text = f"🆕 [Steam {category_label} #{rank}] {name} ({genre_str})"
+                                issue_text += f"\n    上线时间: {date_str}"
                                 issue_text += f"\n    热度预估: {hype_label}"
+                                issue_text += f"\n    加速需求: {accel_need}"
                                 issue_text += f"\n    头部地区: {top_regions}"
                                 if game_intro:
                                     issue_text += f"\n    玩法介绍: {game_intro}"
-                                issue_text += f"\n    加速需求: {accel_need}"
 
                                 issues.append({
                                     'game': name,
