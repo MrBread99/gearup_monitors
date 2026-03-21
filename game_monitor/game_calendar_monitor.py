@@ -85,6 +85,113 @@ SNAPSHOT_FILE = os.path.join(
 )
 
 
+def analyze_acceleration_need(game_name, app_data=None, update_content=''):
+    """
+    分析游戏的加速需求等级。
+    结合 Steam 结构化数据（联机类型、游戏类型）和 Qwen AI 综合判断。
+
+    返回格式：
+    加速需求: ⭐⭐⭐⭐⭐ 极高 - FPS 竞技联机，延迟敏感度极高，且部分地区有封锁风险
+    """
+    # Step 1: 从结构化数据提取关键特征
+    features = {
+        'is_online': False,
+        'online_type': [],      # PvP / Co-op / MMO
+        'genres': [],
+        'latency_sensitive': False,
+        'region_locked': False,
+        'supported_languages': '',
+    }
+
+    if app_data:
+        categories = app_data.get('categories', [])
+        cat_names = [c.get('description', '') for c in categories]
+        genres = app_data.get('genres', [])
+        genre_names = [g.get('description', '') for g in genres]
+
+        features['genres'] = genre_names
+
+        # 判断联机类型
+        online_types = []
+        if 'Online PvP' in cat_names:
+            online_types.append('Online PvP')
+        if 'Online Co-op' in cat_names:
+            online_types.append('Online Co-op')
+        if 'Multi-player' in cat_names:
+            online_types.append('Multi-player')
+        if 'MMO' in cat_names or 'Massively Multiplayer' in cat_names:
+            online_types.append('MMO')
+
+        features['is_online'] = bool(online_types)
+        features['online_type'] = online_types
+
+        # 延迟敏感度判断（FPS/格斗/MOBA/竞速/大逃杀 > 其他联机）
+        high_sensitivity_genres = ['FPS', 'Shooter', 'Fighting', 'MOBA', 'Racing',
+                                   'Battle Royale', 'Sports']
+        features['latency_sensitive'] = any(
+            g in genre_names or g.lower() in [gn.lower() for gn in genre_names]
+            for g in high_sensitivity_genres
+        )
+
+        features['supported_languages'] = app_data.get('supported_languages', '')
+
+    # Step 2: 调用 Qwen 做综合分析
+    if not qwen_client:
+        # 无 AI，基于规则给出简单评级
+        if not features['is_online']:
+            return "⭐ 低 - 单机游戏，无联机需求"
+        elif features['latency_sensitive']:
+            return "⭐⭐⭐⭐⭐ 极高 - 竞技联机，延迟敏感度高"
+        elif 'MMO' in features['online_type']:
+            return "⭐⭐⭐⭐ 高 - MMO 联机，跨区组队需要加速"
+        else:
+            return "⭐⭐⭐ 中 - 有联机模式"
+
+    features_text = f"""联机类型: {', '.join(features['online_type']) if features['online_type'] else '无/未知'}
+游戏类型: {', '.join(features['genres']) if features['genres'] else '未知'}
+延迟敏感: {'是' if features['latency_sensitive'] else '否/未知'}
+支持语言: {features['supported_languages'][:200] if features['supported_languages'] else '未知'}"""
+
+    prompt = f"""你是一个游戏加速器产品专家。请从以下角度分析这款游戏的加速需求，并给出 1-5 星评级：
+
+【游戏】: {game_name}
+【结构化特征】:
+{features_text}
+【更新/游戏内容】: {update_content[:500] if update_content else '无'}
+
+分析角度:
+1. 是否联网游戏（纯单机=无需求，有联机=有需求）
+2. 对延迟的敏感度（FPS/格斗/MOBA 极高，MMO/合作 中等，回合制 低）
+3. 是否有跨区服务器（全球服/亚服/欧服分区 = 跨区加速需求）
+4. 是否有地区封锁或限制风险（如某些游戏在特定国家不可用）
+5. 本次更新是否会带来玩家涌入（新赛季/大版本/免费活动）
+
+请严格按以下格式输出一行（禁止换行，禁止 Markdown）:
+⭐评级(1-5星) 需求等级(极高/高/中/低/无) - 一句话分析理由(30字以内)"""
+
+    try:
+        response = qwen_client.chat.completions.create(
+            model="qwen-plus",
+            messages=[
+                {"role": "system", "content": "你是游戏加速器产品专家，输出简洁一行。"},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2,
+            max_tokens=100
+        )
+        result = str(response.choices[0].message.content).strip()
+        # 确保只返回一行
+        return result.split('\n')[0]
+    except Exception as e:
+        print(f"[Calendar] AI 加速需求分析失败: {e}")
+        if not features['is_online']:
+            return "⭐ 低 - 单机游戏"
+        elif features['latency_sensitive']:
+            return "⭐⭐⭐⭐⭐ 极高 - 竞技联机"
+        else:
+            return "⭐⭐⭐ 中 - 联机游戏"
+
+
 def infer_top_regions(app_data):
     """
     根据 Steam appdetails 的 supported_languages 和 ratings 推算 TOP5 目标市场。
@@ -318,12 +425,14 @@ def check_steam_news_updates():
 
                     # 调用 AI 生成内容摘要
                     summary = summarize_update(game_name, title, contents)
+                    # 调用 AI 分析加速需求
+                    accel_need = analyze_acceleration_need(game_name, update_content=contents)
 
                     issues.append({
                         'game': game_name,
                         'region': 'Global',
                         'country': '',
-                        'issue': f"{tag} {title}\n    {summary}",
+                        'issue': f"{tag} {title}\n    {summary}\n    加速需求: {accel_need}",
                         'alert_type': 'game_update',
                         'source_name': 'Steam News',
                         'source_url': item.get('url', f'https://store.steampowered.com/news/app/{app_id}')
@@ -401,6 +510,10 @@ def check_non_steam_updates():
                     else:
                         issue_text = f"{tag} {title} (↑{score})"
 
+                    # 调用 AI 分析加速需求
+                    accel_need = analyze_acceleration_need(game_name, update_content=selftext or title)
+                    issue_text += f"\n    加速需求: {accel_need}"
+
                     issues.append({
                         'game': game_name,
                         'region': 'Global',
@@ -474,11 +587,14 @@ def check_hot_new_releases():
                                 # AI 新游玩法介绍
                                 description = app_data.get('short_description', '') or app_data.get('about_the_game', '')
                                 game_intro = summarize_new_game(name, description) if description else ''
+                                # AI 加速需求分析
+                                accel_need = analyze_acceleration_need(name, app_data)
 
                                 issue_text = f"🆕 [Steam {category_label} #{rank}] {name} ({genre_str})"
                                 issue_text += f"\n    头部地区: {top_regions}"
                                 if game_intro:
                                     issue_text += f"\n    玩法介绍: {game_intro}"
+                                issue_text += f"\n    加速需求: {accel_need}"
 
                                 issues.append({
                                     'game': name,
@@ -805,11 +921,17 @@ def check_steam_coming_soon():
                     genre_names = [g.get('description', '') for g in genres]
                     genre_str = ', '.join(genre_names[:3]) if genre_names else '未知类型'
 
+                    # AI 加速需求分析
+                    accel_need = analyze_acceleration_need(name, app_data)
+
+                    issue_text = f"📢 [即将发售] {name} ({genre_str}) 预计发售: {date_str}"
+                    issue_text += f"\n    加速需求: {accel_need}"
+
                     issues.append({
                         'game': name,
                         'region': 'Global',
                         'country': '',
-                        'issue': f"📢 [即将发售] {name} ({genre_str}) 预计发售: {date_str}",
+                        'issue': issue_text,
                         'alert_type': 'new_game_release',
                         'source_name': 'Steam Coming Soon',
                         'source_url': f'https://store.steampowered.com/app/{app_id}'
