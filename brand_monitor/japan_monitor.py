@@ -1,11 +1,11 @@
 import requests
-from bs4 import BeautifulSoup
 import os
 import sys
-import urllib.parse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.reddit_client import reddit_get
+from utils.google_client import google_search
 
 # ==========================================
 # 日本品牌舆情监控
@@ -51,76 +51,16 @@ JP_POSITIVE = [
     "ラグ解消", "ping下がった", "買い",
 ]
 
-HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-                  '(KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
-    'Accept-Language': 'ja-JP,ja;q=0.9,en-US;q=0.8'
-}
-
-
 def search_5ch_via_google(query):
     """通过 Google site:5ch.net 搜索 5ch 论坛内容"""
-    encoded = urllib.parse.quote(f"site:5ch.net {query}")
-    url = f"https://www.google.com/search?q={encoded}&tbs=qdr:m&num=10"
-
-    results = []
-    try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
-        if response.status_code != 200:
-            return []
-
-        soup = BeautifulSoup(response.text, 'html.parser')
-        for h3 in soup.select('h3'):
-            title = h3.get_text(strip=True)
-            parent_a = h3.find_parent('a')
-            link = parent_a.get('href', '') if parent_a else ''
-            if title and '5ch' in link:
-                results.append({
-                    'title': title,
-                    'url': link,
-                    'source': '5ch'
-                })
-
-        return results[:10]
-    except Exception as e:
-        print(f"[JP] 搜索 5ch '{query}' 失败: {e}")
-        return []
+    raw = google_search(query, site='5ch.net')
+    return [{'title': r['title'], 'url': r['url'], 'source': '5ch'} for r in raw]
 
 
 def search_google_japan(query):
     """Google 日语搜索（覆盖 4Gamer, GameWith, Price.com 等）"""
-    encoded = urllib.parse.quote(query)
-    url = (
-        f"https://www.google.co.jp/search?q={encoded}"
-        f"&lr=lang_ja&tbs=qdr:m&num=10"
-    )
-
-    results = []
-    try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
-        if response.status_code != 200:
-            # fallback to google.com
-            url = f"https://www.google.com/search?q={encoded}&lr=lang_ja&tbs=qdr:m&num=10"
-            response = requests.get(url, headers=HEADERS, timeout=15)
-            if response.status_code != 200:
-                return []
-
-        soup = BeautifulSoup(response.text, 'html.parser')
-        for h3 in soup.select('h3'):
-            title = h3.get_text(strip=True)
-            parent_a = h3.find_parent('a')
-            link = parent_a.get('href', '') if parent_a else ''
-            if title and link:
-                results.append({
-                    'title': title,
-                    'url': link,
-                    'source': 'Google JP'
-                })
-
-        return results[:10]
-    except Exception as e:
-        print(f"[JP] Google JP 搜索 '{query}' 失败: {e}")
-        return []
+    raw = google_search(query, lang_code='ja')
+    return [{'title': r['title'], 'url': r['url'], 'source': 'Google JP'} for r in raw]
 
 
 def search_reddit_japan(keyword):
@@ -134,11 +74,9 @@ def search_reddit_japan(keyword):
             f"?q={encoded}&restrict_sr=on&sort=new&t=month&limit=25"
         )
         try:
-            response = requests.get(
-                url,
-                headers={'User-Agent': 'OSINT-Monitor/2.1'},
-                timeout=10
-            )
+            response = reddit_get(url)
+            if response is None:
+                continue
             if response.status_code == 200:
                 data = response.json()
                 children = data.get('data', {}).get('children', [])

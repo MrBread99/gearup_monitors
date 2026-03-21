@@ -6,6 +6,8 @@ import urllib.parse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.reddit_client import reddit_get
+from utils.google_client import google_search
 
 # ==========================================
 # 东南亚品牌舆情监控
@@ -57,7 +59,7 @@ ALL_POSITIVE = VI_POSITIVE + TL_POSITIVE + ID_POSITIVE + TH_POSITIVE + [
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
                   '(KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
-}
+}  # Retained for search_tinhte
 
 
 def search_reddit_sea(keyword):
@@ -71,11 +73,9 @@ def search_reddit_sea(keyword):
             f"?q={encoded}&restrict_sr=on&sort=new&t=month&limit=25"
         )
         try:
-            response = requests.get(
-                url,
-                headers={'User-Agent': 'OSINT-Monitor/2.1'},
-                timeout=10
-            )
+            response = reddit_get(url)
+            if response is None:
+                continue
             if response.status_code == 200:
                 data = response.json()
                 children = data.get('data', {}).get('children', [])
@@ -129,44 +129,8 @@ def search_tinhte(query):
 
 def search_google_local(query, lang_code):
     """通过 Google 搜索本地语言内容"""
-    encoded = urllib.parse.quote(query)
-    url = (
-        f"https://www.google.com/search?q={encoded}"
-        f"&lr=lang_{lang_code}&tbs=qdr:m&num=10"
-    )
-
-    results = []
-    try:
-        headers = HEADERS.copy()
-        if lang_code == 'vi':
-            headers['Accept-Language'] = 'vi-VN,vi;q=0.9'
-        elif lang_code == 'id':
-            headers['Accept-Language'] = 'id-ID,id;q=0.9'
-        elif lang_code == 'tl':
-            headers['Accept-Language'] = 'fil-PH,fil;q=0.9'
-        elif lang_code == 'th':
-            headers['Accept-Language'] = 'th-TH,th;q=0.9'
-
-        response = requests.get(url, headers=headers, timeout=15)
-        if response.status_code != 200:
-            return []
-
-        soup = BeautifulSoup(response.text, 'html.parser')
-        for h3 in soup.select('h3'):
-            title = h3.get_text(strip=True)
-            parent_a = h3.find_parent('a')
-            link = parent_a.get('href', '') if parent_a else ''
-            if title and link:
-                results.append({
-                    'title': title,
-                    'url': link,
-                    'source': f'Google ({lang_code})'
-                })
-
-        return results[:10]
-    except Exception as e:
-        print(f"[SEA] Google {lang_code} 搜索 '{query}' 失败: {e}")
-        return []
+    raw = google_search(query, lang_code=lang_code)
+    return [{'title': r['title'], 'url': r['url'], 'source': f'Google ({lang_code})'} for r in raw]
 
 
 def analyze_sentiment_sea(posts):

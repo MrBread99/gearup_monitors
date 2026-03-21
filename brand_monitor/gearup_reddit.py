@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.reddit_client import reddit_get
 
 # ==========================================
 # GearUP Booster Reddit 全站舆情监控
@@ -37,9 +38,6 @@ POSITIVE_KEYWORDS = [
     "好用", "推荐", "不错", "牛", "降低延迟",
 ]
 
-HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) OSINT-Monitor/2.1'
-}
 
 
 def search_reddit_global(query, hours_window=24):
@@ -55,7 +53,9 @@ def search_reddit_global(query, hours_window=24):
     )
 
     try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
+        response = reddit_get(url)
+        if response is None:
+            return posts
         if response.status_code == 200:
             data = response.json()
             children = data.get('data', {}).get('children', [])

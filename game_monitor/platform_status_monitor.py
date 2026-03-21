@@ -4,6 +4,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.reddit_client import reddit_get
 
 # ==========================================
 # 通讯与游戏平台全球连接状态监控
@@ -156,11 +157,9 @@ def check_telegram_russia():
             f"?q={encoded}&sort=new&t=day&limit=25"
         )
         try:
-            response = requests.get(
-                url,
-                headers={'User-Agent': 'OSINT-Monitor/2.1'},
-                timeout=10
-            )
+            response = reddit_get(url)
+            if response is None:
+                continue
             if response.status_code == 200:
                 data = response.json()
                 children = data.get('data', {}).get('children', [])
@@ -227,11 +226,9 @@ def check_steam_status():
             "https://www.reddit.com/r/Steam/search.json"
             "?q=steam+down+OR+steam+not+working+OR+cant+connect&restrict_sr=on&sort=new&t=day&limit=25"
         )
-        response = requests.get(
-            url,
-            headers={'User-Agent': 'OSINT-Monitor/2.1'},
-            timeout=10
-        )
+        response = reddit_get(url)
+        if response is None:
+            return issues
         if response.status_code == 200:
             data = response.json()
             posts = data.get('data', {}).get('children', [])
@@ -321,11 +318,9 @@ def check_battlenet_status():
             "https://www.reddit.com/search.json"
             "?q=battle.net+down+OR+battlenet+down+OR+blizzard+servers+down&sort=new&t=day&limit=25"
         )
-        response = requests.get(
-            url,
-            headers={'User-Agent': 'OSINT-Monitor/2.1'},
-            timeout=10
-        )
+        response = reddit_get(url)
+        if response is None:
+            return issues
         if response.status_code == 200:
             data = response.json()
             posts = data.get('data', {}).get('children', [])
@@ -392,12 +387,8 @@ def check_faceit_status():
             "?q=down+OR+servers+OR+not+working+OR+queue&restrict_sr=on&sort=new&t=day&limit=25"
         )
         try:
-            reddit_resp = requests.get(
-                reddit_url,
-                headers={'User-Agent': 'OSINT-Monitor/2.1'},
-                timeout=10
-            )
-            if reddit_resp.status_code == 200:
+            reddit_resp = reddit_get(reddit_url)
+            if reddit_resp is not None and reddit_resp.status_code == 200:
                 posts = reddit_resp.json().get('data', {}).get('children', [])
                 if len(posts) >= 5:
                     issues.append({
@@ -515,11 +506,9 @@ def check_xbox_live_status():
                 f"https://www.reddit.com/r/{config['subreddit']}/search.json"
                 f"?q={config['query']}&restrict_sr=on&sort=new&t=day&limit=25"
             )
-            response = requests.get(
-                url,
-                headers={'User-Agent': 'OSINT-Monitor/2.1'},
-                timeout=10
-            )
+            response = reddit_get(url)
+            if response is None:
+                continue
             if response.status_code == 200:
                 posts = response.json().get('data', {}).get('children', [])
                 if len(posts) >= config['threshold']:
@@ -562,11 +551,9 @@ def check_whatsapp_connectivity():
         try:
             encoded = requests.utils.quote(query)
             url = f"https://www.reddit.com/search.json?q={encoded}&sort=new&t=day&limit=25"
-            response = requests.get(
-                url,
-                headers={'User-Agent': 'OSINT-Monitor/2.1'},
-                timeout=10
-            )
+            response = reddit_get(url)
+            if response is None:
+                continue
             if response.status_code == 200:
                 total += len(response.json().get('data', {}).get('children', []))
             elif response.status_code == 429:
@@ -598,11 +585,9 @@ def check_ea_status():
             "https://www.reddit.com/search.json"
             "?q=EA+servers+down+OR+EA+app+down+OR+apex+servers+down&sort=new&t=day&limit=25"
         )
-        response = requests.get(
-            url,
-            headers={'User-Agent': 'OSINT-Monitor/2.1'},
-            timeout=10
-        )
+        response = reddit_get(url)
+        if response is None:
+            return issues
         if response.status_code == 200:
             posts = response.json().get('data', {}).get('children', [])
             if len(posts) >= 5:
@@ -631,11 +616,9 @@ def check_ubisoft_status():
             "https://www.reddit.com/search.json"
             "?q=ubisoft+connect+down+OR+ubisoft+servers+down+OR+r6+servers+down&sort=new&t=day&limit=25"
         )
-        response = requests.get(
-            url,
-            headers={'User-Agent': 'OSINT-Monitor/2.1'},
-            timeout=10
-        )
+        response = reddit_get(url)
+        if response is None:
+            return issues
         if response.status_code == 200:
             posts = response.json().get('data', {}).get('children', [])
             if len(posts) >= 5:
@@ -664,11 +647,9 @@ def check_garena_status():
             "https://www.reddit.com/search.json"
             "?q=garena+down+OR+garena+server+OR+garena+lag&sort=new&t=day&limit=25"
         )
-        response = requests.get(
-            url,
-            headers={'User-Agent': 'OSINT-Monitor/2.1'},
-            timeout=10
-        )
+        response = reddit_get(url)
+        if response is None:
+            return issues
         if response.status_code == 200:
             posts = response.json().get('data', {}).get('children', [])
             if len(posts) >= 3:  # Garena 讨论量小，阈值低
@@ -703,11 +684,9 @@ def check_line_connectivity():
         try:
             encoded = requests.utils.quote(query)
             url = f"https://www.reddit.com/search.json?q={encoded}&sort=new&t=day&limit=25"
-            response = requests.get(
-                url,
-                headers={'User-Agent': 'OSINT-Monitor/2.1'},
-                timeout=10
-            )
+            response = reddit_get(url)
+            if response is None:
+                continue
             if response.status_code == 200:
                 total += len(response.json().get('data', {}).get('children', []))
             elif response.status_code == 429:

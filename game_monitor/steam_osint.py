@@ -14,25 +14,9 @@ from datetime import datetime, timezone, timedelta
 # 此接口无需 API Key，直接可用。
 # ==========================================
 
-# Steam AppID 映射（15 款监控游戏）
-STEAM_APP_MAP = {
-    'Valorant': None,           # Valorant 不在 Steam 上
-    'League of Legends': None,  # LOL 不在 Steam 上
-    'APEX Legends': 1172470,
-    'CS2': 730,
-    'Fortnite': None,           # Fortnite 不在 Steam 上
-    'PUBG': 578080,
-    'Overwatch 2': None,        # OW2 不在 Steam 上
-    'Rainbow Six Siege': 359550,
-    'Dota 2': 570,
-    'Call of Duty': None,       # COD 主要在 Battle.net，Steam 版本号频繁变动暂不追踪
-    # 新增 5 款游戏
-    'Where Winds Meet': 1928380,        # 燕云十六声，国产武侠 MMO
-    'Aion 2': None,                     # 永恒之塔2，韩服为主，不在 Steam 上
-    'Escape from Tarkov': 1422440,      # 逃离塔科夫，硬核射击
-    'Arena Breakout Infinite': 2073620, # 暗区突围：无限，腾讯出品
-    'Path of Exile 2': 2694490,         # 流亡黯道2（台港澳版 AppID）
-}
+# Steam AppID 映射 — 从统一游戏注册表 (game_registry.py) 加载
+from game_registry import get_steam_app_map
+STEAM_APP_MAP = get_steam_app_map()
 
 # 网络故障相关关键词（多语言）
 NETWORK_KEYWORDS_EN = [

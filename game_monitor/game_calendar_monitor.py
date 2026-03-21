@@ -7,6 +7,7 @@ from openai import OpenAI
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.reddit_client import reddit_get
 
 # 通义千问 API 客户端
 QWEN_API_KEY = os.environ.get("QWEN_API_KEY", "")
@@ -33,18 +34,10 @@ HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) OSINT-Monitor/2.1'
 }
 
-# 已监控游戏的 Steam AppID（有 AppID 的游戏才能查 News）
-TRACKED_GAMES = {
-    'APEX Legends': 1172470,
-    'CS2': 730,
-    'PUBG': 578080,
-    'Rainbow Six Siege': 359550,
-    'Dota 2': 570,
-    'Where Winds Meet': 1928380,
-    'Escape from Tarkov': 1422440,
-    'Arena Breakout Infinite': 2073620,
-    'Path of Exile 2': 2694490,
-}
+# 已监控游戏的 Steam AppID — 从统一游戏注册表 (game_registry.py) 加载
+# 过滤掉没有 Steam AppID 的游戏（只有有 AppID 的游戏才能查 News）
+from game_registry import get_steam_app_map
+TRACKED_GAMES = {name: appid for name, appid in get_steam_app_map().items() if appid is not None}
 
 # 非 Steam 游戏通过 Reddit 检测更新（含预告）
 NON_STEAM_GAMES = {
@@ -571,11 +564,9 @@ def check_non_steam_updates():
         )
 
         try:
-            response = requests.get(
-                url,
-                headers={'User-Agent': 'OSINT-Monitor/2.1'},
-                timeout=10
-            )
+            response = reddit_get(url)
+            if response is None:
+                continue
             if response.status_code != 200:
                 continue
 
@@ -769,11 +760,9 @@ def check_epic_new_releases():
                 f"https://www.reddit.com/r/{source['subreddit']}/search.json"
                 f"?q={source['query']}&restrict_sr=on&sort=new&t=day&limit=10"
             )
-            response = requests.get(
-                url,
-                headers={'User-Agent': 'OSINT-Monitor/2.1'},
-                timeout=10
-            )
+            response = reddit_get(url)
+            if response is None:
+                continue
             if response.status_code != 200:
                 continue
 
@@ -825,11 +814,9 @@ def check_playstation_releases():
                 f"https://www.reddit.com/r/{config['sub']}/search.json"
                 f"?q={config['query']}&restrict_sr=on&sort=hot&t=day&limit=10"
             )
-            response = requests.get(
-                url,
-                headers={'User-Agent': 'OSINT-Monitor/2.1'},
-                timeout=10
-            )
+            response = reddit_get(url)
+            if response is None:
+                continue
             if response.status_code != 200:
                 continue
 
@@ -885,11 +872,9 @@ def check_xbox_gamepass_releases():
                 f"https://www.reddit.com/r/{config['sub']}/search.json"
                 f"?q={config['query']}&restrict_sr=on&sort=hot&t=day&limit=10"
             )
-            response = requests.get(
-                url,
-                headers={'User-Agent': 'OSINT-Monitor/2.1'},
-                timeout=10
-            )
+            response = reddit_get(url)
+            if response is None:
+                continue
             if response.status_code != 200:
                 continue
 
@@ -947,11 +932,9 @@ def check_battlenet_updates():
                 f"?q=flair%3Aofficial+OR+flair%3Anews+OR+flair%3Ablizzard+{query}"
                 f"&restrict_sr=on&sort=new&t=day&limit=5"
             )
-            response = requests.get(
-                url,
-                headers={'User-Agent': 'OSINT-Monitor/2.1'},
-                timeout=10
-            )
+            response = reddit_get(url)
+            if response is None:
+                continue
             if response.status_code != 200:
                 continue
 
@@ -1078,11 +1061,9 @@ def check_gamepass_upcoming():
             "?q=coming+soon+OR+coming+to+game+pass+OR+leaving+game+pass+OR+second+half"
             "&restrict_sr=on&sort=hot&t=week&limit=10"
         )
-        response = requests.get(
-            url,
-            headers={'User-Agent': 'OSINT-Monitor/2.1'},
-            timeout=10
-        )
+        response = reddit_get(url)
+        if response is None:
+            return issues
         if response.status_code != 200:
             return issues
 

@@ -19,11 +19,26 @@ jobs:
 
       - name: Install dependencies
         run: pip install requests beautifulsoup4 feedparser openai discord.py
-        
+
+      # ===== 快照持久化：从缓存恢复上次运行的快照文件 =====
+      - name: Restore snapshot cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            game_monitor/game_calendar_snapshot.json
+            game_monitor/platform_incidents_snapshot.json
+            competitor_radar/exitlag_pricing_snapshot.json
+            brand_monitor/trustpilot_snapshot.json
+          key: monitor-snapshots-${{ github.run_id }}
+          restore-keys: |
+            monitor-snapshots-
+
       - name: Run Game Monitor Script
         env:
           POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
         run: python game_monitor/monitor.py
 
       - name: Run Platform Status Monitor
@@ -53,6 +68,8 @@ jobs:
       - name: Run GearUP Reddit Monitor
         env:
           POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
         run: python brand_monitor/gearup_reddit.py
 
       - name: Run GearUP YouTube Monitor

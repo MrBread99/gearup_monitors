@@ -11,17 +11,9 @@ import time
 # пинг = ping, лаги = lags, потеря = loss, пакет = packet, сервера = servers, лежат = down
 RU_KEYWORDS = ["ПИНГ", "ЛАГ", "ЛАГИ", "ПОТЕРЯ", "ПАКЕТОВ", "СЕРВЕРА ЛЕЖАТ", "ВЫЛЕТАЕТ", "РОСТЕЛЕКОМ", "ROSTELECOM"]
 
-# VK.com 游戏社群 (Groups) 映射
-# 我们无需登录 API，可以直接通过 VK 的开放搜索页面抓取最新发帖
-# (注：VK的反爬经常变化，这里使用免登录的移动版页面 m.vk.com 成功率更高)
-VK_GAME_MAP = {
-    'Valorant': 'valorant_ru',
-    'League of Legends': 'leagueoflegends',
-    'CS2': 'csgo', # 俄区大量玩家依然使用原群名
-    'Dota 2': 'dota2',
-    'PUBG': 'pubg',
-    'APEX Legends': 'apexlegendsru'
-}
+# VK.com 游戏社群 (Groups) 映射 — 从统一游戏注册表 (game_registry.py) 加载
+from game_registry import get_vk_game_map
+VK_GAME_MAP = get_vk_game_map()
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Mobile Safari/537.36',

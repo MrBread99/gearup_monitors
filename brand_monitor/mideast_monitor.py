@@ -1,12 +1,12 @@
 import requests
-from bs4 import BeautifulSoup
 import os
 import sys
-import urllib.parse
 from datetime import datetime, timezone, timedelta
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.reddit_client import reddit_get
+from utils.google_client import google_search
 
 # ==========================================
 # 中东/阿拉伯语区品牌舆情监控
@@ -56,12 +56,6 @@ AR_POSITIVE = [
     "يشتغل", "زين", "قوي"
 ]
 
-HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-                  '(KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
-    'Accept-Language': 'ar,en-US;q=0.9'
-}
-
 
 def search_reddit_mideast_subs(keyword, hours_window=24):
     """搜索中东相关 subreddit 中的加速器讨论"""
@@ -74,11 +68,9 @@ def search_reddit_mideast_subs(keyword, hours_window=24):
             f"?q={encoded}&restrict_sr=on&sort=new&t=month&limit=25"
         )
         try:
-            response = requests.get(
-                url,
-                headers={'User-Agent': 'OSINT-Monitor/2.1'},
-                timeout=10
-            )
+            response = reddit_get(url)
+            if response is None:
+                continue
             if response.status_code == 200:
                 data = response.json()
                 children = data.get('data', {}).get('children', [])
@@ -111,11 +103,9 @@ def search_reddit_arabic(query, hours_window=24):
     )
 
     try:
-        response = requests.get(
-            url,
-            headers={'User-Agent': 'OSINT-Monitor/2.1'},
-            timeout=15
-        )
+        response = reddit_get(url)
+        if response is None:
+            return posts
         if response.status_code == 200:
             data = response.json()
             children = data.get('data', {}).get('children', [])
@@ -138,34 +128,8 @@ def search_reddit_arabic(query, hours_window=24):
 
 def search_google_arabic(query):
     """通过 Google 搜索阿拉伯语论坛和博客内容"""
-    encoded = urllib.parse.quote(query)
-    url = (
-        f"https://www.google.com/search?q={encoded}"
-        f"&lr=lang_ar&tbs=qdr:m&num=10"  # 阿拉伯语、最近一个月
-    )
-
-    results = []
-    try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
-        if response.status_code != 200:
-            return []
-
-        soup = BeautifulSoup(response.text, 'html.parser')
-        for h3 in soup.select('h3'):
-            title = h3.get_text(strip=True)
-            parent_a = h3.find_parent('a')
-            link = parent_a.get('href', '') if parent_a else ''
-            if title and link:
-                results.append({
-                    'title': title,
-                    'url': link,
-                    'source': 'Google AR'
-                })
-
-        return results[:10]
-    except Exception as e:
-        print(f"[MidEast] Google 阿拉伯语搜索 '{query}' 失败: {e}")
-        return []
+    raw = google_search(query, lang_code='ar')
+    return [{'title': r['title'], 'url': r['url'], 'source': 'Google AR'} for r in raw]
 
 
 def analyze_sentiment_ar(posts):

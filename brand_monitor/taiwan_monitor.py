@@ -6,6 +6,7 @@ import urllib.parse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.google_client import google_search
 
 # ==========================================
 # 台湾区品牌舆情监控（巴哈姆特 + PTT）
@@ -33,7 +34,7 @@ HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
                   '(KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
     'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8'
-}
+}  # Retained for search_bahamut
 
 
 def search_bahamut(query):
@@ -67,38 +68,9 @@ def search_bahamut(query):
 
 
 def search_ptt(query):
-    """搜索 PTT Web 版"""
-    encoded = urllib.parse.quote(query)
-    url = f"https://www.ptt.cc/bbs/hotboards.html"
-    # PTT 搜索需要通过 Google site search 做间接搜索
-    google_url = (
-        f"https://www.google.com/search?q=site:ptt.cc+{encoded}"
-        f"&tbs=qdr:m"  # 最近一个月
-    )
-
-    try:
-        response = requests.get(google_url, headers=HEADERS, timeout=15)
-        if response.status_code != 200:
-            return []
-
-        soup = BeautifulSoup(response.text, 'html.parser')
-        results = []
-
-        for h3 in soup.select('h3'):
-            title = h3.get_text(strip=True)
-            parent_a = h3.find_parent('a')
-            link = parent_a.get('href', '') if parent_a else ''
-            if 'ptt.cc' in link:
-                results.append({
-                    'title': title,
-                    'url': link,
-                    'source': 'PTT'
-                })
-
-        return results[:10]
-    except Exception as e:
-        print(f"[TW] 搜索 PTT '{query}' 失败: {e}")
-        return []
+    """搜索 PTT Web 版（通过 Google site:ptt.cc 间接搜索）"""
+    raw = google_search(query, site='ptt.cc')
+    return [{'title': r['title'], 'url': r['url'], 'source': 'PTT'} for r in raw]
 
 
 def analyze_sentiment_tw(posts):

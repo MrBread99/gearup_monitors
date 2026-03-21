@@ -10,19 +10,9 @@ import time
 # 为了解决 403，我们要么使用代理池，要么使用无需极高验证的 RSS 源 (例如某些地区站点的 RSS)
 # 或者退而求其次，如果遇到 403，我们在报告中注明。
 
-# 这里我提供一个备用方案：使用 istheservicedown.com 抓取，它同样也是一个聚合了大量玩家报错的网站，且反爬较弱。
-ITSD_GAME_MAP = {
-    'Valorant': 'valorant',
-    'League of Legends': 'league-of-legends',
-    'APEX Legends': 'apex-legends',
-    'CS2': 'counter-strike',
-    'Fortnite': 'fortnite',
-    'PUBG': 'playerunknown-s-battlegrounds-pubg',
-    'Overwatch 2': 'overwatch',
-    'Rainbow Six Siege': 'tom-clancy-s-rainbow-six-siege',
-    'Dota 2': 'dota-2',
-    'Call of Duty': 'call-of-duty'
-}
+# ITSD 游戏 slug 映射 — 从统一游戏注册表 (game_registry.py) 加载
+from game_registry import get_itsd_game_map
+ITSD_GAME_MAP = get_itsd_game_map()
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',

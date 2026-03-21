@@ -12,7 +12,9 @@ import apac_osint # 引入亚太区域本地化 OSINT 模块
 import downdetector_osint # 引入聚合报错监控模块
 import cis_osint # 引入独联体/俄语区 OSINT 模块
 import steam_osint # 引入 Steam 差评监控模块
+from game_registry import get_apac_configs, get_game_config, get_all_game_names  # 统一游戏注册表
 from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.reddit_client import reddit_get
 
 # 通义千问 API 客户端（用于总结玩家反馈内容）
 QWEN_API_KEY = os.environ.get("QWEN_API_KEY", "")
@@ -69,10 +71,11 @@ def check_reddit_osint(game_name, subreddit):
     issues = []
     # 搜索包含服务器、延迟、丢包等关键字的最新帖子
     url = f"https://www.reddit.com/r/{subreddit}/search.json?q=server+OR+ping+OR+lag+OR+packet+loss+OR+down&restrict_sr=on&sort=new&t=day"
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) OSINT-Monitor/1.0"}
     
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = reddit_get(url)
+        if response is None:
+            return issues
         if response.status_code == 200:
             data = response.json()
             posts = data.get('data', {}).get('children', [])
@@ -278,85 +281,8 @@ def check_apac_osint_for_game(game_name):
     """
     issues = []
     
-    # 游戏到各个社区板块 ID 或本地化搜索词的映射字典
-    game_configs = {
-        'Valorant': {
-            'tw_bsn': '37714',
-            'jp_search': 'Valorant',
-            'kr_dc': 'valorant'
-        },
-        'League of Legends': {
-            'tw_bsn': '17532',
-            'jp_search': 'LoL',
-            'kr_dc': 'leagueoflegends1'
-        },
-        'APEX Legends': {
-            'tw_bsn': '36072',
-            'jp_search': 'APEX',
-            'kr_dc': 'apexlegends'
-        },
-        'CS2': {
-            'tw_bsn': '11464',
-            'jp_search': 'CS2',
-            'kr_dc': 'counterstrike'
-        },
-        'Fortnite': {
-            'tw_bsn': '32675',
-            'jp_search': 'Fortnite',
-            'kr_dc': 'fortnite'
-        },
-        'PUBG': {
-            'tw_bsn': '31733',
-            'jp_search': 'PUBG',
-            'kr_dc': 'battlegrounds'
-        },
-        'Overwatch 2': {
-            'tw_bsn': '27362',
-            'jp_search': 'OW2',
-            'kr_dc': 'overwatch'
-        },
-        'Rainbow Six Siege': {
-            'tw_bsn': '27202',
-            'jp_search': 'R6S',
-            'kr_dc': 'r6'
-        },
-        'Dota 2': {
-            'tw_bsn': '8905',
-            'jp_search': 'Dota2',
-            'kr_dc': 'dota2'
-        },
-        'Call of Duty': {
-            'tw_bsn': '5371',
-            'jp_search': 'CoD',
-            'kr_dc': 'callofduty'
-        },
-        # 新增 5 款游戏
-        'Where Winds Meet': {
-            'tw_bsn': '77498',      # 燕云十六声巴哈姆特板
-            'jp_search': '燕雲十六声',
-            'kr_dc': 'wherewindsmeet'
-        },
-        'Aion 2': {
-            'tw_bsn': None,          # 永恒之塔2暂无巴哈板
-            'jp_search': 'AION2',
-            'kr_dc': 'aion'
-        },
-        'Escape from Tarkov': {
-            'tw_bsn': '35405',
-            'jp_search': 'タルコフ',
-            'kr_dc': 'tarkov'
-        },
-        'Arena Breakout Infinite': {
-            'tw_bsn': None,          # 暗区突围暂无巴哈板
-            'jp_search': 'ArenaBreakout',
-            'kr_dc': 'arenabreakout'
-        },
-        'Path of Exile 2': {
-            'tw_bsn': '18966',      # POE 巴哈姆特板
-            'jp_search': 'POE2',
-            'kr_dc': 'pathofexile'
-        }
-    }
+    # 游戏到各个社区板块 ID 或本地化搜索词的映射 — 从统一游戏注册表 (game_registry.py) 加载
+    game_configs = get_apac_configs()
     
     config = game_configs.get(game_name)
     if not config:
@@ -411,52 +337,18 @@ def check_all_channels_for_game(game_name, reddit_sub, apac_name):
 def main():
     all_issues = []
     
-    print("正在检测 Valorant...")
-    all_issues.extend(check_all_channels_for_game('Valorant', 'VALORANT', 'Valorant'))
-    
-    print("正在检测 League of Legends...")
-    all_issues.extend(check_all_channels_for_game('League of Legends', 'leagueoflegends', 'League of Legends'))
-    
-    print("正在检测 APEX Legends...")
-    all_issues.extend(check_all_channels_for_game('APEX Legends', 'apexlegends', 'APEX Legends'))
-    
-    print("正在检测 CS2...")
-    all_issues.extend(check_all_channels_for_game('CS2', 'GlobalOffensive', 'CS2'))
-    
-    print("正在检测 Fortnite...")
-    all_issues.extend(check_epic_games_status())
-    all_issues.extend(check_all_channels_for_game('Fortnite', 'FortNiteBR', 'Fortnite'))
-    
-    print("正在检测 PUBG...")
-    all_issues.extend(check_all_channels_for_game('PUBG', 'PUBATTLEGROUNDS', 'PUBG'))
-
-    print("正在检测 Overwatch 2...")
-    all_issues.extend(check_all_channels_for_game('Overwatch 2', 'Overwatch', 'Overwatch 2'))
-
-    print("正在检测 Rainbow Six Siege...")
-    all_issues.extend(check_all_channels_for_game('Rainbow Six Siege', 'Rainbow6', 'Rainbow Six Siege'))
-
-    print("正在检测 Dota 2...")
-    all_issues.extend(check_all_channels_for_game('Dota 2', 'DotA2', 'Dota 2'))
-
-    print("正在检测 Call of Duty...")
-    all_issues.extend(check_all_channels_for_game('Call of Duty', 'CallOfDuty', 'Call of Duty'))
-
-    # 新增 5 款游戏
-    print("正在检测 Where Winds Meet (燕云十六声)...")
-    all_issues.extend(check_all_channels_for_game('Where Winds Meet', 'WhereWindsMeet', 'Where Winds Meet'))
-
-    print("正在检测 Aion 2 (永恒之塔2)...")
-    all_issues.extend(check_all_channels_for_game('Aion 2', 'aion', 'Aion 2'))
-
-    print("正在检测 Escape from Tarkov (逃离塔科夫)...")
-    all_issues.extend(check_all_channels_for_game('Escape from Tarkov', 'EscapefromTarkov', 'Escape from Tarkov'))
-
-    print("正在检测 Arena Breakout Infinite (暗区突围)...")
-    all_issues.extend(check_all_channels_for_game('Arena Breakout Infinite', 'ArenaBreakoutInfinite', 'Arena Breakout Infinite'))
-
-    print("正在检测 Path of Exile 2 (流亡黯道)...")
-    all_issues.extend(check_all_channels_for_game('Path of Exile 2', 'pathofexile', 'Path of Exile 2'))
+    # 从统一游戏注册表 (game_registry.py) 加载所有游戏名，动态遍历
+    for game_name in get_all_game_names():
+        config = get_game_config(game_name)
+        subreddit = config.get('subreddit', '')
+        
+        print(f"正在检测 {game_name}...")
+        
+        # Fortnite 额外检查 Epic Games 官方状态 API
+        if game_name == 'Fortnite':
+            all_issues.extend(check_epic_games_status())
+        
+        all_issues.extend(check_all_channels_for_game(game_name, subreddit, game_name))
     
     # 发送通知汇总
     send_popo_alert(POPO_WEBHOOK_URL, all_issues)
