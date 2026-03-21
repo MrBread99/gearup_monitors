@@ -74,12 +74,47 @@ def send_popo_alert(webhook_url, issues_list):
         print(plain_content)
         return
 
-    try:
-        response = requests.post(webhook_url, headers=headers, data=json.dumps(payload), timeout=10)
-        # 无论成功还是失败，打印 POPO 的真实返回内容，方便排查原因
-        print(f"POPO 接口返回 HTTP 状态码: {response.status_code}")
-        print(f"POPO 接口返回详细内容: {response.text}")
-        response.raise_for_status()
-        print("代码执行：成功发送请求至 POPO Webhook。")
-    except Exception as e:
-        print(f"发送 POPO 警报失败: {e}")
+    # 消息长度限制：超过 4000 字符自动分割发送
+    MAX_LEN = 4000
+    if len(plain_content) <= MAX_LEN:
+        chunks = [plain_content]
+    else:
+        chunks = []
+        lines = plain_content.split('\n')
+        current = ""
+        for line in lines:
+            if len(current) + len(line) + 1 > MAX_LEN:
+                chunks.append(current)
+                current = line + "\n"
+            else:
+                current += line + "\n"
+        if current:
+            chunks.append(current)
+
+    headers = {'Content-Type': 'application/json'}
+
+    for i, chunk in enumerate(chunks):
+        if len(chunks) > 1:
+            chunk = f"({i+1}/{len(chunks)})\n{chunk}"
+
+        payload = {"message": chunk}
+
+        # 重试 3 次，指数退避
+        for attempt in range(3):
+            try:
+                response = requests.post(
+                    webhook_url, headers=headers,
+                    data=json.dumps(payload), timeout=10
+                )
+                print(f"POPO 接口返回 HTTP 状态码: {response.status_code}")
+                response.raise_for_status()
+                print(f"代码执行：成功发送请求至 POPO Webhook{f' (分片 {i+1}/{len(chunks)})' if len(chunks) > 1 else ''}。")
+                break
+            except Exception as e:
+                if attempt < 2:
+                    wait = 2 ** (attempt + 1)
+                    print(f"发送 POPO 警报失败 (第 {attempt+1} 次)，{wait} 秒后重试: {e}")
+                    import time
+                    time.sleep(wait)
+                else:
+                    print(f"发送 POPO 警报最终失败: {e}")

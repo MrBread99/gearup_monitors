@@ -19,8 +19,12 @@ HEADERS = {
     'Accept-Language': 'en-US,en;q=0.9,zh-TW;q=0.8,ja;q=0.7,ko;q=0.6'
 }
 
-def analyze_text_for_issues(text_list, region, threshold=3):
-    """分析文本列表中包含关键词的频率，超过阈值则认为有异常"""
+def analyze_text_for_issues(text_list, region, threshold=5):
+    """
+    分析文本列表中包含关键词的频率，超过阈值则认为有异常。
+    阈值提高到 5 (原 3)，并且要求匹配到至少 2 个不同关键词，
+    减少单一常见词（如"サーバー"/"서버"）导致的误报。
+    """
     issue_count = 0
     matched_keywords = set()
     
@@ -31,7 +35,8 @@ def analyze_text_for_issues(text_list, region, threshold=3):
                 matched_keywords.add(kw)
                 break # 一条帖子只算一次异常
 
-    is_down = issue_count >= threshold
+    # 要求至少匹配到 2 个不同关键词，避免单一词误报
+    is_down = issue_count >= threshold and len(matched_keywords) >= 2
     return is_down, issue_count, list(matched_keywords)
 
 # ==========================================

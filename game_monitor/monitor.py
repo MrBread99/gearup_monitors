@@ -189,6 +189,11 @@ def check_reddit_osint(game_name, subreddit):
                 found_isps = []
                 is_routing_issue = False
                 is_down_issue = False
+
+                # 短 ISP 名（<=3 字符）需要词边界匹配，防止 "BT" 匹配 "BTW", "SK" 匹配 "SKIN"
+                import re
+                short_isps = {kw for kw in isp_keywords if len(kw) <= 3}
+                long_isps = {kw for kw in isp_keywords if len(kw) > 3}
                 
                 # 重新扫描合并后的文本以判断问题性质和提取ISP
                 for post in posts:
@@ -197,9 +202,16 @@ def check_reddit_osint(game_name, subreddit):
                     if post_time > two_hours_ago:
                         content = (post_data.get('title', '') + " " + post_data.get('selftext', '')).upper()
                         
-                        for kw in isp_keywords:
+                        # 长 ISP 名直接子串匹配
+                        for kw in long_isps:
                             if kw in content and kw not in found_isps:
                                 found_isps.append(kw)
+                        # 短 ISP 名词边界匹配，且要求同帖出现网络关键词
+                        for kw in short_isps:
+                            if re.search(r'\b' + re.escape(kw) + r'\b', content):
+                                if any(nkw in content for nkw in routing_keywords + ["INTERNET", "ISP", "NETWORK", "CONNECTION"]):
+                                    if kw not in found_isps:
+                                        found_isps.append(kw)
                         for kw in routing_keywords:
                             if kw in content: is_routing_issue = True
                         for kw in down_keywords:

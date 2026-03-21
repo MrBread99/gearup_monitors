@@ -1,4 +1,5 @@
 import requests
+import json
 import os
 import sys
 
@@ -8,6 +9,42 @@ from utils.reddit_client import reddit_get
 
 # ==========================================
 # 通讯与游戏平台全球连接状态监控
+# ==========================================
+# 事件 ID 去重：已报过的事件不再重复报警
+# ==========================================
+
+INCIDENT_SNAPSHOT_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    'platform_incidents_snapshot.json'
+)
+
+
+def _load_seen_incidents():
+    if os.path.exists(INCIDENT_SNAPSHOT_FILE):
+        try:
+            with open(INCIDENT_SNAPSHOT_FILE, 'r') as f:
+                return set(json.load(f))
+        except Exception:
+            pass
+    return set()
+
+
+def _save_seen_incidents(seen):
+    # 只保留最近 200 个，防止无限增长
+    recent = list(seen)[-200:]
+    with open(INCIDENT_SNAPSHOT_FILE, 'w') as f:
+        json.dump(recent, f)
+
+
+_seen_incidents = _load_seen_incidents()
+
+
+def _is_new_incident(incident_id):
+    """检查事件是否已报过，未报过则标记并返回 True"""
+    if incident_id in _seen_incidents:
+        return False
+    _seen_incidents.add(incident_id)
+    return True
 # ==========================================
 # 监控目标:
 # 1. Discord — 官方 Status API，分区域 Voice 服务器状态（含俄罗斯）
@@ -113,10 +150,13 @@ def check_discord_status():
                 'source_url': 'https://discordstatus.com/'
             })
 
-        # 3. 检查活跃事件 (incidents)
+        # 3. 检查活跃事件 (incidents) — 去重
         incidents = data.get('incidents', [])
         for incident in incidents:
             if incident.get('status') not in ('resolved', 'postmortem'):
+                inc_id = f"discord_{incident.get('id', '')}"
+                if not _is_new_incident(inc_id):
+                    continue
                 impact = incident.get('impact', 'none')
                 name = incident.get('name', '')
                 status = incident.get('status', '')
@@ -286,10 +326,13 @@ def check_epic_platform_status():
                 'source_url': 'https://status.epicgames.com/'
             })
 
-        # 检查活跃事件
+        # 检查活跃事件 — 去重
         incidents = data.get('incidents', [])
         for incident in incidents:
             if incident.get('status') not in ('resolved', 'postmortem'):
+                inc_id = f"epic_{incident.get('id', '')}"
+                if not _is_new_incident(inc_id):
+                    continue
                 name = incident.get('name', '')
                 status = incident.get('status', '')
                 issues.append({
@@ -355,10 +398,13 @@ def check_faceit_status():
 
         data = response.json()
 
-        # 检查活跃事件
+        # 检查活跃事件 — 去重
         ongoing = data.get('ongoing_incidents', [])
         for incident in ongoing:
             name = incident.get('name', 'Unknown')
+            inc_id = f"faceit_{incident.get('id', name)}"
+            if not _is_new_incident(inc_id):
+                continue
             issues.append({
                 'game': 'FACEIT',
                 'region': 'Global',
@@ -749,6 +795,9 @@ def check_all_platforms():
 
     print("正在检测 LINE 连接状态...")
     all_issues.extend(check_line_connectivity())
+
+    # 保存事件去重快照
+    _save_seen_incidents(_seen_incidents)
 
     return all_issues
 
