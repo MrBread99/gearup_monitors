@@ -43,13 +43,16 @@ def send_popo_alert(webhook_url, issues_list):
         plain_content += f"{title}\n时间: {current_time}\n\n"
 
         for item in items:
-            region_display = f"{item['region']} ({item['country']})" if item.get('country') else item['region']
-
             # 去掉 issue 中可能包含的粗体和红灯 emoji
             clean_issue = item['issue'].replace('**', '').replace('__', '')
 
             plain_content += f"[{item['game']}]\n"
-            plain_content += f"地区: {region_display}\n"
+
+            # 新游上线/热游更新不显示"地区: Global"（issue 内已有头部地区信息）
+            if alert_type not in ('new_game_release', 'game_update'):
+                region_display = f"{item['region']} ({item['country']})" if item.get('country') else item['region']
+                plain_content += f"地区: {region_display}\n"
+
             plain_content += f"情报: {clean_issue}\n"
 
             if item.get('source_url'):
