@@ -21,6 +21,8 @@ def send_popo_alert(webhook_url, issues_list):
     # 按 alert_type 分组
     ALERT_TITLES = {
         'game_monitor': '【全球监控商机雷达警报】',
+        'new_game_release': '【新游上线预告】',
+        'game_update': '【热游版本更新预告】',
         'game_calendar': '【新游上线/热游更新预告】',
         'platform_status': '【平台与通讯工具状态警报】',
         'brand_monitor': '【品牌舆情监控报告】',

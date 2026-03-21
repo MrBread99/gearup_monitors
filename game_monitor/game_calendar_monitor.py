@@ -85,6 +85,118 @@ SNAPSHOT_FILE = os.path.join(
 )
 
 
+def infer_top_regions(app_data):
+    """
+    根据 Steam appdetails 的 supported_languages 和 ratings 推算 TOP5 目标市场。
+    有全语音支持的语言 > 有字幕支持的语言 > 有分级的地区。
+    """
+    # 语言到地区的映射
+    LANG_REGION_MAP = {
+        'English': ('North America / Europe', 30),
+        'Korean': ('South Korea', 15),
+        'Japanese': ('Japan', 15),
+        'Simplified Chinese': ('China', 12),
+        'Traditional Chinese': ('Taiwan / Hong Kong', 10),
+        'Russian': ('Russia / CIS', 10),
+        'Portuguese - Brazil': ('Brazil / LATAM', 8),
+        'Spanish - Latin America': ('LATAM', 6),
+        'Spanish - Spain': ('Spain', 5),
+        'French': ('France', 5),
+        'German': ('Germany', 5),
+        'Turkish': ('Turkey / Middle East', 5),
+        'Polish': ('Poland / Eastern EU', 4),
+        'Italian': ('Italy', 3),
+        'Thai': ('Thailand / SEA', 5),
+        'Vietnamese': ('Vietnam / SEA', 5),
+        'Indonesian': ('Indonesia / SEA', 5),
+        'Arabic': ('Middle East', 5),
+    }
+
+    # 分级机构到地区的映射
+    RATING_REGION_MAP = {
+        'esrb': ('North America', 5),
+        'pegi': ('Europe', 5),
+        'cero': ('Japan', 8),
+        'kgrb': ('South Korea', 8),
+        'csrr': ('Taiwan', 6),
+        'usk': ('Germany', 3),
+        'dejus': ('Brazil', 5),
+        'oflc': ('Australia', 3),
+        'fpb': ('South Africa', 2),
+        'mda': ('Singapore / SEA', 4),
+        'igrs': ('Indonesia / SEA', 4),
+    }
+
+    region_scores = {}
+
+    # 从 supported_languages 推算
+    langs_str = app_data.get('supported_languages', '')
+    for lang, (region, base_score) in LANG_REGION_MAP.items():
+        if lang in langs_str:
+            # 全语音支持权重更高
+            score = base_score * 1.5 if f'{lang}<strong>*</strong>' in langs_str else base_score
+            region_scores[region] = region_scores.get(region, 0) + score
+
+    # 从 ratings 推算
+    ratings = app_data.get('ratings', {})
+    for rating_key, (region, score) in RATING_REGION_MAP.items():
+        if rating_key in ratings:
+            region_scores[region] = region_scores.get(region, 0) + score
+
+    # 排序取 TOP5
+    sorted_regions = sorted(region_scores.items(), key=lambda x: x[1], reverse=True)
+    top5 = sorted_regions[:5]
+
+    if not top5:
+        return "未知"
+
+    # 计算占比
+    total = sum(s for _, s in top5)
+    result_parts = []
+    for region, score in top5:
+        pct = round(score / total * 100)
+        result_parts.append(f"{region} {pct}%")
+
+    return ', '.join(result_parts)
+
+
+def summarize_new_game(game_name, description):
+    """
+    调用通义千问对新游戏进行玩法介绍。
+    """
+    if not qwen_client:
+        from html import unescape
+        import re
+        clean = re.sub(r'<[^>]+>', '', unescape(description))
+        return clean[:200].strip() + "..."
+
+    from html import unescape
+    import re
+    clean_desc = re.sub(r'<[^>]+>', '', unescape(description))
+
+    prompt = f"""你是一个游戏行业分析师。请根据以下游戏介绍，用 2-3 句中文简要介绍这款游戏的核心玩法和特色，并说明是否有联机/多人模式。
+
+【游戏名称】: {game_name}
+【游戏介绍】: {clean_desc[:1500]}
+
+要求: 纯文本输出，禁止 Markdown，不超过 3 句话。"""
+
+    try:
+        response = qwen_client.chat.completions.create(
+            model="qwen-plus",
+            messages=[
+                {"role": "system", "content": "你是一个游戏行业分析师，输出简洁中文。"},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=200
+        )
+        return str(response.choices[0].message.content).strip()
+    except Exception as e:
+        print(f"[Calendar] AI 新游介绍失败: {e}")
+        return clean_desc[:200].strip() + "..."
+
+
 def summarize_update(game_name, title, content):
     """
     调用通义千问对游戏更新内容做中文摘要，提取：
@@ -212,7 +324,7 @@ def check_steam_news_updates():
                         'region': 'Global',
                         'country': '',
                         'issue': f"{tag} {title}\n    {summary}",
-                        'alert_type': 'game_calendar',
+                        'alert_type': 'game_update',
                         'source_name': 'Steam News',
                         'source_url': item.get('url', f'https://store.steampowered.com/news/app/{app_id}')
                     })
@@ -294,7 +406,7 @@ def check_non_steam_updates():
                         'region': 'Global',
                         'country': '',
                         'issue': issue_text,
-                        'alert_type': 'game_calendar',
+                        'alert_type': 'game_update',
                         'source_name': f'r/{subreddit}',
                         'source_url': f"https://www.reddit.com{post_data.get('permalink', '')}"
                     })
@@ -357,12 +469,23 @@ def check_hot_new_releases():
 
                             release_date = app_data.get('release_date', {})
                             if not release_date.get('coming_soon', True):
+                                # 推算头部地区
+                                top_regions = infer_top_regions(app_data)
+                                # AI 新游玩法介绍
+                                description = app_data.get('short_description', '') or app_data.get('about_the_game', '')
+                                game_intro = summarize_new_game(name, description) if description else ''
+
+                                issue_text = f"🆕 [Steam {category_label} #{rank}] {name} ({genre_str})"
+                                issue_text += f"\n    头部地区: {top_regions}"
+                                if game_intro:
+                                    issue_text += f"\n    玩法介绍: {game_intro}"
+
                                 issues.append({
                                     'game': name,
                                     'region': 'Global',
                                     'country': '',
-                                    'issue': f"🆕 [Steam {category_label} #{rank}] {name} ({genre_str})",
-                                    'alert_type': 'game_calendar',
+                                    'issue': issue_text,
+                                    'alert_type': 'new_game_release',
                                     'source_name': 'Steam Store',
                                     'source_url': f'https://store.steampowered.com/app/{app_id}'
                                 })
@@ -444,7 +567,7 @@ def check_epic_new_releases():
                             'region': 'Global',
                             'country': '',
                             'issue': f"🆕 [{source['label']}] {title} (↑{score})",
-                            'alert_type': 'game_calendar',
+                            'alert_type': 'new_game_release',
                             'source_name': f"r/{source['subreddit']}",
                             'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
                         })
@@ -503,7 +626,7 @@ def check_playstation_releases():
                         'region': 'Global',
                         'country': '',
                         'issue': f"🎮 [PS 新游/更新] {title} (↑{score})",
-                        'alert_type': 'game_calendar',
+                        'alert_type': 'new_game_release',
                         'source_name': f"r/{config['sub']}",
                         'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
                     })
@@ -561,7 +684,7 @@ def check_xbox_gamepass_releases():
                         'region': 'Global',
                         'country': '',
                         'issue': f"🎮 [{config['label']}] {title} (↑{score})",
-                        'alert_type': 'game_calendar',
+                        'alert_type': 'new_game_release',
                         'source_name': f"r/{config['sub']}",
                         'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
                     })
@@ -622,7 +745,7 @@ def check_battlenet_updates():
                         'region': 'Global',
                         'country': '',
                         'issue': f"🎮 [Battle.net 更新] {title} (↑{score})",
-                        'alert_type': 'game_calendar',
+                        'alert_type': 'game_update',
                         'source_name': f"r/{game['sub']}",
                         'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
                     })
@@ -687,7 +810,7 @@ def check_steam_coming_soon():
                         'region': 'Global',
                         'country': '',
                         'issue': f"📢 [即将发售] {name} ({genre_str}) 预计发售: {date_str}",
-                        'alert_type': 'game_calendar',
+                        'alert_type': 'new_game_release',
                         'source_name': 'Steam Coming Soon',
                         'source_url': f'https://store.steampowered.com/app/{app_id}'
                     })
@@ -747,7 +870,7 @@ def check_gamepass_upcoming():
                     'region': 'Global',
                     'country': '',
                     'issue': f"📢 [Game Pass 即将上新] {title} (↑{score})",
-                    'alert_type': 'game_calendar',
+                    'alert_type': 'new_game_release',
                     'source_name': 'r/XboxGamePass',
                     'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
                 })
