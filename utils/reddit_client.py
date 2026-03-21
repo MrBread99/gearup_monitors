@@ -22,7 +22,7 @@ REDDIT_CLIENT_SECRET = os.environ.get('REDDIT_CLIENT_SECRET', '')
 _access_token = None
 _token_expires = 0
 _last_request_time = 0
-_REQUEST_INTERVAL = 1.0  # 每次请求最少间隔 1 秒
+_REQUEST_INTERVAL = 2.0  # 未认证模式下 2 秒间隔，确保不触发 60 请求/分钟限制
 
 
 def _get_oauth_token():
