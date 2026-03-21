@@ -85,6 +85,103 @@ SNAPSHOT_FILE = os.path.join(
 )
 
 
+def estimate_game_hype(app_data, rank=None, category_label=''):
+    """
+    预估新游热度（0-100 分），基于多维度打分。
+    """
+    score = 0
+
+    if not app_data:
+        return 50  # 无数据默认中等
+
+    # 1. 榜单排名 (最高 30 分)
+    if rank:
+        score += max(0, 30 - (rank - 1) * 3)  # #1=30, #2=27, ..., #10=3
+
+    # 2. 评论数/关注度 (最高 25 分)
+    recommendations = app_data.get('recommendations', {}).get('total', 0)
+    if recommendations > 50000:
+        score += 25
+    elif recommendations > 10000:
+        score += 20
+    elif recommendations > 5000:
+        score += 15
+    elif recommendations > 1000:
+        score += 10
+    elif recommendations > 100:
+        score += 5
+
+    # 3. 免费游戏加成 (最高 15 分)
+    is_free = app_data.get('is_free', False)
+    if is_free:
+        score += 15
+
+    # 4. 热门游戏类型加成 (最高 15 分)
+    genres = [g.get('description', '') for g in app_data.get('genres', [])]
+    hot_genres = {'Action': 5, 'FPS': 8, 'RPG': 5, 'Adventure': 3,
+                  'Massively Multiplayer': 8, 'Strategy': 3, 'Sports': 4,
+                  'Racing': 3, 'Simulation': 2}
+    genre_bonus = sum(hot_genres.get(g, 0) for g in genres)
+    score += min(15, genre_bonus)
+
+    # 5. 联机类型加成 (最高 15 分)
+    categories = [c.get('description', '') for c in app_data.get('categories', [])]
+    if 'Online PvP' in categories:
+        score += 10
+    elif 'Online Co-op' in categories:
+        score += 7
+    elif 'Multi-player' in categories:
+        score += 5
+    if 'MMO' in categories or 'Massively Multiplayer' in categories:
+        score += 5
+
+    return min(100, score)
+
+
+def estimate_update_priority(reddit_score=0, accel_need_text=''):
+    """
+    预估热游更新的综合优先级（0-100 分），
+    结合社区热度（Reddit score）和加速需求强度。
+    """
+    priority = 0
+
+    # 1. Reddit 热度 (最高 50 分)
+    if reddit_score > 5000:
+        priority += 50
+    elif reddit_score > 2000:
+        priority += 40
+    elif reddit_score > 1000:
+        priority += 30
+    elif reddit_score > 500:
+        priority += 25
+    elif reddit_score > 200:
+        priority += 20
+    elif reddit_score > 100:
+        priority += 15
+    elif reddit_score > 0:
+        priority += 10
+
+    # 2. 加速需求星级 (最高 50 分)
+    star_count = accel_need_text.count('⭐')
+    priority += star_count * 10
+
+    return min(100, priority)
+
+
+def format_hype_label(score):
+    """将热度分数转换为可读标签"""
+    if score >= 80:
+        return f"🔥🔥🔥 热度极高 ({score}分)"
+    elif score >= 60:
+        return f"🔥🔥 热度较高 ({score}分)"
+    elif score >= 40:
+        return f"🔥 热度中等 ({score}分)"
+    elif score >= 20:
+        return f"热度一般 ({score}分)"
+    else:
+        return f"热度较低 ({score}分)"
+
+
 def analyze_acceleration_need(game_name, app_data=None, update_content=''):
     """
     分析游戏的加速需求等级。
@@ -427,6 +524,8 @@ def check_steam_news_updates():
                     summary = summarize_update(game_name, title, contents)
                     # 调用 AI 分析加速需求
                     accel_need = analyze_acceleration_need(game_name, update_content=contents)
+                    # 综合优先级
+                    update_priority = estimate_update_priority(reddit_score=0, accel_need_text=accel_need)
 
                     issues.append({
                         'game': game_name,
@@ -434,6 +533,7 @@ def check_steam_news_updates():
                         'country': '',
                         'issue': f"{tag} {title}\n    {summary}\n    加速需求: {accel_need}",
                         'alert_type': 'game_update',
+                        'update_priority': update_priority,
                         'source_name': 'Steam News',
                         'source_url': item.get('url', f'https://store.steampowered.com/news/app/{app_id}')
                     })
@@ -514,12 +614,16 @@ def check_non_steam_updates():
                     accel_need = analyze_acceleration_need(game_name, update_content=selftext or title)
                     issue_text += f"\n    加速需求: {accel_need}"
 
+                    # 综合优先级
+                    update_priority = estimate_update_priority(reddit_score=score, accel_need_text=accel_need)
+
                     issues.append({
                         'game': game_name,
                         'region': 'Global',
                         'country': '',
                         'issue': issue_text,
                         'alert_type': 'game_update',
+                        'update_priority': update_priority,
                         'source_name': f'r/{subreddit}',
                         'source_url': f"https://www.reddit.com{post_data.get('permalink', '')}"
                     })
@@ -590,7 +694,12 @@ def check_hot_new_releases():
                                 # AI 加速需求分析
                                 accel_need = analyze_acceleration_need(name, app_data)
 
+                                # 热度预估
+                                hype_score = estimate_game_hype(app_data, rank, category_label)
+                                hype_label = format_hype_label(hype_score)
+
                                 issue_text = f"🆕 [Steam {category_label} #{rank}] {name} ({genre_str})"
+                                issue_text += f"\n    热度预估: {hype_label}"
                                 issue_text += f"\n    头部地区: {top_regions}"
                                 if game_intro:
                                     issue_text += f"\n    玩法介绍: {game_intro}"
@@ -602,6 +711,7 @@ def check_hot_new_releases():
                                     'country': '',
                                     'issue': issue_text,
                                     'alert_type': 'new_game_release',
+                                    'hype_score': hype_score,  # 用于排序
                                     'source_name': 'Steam Store',
                                     'source_url': f'https://store.steampowered.com/app/{app_id}'
                                 })
@@ -618,6 +728,8 @@ def check_hot_new_releases():
                 seen.add(key)
                 unique_issues.append(issue)
 
+        # 按热度从高到低排序
+        unique_issues.sort(key=lambda x: x.get('hype_score', 0), reverse=True)
         return unique_issues[:5]  # 最多报 5 条，避免刷屏
 
     except Exception as e:
@@ -1035,7 +1147,17 @@ def check_game_calendar():
     print("正在检测 Battle.net 游戏更新...")
     all_issues.extend(check_battlenet_updates())
 
-    return all_issues
+    # 按 alert_type 分组排序
+    new_releases = [i for i in all_issues if i.get('alert_type') == 'new_game_release']
+    updates = [i for i in all_issues if i.get('alert_type') == 'game_update']
+    others = [i for i in all_issues if i.get('alert_type') not in ('new_game_release', 'game_update')]
+
+    # 新游按热度从高到低
+    new_releases.sort(key=lambda x: x.get('hype_score', 0), reverse=True)
+    # 热游更新按综合优先级从高到低
+    updates.sort(key=lambda x: x.get('update_priority', 0), reverse=True)
+
+    return updates + new_releases + others
 
 
 if __name__ == "__main__":
