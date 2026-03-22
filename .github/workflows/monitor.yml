@@ -27,6 +27,7 @@ jobs:
           path: |
             game_monitor/game_calendar_snapshot.json
             game_monitor/platform_incidents_snapshot.json
+            game_monitor/ineffective_alerts_snapshot.json
             competitor_radar/exitlag_pricing_snapshot.json
             brand_monitor/trustpilot_snapshot.json
           key: monitor-snapshots-${{ github.run_id }}

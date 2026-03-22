@@ -799,6 +799,10 @@ def check_all_platforms():
     # 保存事件去重快照
     _save_seen_incidents(_seen_incidents)
 
+    # 处理报警：🔴 加速器无效合并去重，🟢🟡 正常输出
+    from utils.alert_dedup import process_alerts
+    all_issues = process_alerts(all_issues)
+
     return all_issues
 
 
@@ -812,6 +816,9 @@ if __name__ == "__main__":
     print("Testing Platform Status Monitor...")
     results = check_all_platforms()
     if results:
+        # 处理报警：🔴 加速器无效合并去重，🟢🟡 正常输出
+        from utils.alert_dedup import process_alerts
+        results = process_alerts(results)
         for r in results:
             print(f"[{r['game']}] {r['issue']}")
         # 发送通知

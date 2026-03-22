@@ -346,6 +346,9 @@ def check_all_channels_for_game(game_name, reddit_sub, apac_name):
         
     return issues
 
+from utils.alert_dedup import process_alerts
+
+
 def main():
     all_issues = []
     
@@ -361,6 +364,9 @@ def main():
             all_issues.extend(check_epic_games_status())
         
         all_issues.extend(check_all_channels_for_game(game_name, subreddit, game_name))
+    
+    # 处理报警：🔴 加速器无效合并去重，🟢🟡 正常输出
+    all_issues = process_alerts(all_issues)
     
     # 发送通知汇总
     send_popo_alert(POPO_WEBHOOK_URL, all_issues)
