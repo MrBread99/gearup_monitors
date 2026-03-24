@@ -1,7 +1,7 @@
 import requests
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 # 从环境变量中获取 POPO Webhook URL
 POPO_WEBHOOK_URL = os.environ.get("POPO_WEBHOOK_URL")
@@ -16,7 +16,7 @@ def send_popo_alert(webhook_url, issues_list):
         print("未检测到异常或情报，静默退出，不发送打扰信息。")
         return
 
-    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    current_time = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
 
     # 按 alert_type 分组
     ALERT_TITLES = {
