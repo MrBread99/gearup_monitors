@@ -332,9 +332,11 @@ def check_all_channels_for_game(game_name, reddit_sub, apac_name):
     # 2. 检查亚太本土社区
     issues.extend(check_apac_osint_for_game(apac_name or game_name))
     
-    # 3. 检查独联体/俄语区 (VK.com)
+    # 3. 检查独联体/俄语区 (VK.com + detector404.ru)
     cis_res = cis_osint.check_cis_vk(game_name)
     if cis_res: issues.append(cis_res)
+    d404_res = cis_osint.check_detector404(game_name)
+    if d404_res: issues.append(d404_res)
     
     # 4. 检查全球故障聚合网站 (替代 Downdetector)
     dd_res = downdetector_osint.check_downdetector_global(game_name)

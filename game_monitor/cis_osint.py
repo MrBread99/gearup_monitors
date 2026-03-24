@@ -2,23 +2,49 @@ import requests
 from bs4 import BeautifulSoup
 import urllib.parse
 import time
+import re
 
 # ==========================================
 # 独联体/俄语区 (CIS/Russia) 监控配置
 # ==========================================
 
 # 俄语本地化异常关键词
-# пинг = ping, лаги = lags, потеря = loss, пакет = packet, сервера = servers, лежат = down
 RU_KEYWORDS = ["ПИНГ", "ЛАГ", "ЛАГИ", "ПОТЕРЯ", "ПАКЕТОВ", "СЕРВЕРА ЛЕЖАТ", "ВЫЛЕТАЕТ", "РОСТЕЛЕКОМ", "ROSTELECOM"]
 
 # VK.com 游戏社群 (Groups) 映射 — 从统一游戏注册表 (game_registry.py) 加载
 from game_registry import get_vk_game_map
 VK_GAME_MAP = get_vk_game_map()
 
+# detector404.ru（俄罗斯版 Downdetector）游戏/平台 slug 映射
+DETECTOR404_MAP = {
+    # 游戏
+    'Valorant': 'valorant',
+    'League of Legends': 'league-of-legends',
+    'APEX Legends': 'apex-legends',
+    'CS2': 'counter-strike-2',
+    'Fortnite': 'fortnite',
+    'PUBG': 'pubg',
+    'Overwatch 2': 'overwatch',
+    'Dota 2': 'dota-2',
+    'Escape from Tarkov': 'escape-from-tarkov',
+    'Path of Exile 2': 'path-of-exile',
+    # 平台
+    'Steam': 'steam',
+    'Discord': 'discord',
+    'Telegram': 'telegram',
+    'Epic Games': 'epic-games',
+}
+
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Mobile Safari/537.36',
     'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7'
 }
+
+HEADERS_WEB = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
+    'Accept-Language': 'ru-RU,ru;q=0.9'
+}
+
 
 def analyze_russian_text(text_list, threshold=2):
     """分析俄语文本列表，匹配故障关键词"""
@@ -35,6 +61,7 @@ def analyze_russian_text(text_list, threshold=2):
                 
     return issue_count >= threshold, issue_count, list(matched_keywords)
 
+
 def check_cis_vk(game_name):
     """
     抓取俄语区最大的社交网络 VK (Vkontakte) 的对应游戏群组的墙 (Wall)
@@ -49,15 +76,12 @@ def check_cis_vk(game_name):
     try:
         response = requests.get(url, headers=HEADERS, timeout=15)
         
-        # 如果返回 200，说明移动版页面访问成功
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # 抓取页面上的发帖内容 (移动版 VK 的 post 文本通常在 pi_text 类的 div 里)
             post_divs = soup.find_all('div', class_='pi_text')
             texts = [div.text for div in post_divs]
             
-            is_down, count, matched = analyze_russian_text(texts, threshold=2) # 俄语区专属墙，稍微提到 2 篇就报警
+            is_down, count, matched = analyze_russian_text(texts, threshold=2)
             
             if is_down:
                 return {
@@ -73,17 +97,99 @@ def check_cis_vk(game_name):
         
     return None
 
+
+def check_detector404(game_name):
+    """
+    检查 detector404.ru（俄罗斯版 Downdetector）上的故障报告。
+    提取：投诉量级、受影响区域 TOP5、故障类型占比。
+    """
+    slug = DETECTOR404_MAP.get(game_name)
+    if not slug:
+        return None
+
+    url = f"https://detector404.ru/{slug}"
+
+    try:
+        response = requests.get(url, headers=HEADERS_WEB, timeout=15)
+        if response.status_code != 200:
+            print(f"[CIS] detector404 {game_name}: HTTP {response.status_code}")
+            return None
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+        text = soup.get_text()
+
+        # 提取投诉量级 — 页面中有 "Жалоб – умеренно/много/критично" 等描述
+        complaint_level = None
+        level_match = re.search(r'Жалоб\s*[–—-]\s*(\S+)', text)
+        if level_match:
+            complaint_level = level_match.group(1)
+
+        # 如果投诉量级为"нет"(无)或"мало"(少)，跳过
+        if complaint_level and complaint_level.lower() in ('нет', 'мало', 'минимально'):
+            return None
+
+        # 提取受影响区域 TOP
+        regions = []
+        region_links = soup.select('a[href*="-oblast"], a[href*="-kraj"], a[href*="-respublika"]')
+        for link in region_links[:5]:
+            region_text = link.get_text(strip=True)
+            # 提取百分比
+            pct_match = re.search(r'(\d+)%', link.parent.get_text() if link.parent else '')
+            if pct_match:
+                regions.append(f"{region_text} {pct_match.group(1)}%")
+            elif region_text:
+                regions.append(region_text)
+
+        # 提取故障类型占比
+        fault_types = []
+        type_patterns = [
+            (r'Общий сбой\s*(\d+)%', '全面故障'),
+            (r'Сбой сайта\s*(\d+)%', '网站故障'),
+            (r'Сбой мобильного\s*(\d+)%', '移动端故障'),
+            (r'Сбой личного кабинета\s*(\d+)%', '账户故障'),
+        ]
+        for pattern, label in type_patterns:
+            match = re.search(pattern, text)
+            if match:
+                fault_types.append(f"{label} {match.group(1)}%")
+
+        # 只在投诉量级较高时报警
+        high_levels = ['умеренно', 'много', 'критично', 'массово']
+        if complaint_level and any(lvl in complaint_level.lower() for lvl in high_levels):
+            issue_parts = [f"🇷🇺 俄罗斯区故障检测 (投诉量: {complaint_level})"]
+            if regions:
+                issue_parts.append(f"受影响区域: {', '.join(regions[:5])}")
+            if fault_types:
+                issue_parts.append(f"故障类型: {', '.join(fault_types)}")
+
+            return {
+                'game': game_name,
+                'region': 'CIS / Russia',
+                'country': 'Russia',
+                'issue': '\n    '.join(issue_parts),
+                'source_name': 'detector404.ru',
+                'source_url': url
+            }
+
+    except Exception as e:
+        print(f"[CIS] detector404 检测 {game_name} 失败: {e}")
+
+    return None
+
+
 def check_cis_telegram_search(game_name):
     """
-    备用或补充方案：通过 t.me 的网页版预览或者第三方 Telegram 搜索引擎
-    由于 Telegram 官方防爬极其严格，这里作为一个扩展槽位留存，目前主依赖 VK。
-    如果有必要，可以接入 tgstat.ru 的非官方搜索。
+    备用方案：通过第三方 Telegram 搜索引擎。
+    目前主依赖 VK + detector404。
     """
     pass
+
 
 if __name__ == "__main__":
     print("Testing CIS OSINT...")
     res = check_cis_vk("Dota 2")
-    print(res)
-    res2 = check_cis_vk("PUBG")
-    print(res2)
+    print(f"VK: {res}")
+    res2 = check_detector404("Steam")
+    print(f"detector404 Steam: {res2}")
+    res3 = check_detector404("Discord")
+    print(f"detector404 Discord: {res3}")
