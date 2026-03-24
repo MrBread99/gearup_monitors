@@ -4,7 +4,34 @@
 
 ---
 
-## [v3.4.0] - 报警体系全面优化 (Current)
+## [v4.0.0] - 基础设施大修 + 俄罗斯深度覆盖 (Current)
+
+### 🔧 基础设施大修 (Critical Fixes)
+- **快照持久化**: GitHub Actions 新增 `actions/cache`，6 个快照文件跨运行持久化，去重和变动检测在线上真正生效。
+- **Reddit 共享客户端 (`utils/reddit_client.py`)**: OAuth2 可选（600 req/min）+ 2s 限流 + 429 自动重试。7 个文件迁移至统一入口。
+- **Google 搜索共享客户端 (`utils/google_client.py`)**: 5-8s 随机延迟防 CAPTCHA。4 个文件迁移至统一入口。
+- **统一游戏配置 (`game_registry.py`)**: 15 款游戏配置集中管理（AppID/subreddit/VK/ITSD/巴哈/Yahoo JP/DC Inside），新增游戏只改一个文件。
+- **通知系统增强 (`notifier.py`)**: 消息超 4000 字自动分割 + 3 次重试指数退避 + 报警时间统一 UTC+8。
+
+### 🎯 报警质量优化
+- **ISP 短关键词误报修复**: BT/SK/DU 等 2-3 字母 ISP 名改用词边界匹配 + 网络关键词共现要求。
+- **平台事件去重**: Discord/Epic/FACEIT 事件 ID 快照去重，同一事件不重复报。
+- **YouTube 配额优化**: 搜索词从 15 个精简到 8 个，仅 UTC 00:00-02:00 运行（每天 1 次），配额从 18,000 降到 ~1,600 单位/天。
+- **APAC 误报降低**: 巴哈姆特/DC Inside 阈值从 3 提高到 5，且要求匹配 2+ 个不同关键词。
+- **🔴 加速器无效报警合并去重 (`utils/alert_dedup.py`)**: 合并成一条摘要（保留游戏名+地区），跨运行去重（报过不再报）。🟢/🟡 报警不受影响。
+- **OW2 Steam AppID 补齐** (2357570)。
+
+### 🇷🇺 俄罗斯深度覆盖
+- **detector404.ru 接入 (`cis_osint.py`)**: 俄罗斯版 Downdetector，覆盖 10 款游戏 + 4 个平台。投诉量级/区域名/故障类型全部中文翻译。中等投诉量合并成一条，大量及以上逐条详细报告。
+- **VK 全覆盖**: 从 6 款扩到 15 款游戏（通过 game_registry 自动生效）。
+- **俄罗斯大型活动预警 (`russia_event_monitor.py`)**: 8 个已知年度活动提前 14 天预警（SPIEF/EEF/BRICS/SCO/胜利日等），Reddit 动态检测 Roskomnadzor 封锁 + AI 风险评估。
+
+### 🏷️ 竞品定价扩展
+- **LagoFast 加入竞品定价监控**: 10 个地区版本（EN/繁中/JP/KR/PT-BR/TH/VI/ID/AR/TR），多竞品架构重构。
+
+---
+
+## [v3.4.0] - 报警体系全面优化
 
 ### 📊 报警标题分离
 - 新游上线和热游更新不再混在同一个报警标题下，拆分为独立的 `【新游上线预告】` 和 `【热游版本更新预告】`。
