@@ -74,11 +74,14 @@ def process_alerts(issues):
         game_list = []
         for item in ineffective_items:
             game = item.get('game', '?')
-            # 从 issue 文本中提取简短原因
+            region = item.get('region', '')
+            country = item.get('country', '')
+            location = f" [{country}]" if country else (f" [{region}]" if region and region != 'Global' else '')
+            
+            # 从 issue 文本中提取简短原因（去掉标签前缀）
             text = item.get('issue', '').replace('🔴 [加速器无效] ', '')
-            # 截取到换行符前的第一行
             first_line = text.split('\n')[0][:80]
-            game_list.append(f"{game}: {first_line}")
+            game_list.append(f"{game}{location}: {first_line}")
 
         summary = f"🔴 [加速器无效] 以下 {len(ineffective_items)} 项为官方维护/宕机，加速器无法解决:\n"
         summary += '\n'.join(f"    - {g}" for g in game_list)
