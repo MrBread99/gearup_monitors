@@ -332,11 +332,10 @@ def check_all_channels_for_game(game_name, reddit_sub, apac_name):
     # 2. 检查亚太本土社区
     issues.extend(check_apac_osint_for_game(apac_name or game_name))
     
-    # 3. 检查独联体/俄语区 (VK.com + detector404.ru)
+    # 3. 检查独联体/俄语区 (VK.com)
     cis_res = cis_osint.check_cis_vk(game_name)
     if cis_res: issues.append(cis_res)
-    d404_res = cis_osint.check_detector404(game_name)
-    if d404_res: issues.append(d404_res)
+    # detector404.ru 在 main() 中批量调用，不在此逐个调用
     
     # 4. 检查全球故障聚合网站 (替代 Downdetector)
     dd_res = downdetector_osint.check_downdetector_global(game_name)
@@ -366,6 +365,10 @@ def main():
             all_issues.extend(check_epic_games_status())
         
         all_issues.extend(check_all_channels_for_game(game_name, subreddit, game_name))
+    
+    # detector404.ru 批量检测（中等合并，高级别逐条）
+    print("正在批量检测 detector404.ru 俄罗斯区故障...")
+    all_issues.extend(cis_osint.check_detector404_batch(get_all_game_names()))
     
     # 处理报警：🔴 加速器无效合并去重，🟢🟡 正常输出
     all_issues = process_alerts(all_issues)

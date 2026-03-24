@@ -796,13 +796,10 @@ def check_all_platforms():
     print("正在检测 LINE 连接状态...")
     all_issues.extend(check_line_connectivity())
 
-    # detector404.ru 俄罗斯区平台故障检测
+    # detector404.ru 俄罗斯区平台故障检测（中等合并，高级别逐条）
     print("正在检测 detector404.ru 俄罗斯区平台状态...")
     import cis_osint
-    for platform in ['Steam', 'Discord', 'Telegram', 'Epic Games']:
-        d404_res = cis_osint.check_detector404(platform)
-        if d404_res:
-            all_issues.append(d404_res)
+    all_issues.extend(cis_osint.check_detector404_batch(['Steam', 'Discord', 'Telegram', 'Epic Games']))
 
     # 保存事件去重快照
     _save_seen_incidents(_seen_incidents)
