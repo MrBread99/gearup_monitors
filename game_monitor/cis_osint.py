@@ -119,26 +119,63 @@ def check_detector404(game_name):
         text = soup.get_text()
 
         # 提取投诉量级 — 页面中有 "Жалоб – умеренно/много/критично" 等描述
+        # 翻译对照：нет=无, мало=少, минимально=极少, умеренно=中等, много=大量, критично=严重, массово=大规模
+        LEVEL_TRANSLATE = {
+            'нет': '无',
+            'мало': '少量',
+            'минимально': '极少',
+            'умеренно': '中等',
+            'много': '大量',
+            'критично': '严重',
+            'массово': '大规模',
+        }
+
         complaint_level = None
+        complaint_level_zh = None
         level_match = re.search(r'Жалоб\s*[–—-]\s*(\S+)', text)
         if level_match:
-            complaint_level = level_match.group(1)
+            complaint_level = level_match.group(1).lower()
+            complaint_level_zh = LEVEL_TRANSLATE.get(complaint_level, complaint_level)
 
-        # 如果投诉量级为"нет"(无)或"мало"(少)，跳过
+        # 如果投诉量级为"无"或"少"，跳过
         if complaint_level and complaint_level.lower() in ('нет', 'мало', 'минимально'):
             return None
 
-        # 提取受影响区域 TOP
+        # 提取受影响区域 TOP，并翻译俄语地名
+        REGION_TRANSLATE = {
+            'Московская область': '莫斯科州',
+            'Москва': '莫斯科',
+            'Санкт-Петербург': '圣彼得堡',
+            'Новосибирская область': '新西伯利亚州',
+            'Свердловская область': '斯维尔德洛夫斯克州',
+            'Краснодарский край': '克拉斯诺达尔边疆区',
+            'Татарстан': '鞑靼斯坦',
+            'Нижегородская область': '下诺夫哥罗德州',
+            'Самарская область': '萨马拉州',
+            'Челябинская область': '车里雅宾斯克州',
+            'Ростовская область': '罗斯托夫州',
+            'Волгоградская область': '伏尔加格勒州',
+            'Тюменская область': '秋明州',
+            'Приморский край': '滨海边疆区',
+            'Хабаровский край': '哈巴罗夫斯克边疆区',
+            'Магаданская область': '马加丹州',
+            'Пермский край': '彼尔姆边疆区',
+            'Воронежская область': '沃罗涅日州',
+            'Иркутская область': '伊尔库茨克州',
+            'Омская область': '鄂木斯克州',
+        }
+
         regions = []
         region_links = soup.select('a[href*="-oblast"], a[href*="-kraj"], a[href*="-respublika"]')
         for link in region_links[:5]:
             region_text = link.get_text(strip=True)
+            region_zh = REGION_TRANSLATE.get(region_text, region_text)
             # 提取百分比
             pct_match = re.search(r'(\d+)%', link.parent.get_text() if link.parent else '')
             if pct_match:
-                regions.append(f"{region_text} {pct_match.group(1)}%")
-            elif region_text:
-                regions.append(region_text)
+                regions.append(f"{region_zh} {pct_match.group(1)}%")
+            elif region_zh:
+                regions.append(region_zh)
 
         # 提取故障类型占比
         fault_types = []
@@ -155,8 +192,8 @@ def check_detector404(game_name):
 
         # 只在投诉量级较高时报警
         high_levels = ['умеренно', 'много', 'критично', 'массово']
-        if complaint_level and any(lvl in complaint_level.lower() for lvl in high_levels):
-            issue_parts = [f"🇷🇺 俄罗斯区故障检测 (投诉量: {complaint_level})"]
+        if complaint_level and any(lvl in complaint_level for lvl in high_levels):
+            issue_parts = [f"🇷🇺 俄罗斯区故障检测 (投诉量: {complaint_level_zh})"]
             if regions:
                 issue_parts.append(f"受影响区域: {', '.join(regions[:5])}")
             if fault_types:
