@@ -63,21 +63,46 @@ SNAPSHOT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'exitla
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-                  '(KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
-    'Accept-Language': 'en-US,en;q=0.9'
+                  '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Sec-Fetch-User': '?1',
+    'Upgrade-Insecure-Requests': '1',
+    'Cache-Control': 'max-age=0',
 }
 
 
 def fetch_pricing_for_region(region_code, competitor_name='ExitLag'):
     """
     抓取指定竞品指定地区的定价页面，解析出价格和折扣信息。
+    支持 Cloudflare 绕过（cloudscraper 优先，fallback 到 requests）。
     """
     config = COMPETITORS.get(competitor_name, {})
     url_template = config.get('url_template', '')
     url = url_template.replace('{region}', region_code)
+
+    # 尝试用 cloudscraper 绕过 Cloudflare（如果安装了）
+    try:
+        import cloudscraper
+        scraper = cloudscraper.create_scraper(
+            browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False}
+        )
+        response = scraper.get(url, timeout=20)
+    except ImportError:
+        # cloudscraper 未安装，用普通 requests
+        import time
+        time.sleep(1)  # 简单延迟降低被拦概率
+        response = requests.get(url, headers=HEADERS, timeout=15)
+    except Exception as e:
+        print(f"[{competitor_name}] cloudscraper {region_code} 失败: {e}")
+        response = requests.get(url, headers=HEADERS, timeout=15)
     
     try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
         if response.status_code != 200:
             print(f"[{competitor_name}] {region_code}: HTTP {response.status_code}")
             return None
@@ -91,11 +116,13 @@ def fetch_pricing_for_region(region_code, competitor_name='ExitLag'):
         # 提取所有折扣百分比
         discounts = re.findall(r'(\d+)%\s*(?:OFF|off|Save|save|discount)', text, re.IGNORECASE)
         
-        # 构建结构化数据
+        # 用价格+折扣的 hash 做变动检测（而非整个页面 hash，避免动态内容误报）
+        pricing_fingerprint = str(sorted(prices)) + '|' + str(sorted(discounts))
+        
         pricing_data = {
             'prices_raw': prices,
             'discounts': discounts,
-            'page_text_hash': str(hash(text)),
+            'pricing_hash': str(hash(pricing_fingerprint)),
         }
         
         return pricing_data
@@ -148,7 +175,7 @@ def check_competitor_pricing(competitor_name):
         # 与旧快照比对
         old_pricing = old_competitor_data.get(region_code)
         if old_pricing:
-            if old_pricing.get('page_text_hash') != pricing.get('page_text_hash'):
+            if old_pricing.get('pricing_hash') != pricing.get('pricing_hash'):
                 old_prices = set(old_pricing.get('prices_raw', []))
                 new_prices = set(pricing.get('prices_raw', []))
 

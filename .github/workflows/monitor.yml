@@ -18,7 +18,7 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4 feedparser openai discord.py
+        run: pip install requests beautifulsoup4 feedparser openai discord.py cloudscraper
 
       # ===== 快照持久化：从缓存恢复上次运行的快照文件 =====
       - name: Restore snapshot cache
