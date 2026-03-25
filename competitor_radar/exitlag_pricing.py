@@ -24,9 +24,9 @@ COMPETITORS = {
     'ExitLag': {
         'regions': {
             'en': 'English (Global)',
-            'zh': '繁體中文 (Taiwan/HK)',
+            'zh-tw': '繁體中文 (Taiwan/HK)',
             'jp': '日本語 (Japan)',
-            'kr': '한국어 (Korea)',
+            'ko': '한국어 (Korea)',
             'pt': 'Português (Brazil)',
             'ru': 'Русский (Russia/CIS)',
             'es': 'Español (LATAM)',
@@ -103,7 +103,10 @@ def fetch_pricing_for_region(region_code, competitor_name='ExitLag'):
         response = requests.get(url, headers=HEADERS, timeout=15)
     
     try:
-        if response.status_code != 200:
+        if response.status_code == 403:
+            # Cloudflare 拦截，静默跳过（不刷日志）
+            return None
+        elif response.status_code != 200:
             print(f"[{competitor_name}] {region_code}: HTTP {response.status_code}")
             return None
         
@@ -172,18 +175,18 @@ def check_competitor_pricing(competitor_name):
 
         new_competitor_data[region_code] = pricing
 
-        # 与旧快照比对
+        # 与旧快照比对 — 直接比对价格和折扣列表（不依赖 hash key 名称）
         old_pricing = old_competitor_data.get(region_code)
         if old_pricing:
-            if old_pricing.get('pricing_hash') != pricing.get('pricing_hash'):
-                old_prices = set(old_pricing.get('prices_raw', []))
-                new_prices = set(pricing.get('prices_raw', []))
+            old_prices = set(old_pricing.get('prices_raw', []))
+            new_prices = set(pricing.get('prices_raw', []))
+            old_discounts = set(old_pricing.get('discounts', []))
+            new_discounts = set(pricing.get('discounts', []))
 
+            # 只有价格或折扣真正变化时才报警
+            if old_prices != new_prices or old_discounts != new_discounts:
                 added_prices = new_prices - old_prices
                 removed_prices = old_prices - new_prices
-
-                old_discounts = set(old_pricing.get('discounts', []))
-                new_discounts = set(pricing.get('discounts', []))
 
                 changes = []
                 if added_prices:
@@ -194,7 +197,7 @@ def check_competitor_pricing(competitor_name):
                     changes.append(f"折扣变动: {', '.join(old_discounts)} -> {', '.join(new_discounts)}")
 
                 if not changes:
-                    changes.append("页面内容有变化（可能是套餐结构/文案调整）")
+                    changes.append("价格结构有微调")
 
                 url = config.get('url_template', '').replace('{region}', region_code)
                 issues.append({
