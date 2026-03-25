@@ -70,10 +70,15 @@ def summarize_sentiment(brand_name, region_name, positive_posts, negative_posts,
 【中性讨论 ({len(neutral_posts)} 篇)】:
 {neu_titles}
 
+重要要求:
+- 如果帖子中提到了其他竞品加速器或 VPN（如 ExitLag, LagoFast, NoPing, Hone.gg, wtfast, Mudfish, UU加速器, 迅游, 雷神 等），必须在总结中写出具体的竞品名称。
+- 如果有用户在对比 {brand_name} 和其他竞品，请在总结中明确指出对比对象和结论。
+
 请严格按以下格式输出（纯文本，禁止 Markdown，每项 1 句话，无内容则写"暂无"）:
-正面评价: （总结核心正面反馈）
-负面评价: （总结核心负面反馈）
-中性讨论: （总结主要讨论方向）
+正面评价: （总结核心正面反馈，提及具体竞品名称）
+负面评价: （总结核心负面反馈，提及具体竞品名称）
+中性讨论: （总结主要讨论方向，提及具体竞品名称）
+涉及竞品: （列出帖子中出现的所有竞品/VPN 名称，用逗号分隔，无则写"无"）
 商业洞察: （对加速器产品的 1 句建议）"""
 
     try:
