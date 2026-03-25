@@ -203,14 +203,8 @@ def analyze_video_sentiment(videos):
 def check_gearup_youtube(hours_window=168):
     """
     主检测函数：搜索 YouTube，汇总 GearUP Booster 相关视频舆情。
-    默认 7 天窗口。为节省 API 配额（每天 10,000 单位），只在 UTC 00:00-02:00 运行。
+    默认 7 天窗口。已拆分到独立的每日 workflow，无需时段限制。
     """
-    # 配额优化：7 天窗口不需要每 2h 查一次，每天查一次即可
-    current_hour = datetime.now(timezone.utc).hour
-    if current_hour >= 2:
-        print("[YouTube] 非 UTC 00:00-02:00 时段，跳过以节省 API 配额。")
-        return []
-
     if not YOUTUBE_API_KEY:
         print("[YouTube] YOUTUBE_API_KEY 未配置，跳过 YouTube 监控。")
         return []
