@@ -370,10 +370,15 @@ def main():
     print("正在批量检测 detector404.ru 俄罗斯区故障...")
     all_issues.extend(cis_osint.check_detector404_batch(get_all_game_names()))
     
+    # 平台与通讯工具状态检测（合并到同一条消息）
+    print("正在检测平台与通讯工具状态...")
+    import platform_status_monitor
+    all_issues.extend(platform_status_monitor.check_all_platforms())
+    
     # 处理报警：🔴 加速器无效合并去重，🟢🟡 正常输出
     all_issues = process_alerts(all_issues)
     
-    # 发送通知汇总
+    # 发送通知汇总（游戏+平台合并一条消息）
     send_popo_alert(POPO_WEBHOOK_URL, all_issues)
 
 if __name__ == "__main__":

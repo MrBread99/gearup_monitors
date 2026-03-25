@@ -43,10 +43,7 @@ jobs:
           REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
         run: python game_monitor/monitor.py
 
-      - name: Run Platform Status Monitor
-        env:
-          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
-        run: python game_monitor/platform_status_monitor.py
+      # Platform Status Monitor 已合并到 monitor.py，不再单独运行
 
       - name: Run Russia Event Monitor
         env:
