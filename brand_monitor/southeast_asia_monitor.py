@@ -100,32 +100,9 @@ def search_reddit_sea(keyword):
 
 
 def search_tinhte(query):
-    """搜索 Tinhte.vn（越南最大科技论坛）"""
-    encoded = urllib.parse.quote(query)
-    url = f"https://tinhte.vn/search/?q={encoded}&o=date"
-
-    try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
-        if response.status_code != 200:
-            return []
-
-        soup = BeautifulSoup(response.text, 'html.parser')
-        results = []
-
-        for item in soup.select('h3.contentRow-title a, .listBlock.main h3 a'):
-            title = item.get_text(strip=True)
-            link = item.get('href', '')
-            if title:
-                results.append({
-                    'title': title,
-                    'url': f"https://tinhte.vn{link}" if link.startswith('/') else link,
-                    'source': 'Tinhte.vn'
-                })
-
-        return results[:15]
-    except Exception as e:
-        print(f"[SEA] 搜索 Tinhte '{query}' 失败: {e}")
-        return []
+    """搜索 Tinhte.vn（通过搜索引擎间接搜索，Tinhte 原生搜索需要 POST）"""
+    raw = google_search(query, site='tinhte.vn')
+    return [{'title': r['title'], 'url': r['url'], 'source': 'Tinhte.vn'} for r in raw]
 
 
 def search_google_local(query, lang_code):

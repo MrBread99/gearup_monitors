@@ -39,33 +39,9 @@ HEADERS = {
 
 
 def search_bahamut(query):
-    """搜索巴哈姆特全站"""
-    encoded = urllib.parse.quote(query)
-    url = f"https://forum.gamer.com.tw/search.php?q={encoded}"
-
-    try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
-        if response.status_code != 200:
-            return []
-
-        soup = BeautifulSoup(response.text, 'html.parser')
-        results = []
-
-        for item in soup.select('.search-result__item, .b-list__main__title'):
-            title = item.get_text(strip=True)
-            link_tag = item.find('a') if item.name != 'a' else item
-            link = link_tag.get('href', '') if link_tag else ''
-            if title:
-                results.append({
-                    'title': title,
-                    'url': f"https://forum.gamer.com.tw{link}" if link.startswith('/') else link,
-                    'source': 'Bahamut'
-                })
-
-        return results[:20]
-    except Exception as e:
-        print(f"[TW] 搜索巴哈姆特 '{query}' 失败: {e}")
-        return []
+    """搜索巴哈姆特全站（通过搜索引擎间接搜索，巴哈原生搜索需要登录）"""
+    raw = google_search(query, site='forum.gamer.com.tw')
+    return [{'title': r['title'], 'url': r['url'], 'source': 'Bahamut'} for r in raw]
 
 
 def search_ptt(query):
