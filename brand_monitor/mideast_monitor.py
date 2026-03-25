@@ -224,6 +224,7 @@ def check_mideast_brand():
         'game': 'GearUP Booster',
         'region': 'MENA',
         'country': 'Middle East',
+        'alert_type': 'brand_monitor',
         'issue': issue_desc,
         'source_name': 'Reddit MENA / Google AR',
         'source_url': 'https://www.reddit.com/r/saudiarabia/'

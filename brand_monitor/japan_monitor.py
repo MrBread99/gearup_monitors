@@ -196,6 +196,7 @@ def check_japan_brand():
         'game': 'GearUP Booster',
         'region': 'APAC',
         'country': 'Japan',
+        'alert_type': 'brand_monitor',
         'issue': issue_desc,
         'source_name': '5ch / Google JP / Reddit JP',
         'source_url': 'https://www.google.co.jp/'

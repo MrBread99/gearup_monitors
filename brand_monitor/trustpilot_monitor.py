@@ -161,6 +161,7 @@ def check_trustpilot():
                     'game': brand_name,
                     'region': 'Global',
                     'country': '',
+                    'alert_type': 'brand_monitor',
                     'issue': f"{prefix}: {'; '.join(changes)}",
                     'source_name': 'Trustpilot',
                     'source_url': f'https://www.trustpilot.com/review/{slug}'
@@ -180,6 +181,7 @@ def check_trustpilot():
                 'game': 'Trustpilot',
                 'region': 'Global',
                 'country': '',
+                'alert_type': 'brand_monitor',
                 'issue': f"📊 Trustpilot 基线快照: {' | '.join(summary_parts)}",
                 'source_name': 'Trustpilot',
                 'source_url': 'https://www.trustpilot.com/'

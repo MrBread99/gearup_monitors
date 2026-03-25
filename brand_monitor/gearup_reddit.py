@@ -179,6 +179,7 @@ def check_gearup_reddit(hours_window=24):
         'game': 'GearUP Booster',
         'region': 'Global',
         'country': '',
+        'alert_type': 'brand_monitor',
         'issue': issue_desc,
         'source_name': 'Reddit Global Search',
         'source_url': 'https://www.reddit.com/search/?q=GearUP+Booster&sort=new&t=day'

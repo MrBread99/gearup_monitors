@@ -171,6 +171,7 @@ def check_russia_brand():
         'game': 'GearUP Booster',
         'region': 'CIS / Russia',
         'country': 'Russia',
+        'alert_type': 'brand_monitor',
         'issue': issue_desc,
         'source_name': 'VK / Otzovik',
         'source_url': 'https://otzovik.com/'

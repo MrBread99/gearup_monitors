@@ -145,6 +145,7 @@ def check_taiwan_brand():
         'game': 'GearUP Booster',
         'region': 'APAC',
         'country': 'Taiwan',
+        'alert_type': 'brand_monitor',
         'issue': issue_desc,
         'source_name': 'Bahamut / PTT',
         'source_url': 'https://forum.gamer.com.tw/'

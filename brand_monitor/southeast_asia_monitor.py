@@ -233,6 +233,7 @@ def check_sea_brand():
         'game': 'GearUP Booster',
         'region': 'Southeast Asia',
         'country': '',
+        'alert_type': 'brand_monitor',
         'issue': issue_desc,
         'source_name': 'SEA Communities',
         'source_url': 'https://tinhte.vn/'

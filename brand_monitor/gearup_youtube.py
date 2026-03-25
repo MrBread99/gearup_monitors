@@ -272,6 +272,7 @@ def check_gearup_youtube(hours_window=168):
         'game': 'GearUP Booster',
         'region': 'Global',
         'country': '',
+        'alert_type': 'brand_monitor',
         'issue': issue_desc,
         'source_name': 'YouTube',
         'source_url': 'https://www.youtube.com/results?search_query=GearUP+Booster'

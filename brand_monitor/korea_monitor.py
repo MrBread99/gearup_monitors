@@ -159,6 +159,7 @@ def check_korea_brand():
         'game': 'GearUP Booster',
         'region': 'APAC',
         'country': 'South Korea',
+        'alert_type': 'brand_monitor',
         'issue': issue_desc,
         'source_name': 'Naver / DC Inside',
         'source_url': 'https://search.naver.com/'
