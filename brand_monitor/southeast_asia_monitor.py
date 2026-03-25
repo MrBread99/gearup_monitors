@@ -247,5 +247,7 @@ if __name__ == "__main__":
     if results:
         for r in results:
             print(r['issue'])
+        if POPO_WEBHOOK_URL:
+            send_popo_alert(POPO_WEBHOOK_URL, results)
     else:
         print("无东南亚区相关讨论。")

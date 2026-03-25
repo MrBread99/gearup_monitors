@@ -247,5 +247,7 @@ if __name__ == "__main__":
     if results:
         for r in results:
             print(f"[{r['game']} - {r['region']}] {r['issue']}")
+        if POPO_WEBHOOK_URL:
+            send_popo_alert(POPO_WEBHOOK_URL, results)
     else:
         print("无定价变动（或首次运行已保存基线）。")

@@ -290,5 +290,7 @@ if __name__ == "__main__":
     if results:
         for r in results:
             print(r['issue'])
+        if POPO_WEBHOOK_URL:
+            send_popo_alert(POPO_WEBHOOK_URL, results)
     else:
         print("过去 7 天无 GearUP 相关 YouTube 视频（或未配置 API Key）。")

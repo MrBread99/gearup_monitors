@@ -200,5 +200,10 @@ if __name__ == "__main__":
 
     print("Testing Trustpilot Monitor...")
     results = check_trustpilot()
-    for r in results:
-        print(f"[{r['game']}] {r['issue']}")
+    if results:
+        for r in results:
+            print(f"[{r['game']}] {r['issue']}")
+        if POPO_WEBHOOK_URL:
+            send_popo_alert(POPO_WEBHOOK_URL, results)
+    else:
+        print("无结果")

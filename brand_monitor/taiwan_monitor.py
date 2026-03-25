@@ -156,5 +156,10 @@ if __name__ == "__main__":
 
     print("Testing Taiwan Brand Monitor...")
     results = check_taiwan_brand()
-    for r in results:
-        print(r['issue'])
+    if results:
+        for r in results:
+            print(r['issue'])
+        if POPO_WEBHOOK_URL:
+            send_popo_alert(POPO_WEBHOOK_URL, results)
+    else:
+        print("无结果")
