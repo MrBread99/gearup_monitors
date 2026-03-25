@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.sentiment_summarizer import summarize_sentiment
 
 # ==========================================
 # GearUP Booster YouTube 舆情监控
@@ -261,6 +262,11 @@ def check_gearup_youtube(hours_window=168):
     if negative:
         top_neg = sorted(negative, key=lambda x: x['views'], reverse=True)[0]
         issue_desc += f"\n    ⚠️ 负面视频: \"{top_neg['title'][:50]}\" ({top_neg['channel']}, {top_neg['views']:,} 播放)"
+
+    # AI 舆情总结
+    ai_summary = summarize_sentiment('GearUP Booster', 'Global (YouTube)', negative, positive, neutral)
+    if ai_summary:
+        issue_desc += f"\n    {ai_summary.replace(chr(10), chr(10) + '    ')}"
 
     issues.append({
         'game': 'GearUP Booster',

@@ -6,6 +6,7 @@ from datetime import datetime, timezone, timedelta
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
 from utils.reddit_client import reddit_get
+from utils.sentiment_summarizer import summarize_sentiment
 
 # ==========================================
 # GearUP Booster Reddit 全站舆情监控
@@ -168,6 +169,11 @@ def check_gearup_reddit(hours_window=24):
     if hot_posts:
         top_hot = sorted(hot_posts, key=lambda x: x['score'], reverse=True)[0]
         issue_desc += f"\n    🔥 最热帖子: \"{top_hot['title'][:60]}\" (r/{top_hot['subreddit']}, ↑{top_hot['score']})"
+
+    # AI 舆情总结
+    ai_summary = summarize_sentiment('GearUP Booster', 'Global', negative, positive, neutral)
+    if ai_summary:
+        issue_desc += f"\n    {ai_summary.replace(chr(10), chr(10) + '    ')}"
 
     issues.append({
         'game': 'GearUP Booster',

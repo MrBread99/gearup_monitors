@@ -8,6 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
 from utils.reddit_client import reddit_get
 from utils.google_client import google_search
+from utils.sentiment_summarizer import summarize_sentiment
 
 # ==========================================
 # 东南亚品牌舆情监控
@@ -222,6 +223,11 @@ def check_sea_brand():
     if negative:
         top = negative[0]
         issue_desc += f"\n    ⚠️ 负面帖: \"{top['title'][:50]}\" ({top.get('source', '')})"
+
+    # AI 舆情总结
+    ai_summary = summarize_sentiment('GearUP Booster', 'Southeast Asia', negative, positive, neutral)
+    if ai_summary:
+        issue_desc += f"\n    {ai_summary.replace(chr(10), chr(10) + '    ')}"
 
     issues.append({
         'game': 'GearUP Booster',
