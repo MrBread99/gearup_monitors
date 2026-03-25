@@ -88,12 +88,16 @@ def reddit_get(url, timeout=10):
         oauth_url = url.replace('https://www.reddit.com/', 'https://oauth.reddit.com/')
         headers = {
             'Authorization': f'Bearer {token}',
-            'User-Agent': 'OSINT-Monitor/3.0'
+            'User-Agent': 'windows:gearup.monitors:v4.0 (by /u/GearUPMonitor)'
         }
     else:
-        # 无认证，使用原始 URL
+        # 无认证，用浏览器 User-Agent 降低被拦概率
         oauth_url = url
-        headers = {'User-Agent': 'OSINT-Monitor/3.0'}
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+        }
 
     try:
         response = requests.get(oauth_url, headers=headers, timeout=timeout)
