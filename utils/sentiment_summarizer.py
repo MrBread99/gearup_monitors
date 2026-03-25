@@ -4,8 +4,8 @@ from openai import OpenAI
 # ==========================================
 # 品牌舆情 AI 总结
 # ==========================================
-# 调用通义千问对各地区品牌舆情进行分类总结，
-# 并附上每类评价的代表性帖子链接。
+# 把所有帖子标题+链接一起给 AI，由 AI 统一判断分类和总结，
+# 避免关键词分类和 AI 总结不一致的问题。
 # ==========================================
 
 QWEN_API_KEY = os.environ.get("QWEN_API_KEY", "")
@@ -15,71 +15,70 @@ qwen_client = OpenAI(
 ) if QWEN_API_KEY else None
 
 
-def _extract_top_links(posts, max_count=2):
-    """提取帖子列表中前 N 条的链接"""
-    links = []
-    for p in posts[:max_count]:
-        url = p.get('url', '')
-        title = p.get('title', '')[:40]
-        if url:
-            links.append(f"{title} ({url})")
-        elif title:
-            links.append(title)
-    return links
-
-
 def summarize_sentiment(brand_name, region_name, positive_posts, negative_posts, neutral_posts):
     """
     对品牌舆情进行 AI 分类总结，并附上来源链接。
+    将所有帖子合并后交给 AI 统一分析，避免关键词分类与 AI 总结不一致。
     """
+    # 合并所有帖子，附带编号和链接
+    all_posts = []
+    for p in positive_posts:
+        all_posts.append(p)
+    for p in negative_posts:
+        all_posts.append(p)
+    for p in neutral_posts:
+        all_posts.append(p)
+
+    if not all_posts:
+        return ""
+
+    # 去重
+    seen = set()
+    unique_posts = []
+    for p in all_posts:
+        key = p.get('title', '')[:50]
+        if key and key not in seen:
+            seen.add(key)
+            unique_posts.append(p)
+
     if not qwen_client:
-        # AI 不可用时，只返回链接摘要
-        result = ""
-        if positive_posts:
-            links = _extract_top_links(positive_posts)
-            result += f"正面评价 ({len(positive_posts)} 篇): " + '; '.join(links) + "\n"
-        if negative_posts:
-            links = _extract_top_links(negative_posts)
-            result += f"负面评价 ({len(negative_posts)} 篇): " + '; '.join(links) + "\n"
-        return result.strip() if result else ""
+        # AI 不可用，只返回帖子数量和链接
+        links = [f"{p.get('title', '')[:40]} ({p.get('url', '')})" for p in unique_posts[:3] if p.get('url')]
+        return f"共 {len(unique_posts)} 篇讨论。代表帖子: {'; '.join(links)}" if links else ""
 
-    # 提取标题用于 AI 分析（每类最多 5 条）
-    pos_titles = '\n'.join(
-        f"- {p.get('title', '')[:100]}"
-        for p in positive_posts[:5]
-    ) or "（无）"
+    # 构建带编号和链接的帖子列表（最多 15 条给 AI）
+    post_lines = []
+    for i, p in enumerate(unique_posts[:15], 1):
+        title = p.get('title', '')[:120]
+        url = p.get('url', '')
+        source = p.get('source', '')
+        line = f"[{i}] {title}"
+        if url:
+            line += f" | 链接: {url}"
+        if source:
+            line += f" | 来源: {source}"
+        post_lines.append(line)
 
-    neg_titles = '\n'.join(
-        f"- {p.get('title', '')[:100]}"
-        for p in negative_posts[:5]
-    ) or "（无）"
+    posts_text = '\n'.join(post_lines)
 
-    neu_titles = '\n'.join(
-        f"- {p.get('title', '')[:100]}"
-        for p in neutral_posts[:5]
-    ) or "（无）"
+    prompt = f"""你是一个游戏加速器品牌舆情分析师。以下是 {region_name} 地区关于 {brand_name} 的 {len(unique_posts)} 篇社区讨论帖子。
 
-    prompt = f"""你是一个游戏加速器品牌舆情分析师。请根据以下 {region_name} 地区关于 {brand_name} 的讨论帖子标题，分别总结正面、负面和中性评价的核心内容。
+请你自己判断每篇帖子属于正面、负面还是中性，然后分别总结。
 
-【正面评价 ({len(positive_posts)} 篇)】:
-{pos_titles}
-
-【负面评价 ({len(negative_posts)} 篇)】:
-{neg_titles}
-
-【中性讨论 ({len(neutral_posts)} 篇)】:
-{neu_titles}
+帖子列表:
+{posts_text}
 
 重要要求:
 - 如果帖子中提到了其他竞品加速器或 VPN（如 ExitLag, LagoFast, NoPing, Hone.gg, wtfast, Mudfish, UU加速器, 迅游, 雷神 等），必须在总结中写出具体的竞品名称。
-- 如果有用户在对比 {brand_name} 和其他竞品，请在总结中明确指出对比对象和结论。
+- 每条总结后面用方括号标注对应的帖子编号，如 [1][3]。
+- 如果某个分类没有对应的帖子，写"暂无"。
 
-请严格按以下格式输出（纯文本，禁止 Markdown，每项 1 句话，无内容则写"暂无"）:
-正面评价: （总结核心正面反馈，提及具体竞品名称）
-负面评价: （总结核心负面反馈，提及具体竞品名称）
-中性讨论: （总结主要讨论方向，提及具体竞品名称）
-涉及竞品: （列出帖子中出现的所有竞品/VPN 名称，用逗号分隔，无则写"无"）
-商业洞察: （对加速器产品的 1 句建议）"""
+请严格按以下格式输出（纯文本，禁止 Markdown，每项 1-2 句话）:
+正面评价: （总结 + 帖子编号）
+负面评价: （总结 + 帖子编号）
+中性讨论: （总结 + 帖子编号）
+涉及竞品: （列出所有竞品/VPN 名称，逗号分隔，无则写"无"）
+商业洞察: （1 句建议）"""
 
     try:
         response = qwen_client.chat.completions.create(
@@ -89,24 +88,25 @@ def summarize_sentiment(brand_name, region_name, positive_posts, negative_posts,
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3,
-            max_tokens=300
+            max_tokens=400
         )
         ai_text = str(response.choices[0].message.content).strip()
 
-        # 在 AI 总结后附上各类代表性帖子链接
-        link_lines = []
-        if positive_posts:
-            links = _extract_top_links(positive_posts)
-            link_lines.append(f"正面来源: {'; '.join(links)}")
-        if negative_posts:
-            links = _extract_top_links(negative_posts)
-            link_lines.append(f"负面来源: {'; '.join(links)}")
-        if neutral_posts:
-            links = _extract_top_links(neutral_posts, 1)
-            link_lines.append(f"中性来源: {'; '.join(links)}")
+        # 从 AI 输出中提取引用的帖子编号，附上对应链接
+        import re
+        referenced_ids = set(int(x) for x in re.findall(r'\[(\d+)\]', ai_text))
 
-        if link_lines:
-            ai_text += '\n' + '\n'.join(link_lines)
+        if referenced_ids:
+            link_lines = []
+            for idx in sorted(referenced_ids):
+                if 1 <= idx <= len(unique_posts):
+                    p = unique_posts[idx - 1]
+                    url = p.get('url', '')
+                    title = p.get('title', '')[:50]
+                    if url:
+                        link_lines.append(f"[{idx}] {title} ({url})")
+            if link_lines:
+                ai_text += '\n来源链接:\n' + '\n'.join(link_lines)
 
         return ai_text
 
