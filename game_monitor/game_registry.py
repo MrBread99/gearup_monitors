@@ -262,6 +262,53 @@ GAME_REGISTRY = {
         'jp_search': 'Warframe',
         'kr_dc': 'warframe',
     },
+
+    # === 非 Steam 热门游戏 ===
+    'Genshin Impact': {
+        'steam_appid': None,
+        'subreddit': 'Genshin_Impact',
+        'vk_group': 'genshinimpact_ru',
+        'itsd_slug': 'genshin-impact',
+        'tw_bsn': '36730',
+        'jp_search': '原神',
+        'kr_dc': 'genshinimpact',
+    },
+    'Honkai Star Rail': {
+        'steam_appid': None,
+        'subreddit': 'HonkaiStarRail',
+        'vk_group': 'honkaistarrail',
+        'itsd_slug': None,
+        'tw_bsn': '73498',
+        'jp_search': '崩壊スターレイル',
+        'kr_dc': 'honkaistarrail',
+    },
+    'Wuthering Waves': {
+        'steam_appid': None,
+        'subreddit': 'WutheringWaves',
+        'vk_group': 'wutheringwaves',
+        'itsd_slug': None,
+        'tw_bsn': None,
+        'jp_search': '鳴潮',
+        'kr_dc': 'wutheringwaves',
+    },
+    'Zenless Zone Zero': {
+        'steam_appid': None,
+        'subreddit': 'ZenlessZoneZero',
+        'vk_group': 'zenlesszonezero',
+        'itsd_slug': None,
+        'tw_bsn': None,
+        'jp_search': 'ゼンレスゾーンゼロ',
+        'kr_dc': 'zenlesszonezero',
+    },
+    'Roblox': {
+        'steam_appid': None,
+        'subreddit': 'roblox',
+        'vk_group': 'roblox',
+        'itsd_slug': 'roblox',
+        'tw_bsn': None,
+        'jp_search': 'Roblox',
+        'kr_dc': 'roblox',
+    },
 }
 
 
