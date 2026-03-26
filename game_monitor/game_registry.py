@@ -513,6 +513,17 @@ GAME_REGISTRY = {
         'jp_search': 'TF2',
         'kr_dc': 'tf2',
     },
+
+    # === 非 Steam 顶级 MMO ===
+    'World of Warcraft': {
+        'steam_appid': None,  # Battle.net 独占
+        'subreddit': 'wow',
+        'vk_group': 'wow_ru',
+        'itsd_slug': 'world-of-warcraft',
+        'tw_bsn': '5219',
+        'jp_search': 'WoW',
+        'kr_dc': 'wow',
+    },
 }
 
 
