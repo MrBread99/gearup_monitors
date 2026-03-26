@@ -140,9 +140,9 @@ def check_korea_brand():
 
     total = len(unique)
     parts = []
-    if negative: parts.append(f"부정 {len(negative)} 건")
-    if positive: parts.append(f"긍정 {len(positive)} 건")
-    if neutral: parts.append(f"중립 {len(neutral)} 건")
+    if negative: parts.append(f"负面 {len(negative)} 篇")
+    if positive: parts.append(f"正面 {len(positive)} 篇")
+    if neutral: parts.append(f"中性 {len(neutral)} 篇")
 
     issue_desc = f"🇰🇷 韩国区加速器舆情: 共 {total} 篇讨论 ({', '.join(parts)})"
 

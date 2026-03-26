@@ -169,9 +169,9 @@ def check_japan_brand():
 
     total = len(unique)
     parts = []
-    if negative: parts.append(f"ネガティブ {len(negative)}")
-    if positive: parts.append(f"ポジティブ {len(positive)}")
-    if neutral: parts.append(f"中立 {len(neutral)}")
+    if negative: parts.append(f"负面 {len(negative)} 篇")
+    if positive: parts.append(f"正面 {len(positive)} 篇")
+    if neutral: parts.append(f"中性 {len(neutral)} 篇")
 
     issue_desc = f"🇯🇵 日本区加速器舆情: 共 {total} 篇讨论 ({', '.join(parts)})"
 

@@ -197,9 +197,9 @@ def check_mideast_brand():
 
     total = len(unique)
     parts = []
-    if negative: parts.append(f"سلبي {len(negative)}")
-    if positive: parts.append(f"إيجابي {len(positive)}")
-    if neutral: parts.append(f"محايد {len(neutral)}")
+    if negative: parts.append(f"负面 {len(negative)} 篇")
+    if positive: parts.append(f"正面 {len(positive)} 篇")
+    if neutral: parts.append(f"中性 {len(neutral)} 篇")
 
     issue_desc = f"🇸🇦 中东区加速器舆情: 共 {total} 篇讨论 ({', '.join(parts)})"
 
