@@ -321,7 +321,7 @@ GAME_REGISTRY = {
         'kr_dc': 'pathofexile',
     },
     'Marathon': {
-        'steam_appid': 3065800,  # 未发售，先加入监控
+        'steam_appid': 3065800,  # 2026.3.5 已发售，PvPvE 提取射击
         'subreddit': 'Marathon',
         'vk_group': 'marathon_bungie',
         'itsd_slug': None,
