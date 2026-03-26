@@ -47,6 +47,13 @@ NON_STEAM_GAMES = {
     'Overwatch 2': {'subreddit': 'Overwatch', 'keywords': ['patch', 'update', 'season', 'hero', 'preview', 'ptr', 'upcoming']},
     'Call of Duty': {'subreddit': 'CallOfDuty', 'keywords': ['update', 'season', 'patch', 'warzone', 'upcoming', 'roadmap', 'preview']},
     'Aion 2': {'subreddit': 'aion', 'keywords': ['update', 'patch', 'maintenance', 'launch', 'upcoming', 'beta', 'release date']},
+    # 非 Steam 游戏补充
+    'Genshin Impact': {'subreddit': 'Genshin_Impact', 'keywords': ['update', 'version', 'patch', 'banner', 'preview', 'livestream', 'maintenance']},
+    'Honkai Star Rail': {'subreddit': 'HonkaiStarRail', 'keywords': ['update', 'version', 'patch', 'banner', 'preview', 'livestream', 'maintenance']},
+    'Wuthering Waves': {'subreddit': 'WutheringWaves', 'keywords': ['update', 'version', 'patch', 'banner', 'preview', 'maintenance', 'convene']},
+    'Zenless Zone Zero': {'subreddit': 'ZenlessZoneZero', 'keywords': ['update', 'version', 'patch', 'banner', 'preview', 'maintenance', 'livestream']},
+    'Roblox': {'subreddit': 'roblox', 'keywords': ['update', 'patch', 'outage', 'down', 'maintenance', 'change']},
+    'World of Warcraft': {'subreddit': 'wow', 'keywords': ['patch', 'update', 'expansion', 'season', 'hotfix', 'maintenance', 'ptr', 'upcoming']},
 }
 
 # 大版本更新 + 预告关键词（出现在 Steam News 标题中）

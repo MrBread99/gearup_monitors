@@ -819,7 +819,10 @@ def check_all_platforms():
     # detector404.ru 俄罗斯区平台故障检测（中等合并，高级别逐条）
     print("正在检测 detector404.ru 俄罗斯区平台状态...")
     import cis_osint
-    all_issues.extend(cis_osint.check_detector404_batch(['Steam', 'Discord', 'Telegram', 'Epic Games']))
+    all_issues.extend(cis_osint.check_detector404_batch([
+        'Steam', 'Discord', 'Telegram', 'Epic Games',
+        'Battle.net', 'PlayStation', 'Xbox Live', 'FACEIT', 'Ubisoft Connect'
+    ]))
 
     # 保存事件去重快照
     _save_seen_incidents(_seen_incidents)

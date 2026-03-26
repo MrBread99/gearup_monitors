@@ -58,6 +58,11 @@ DETECTOR404_MAP = {
     'STALCRAFT X': 'stalcraft',
     'Once Human': 'oncehuman',
     'World of Warcraft': 'world-of-warcraft',
+    'Black Desert Online': 'blackdesert',
+    'Albion Online': 'albiononline',
+    'Honkai Star Rail': 'honkaistarrail',
+    'Team Fortress 2': 'team-fortress-2',
+    'Aion 2': 'aionclassicpro',
     # 平台
     'Steam': 'steam',
     'Discord': 'discord',
