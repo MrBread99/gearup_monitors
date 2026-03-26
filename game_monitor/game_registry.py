@@ -309,6 +309,53 @@ GAME_REGISTRY = {
         'jp_search': 'Roblox',
         'kr_dc': 'roblox',
     },
+
+    # === 补充热门联机游戏 ===
+    'Path of Exile': {
+        'steam_appid': 238960,
+        'subreddit': 'pathofexile',
+        'vk_group': 'pathofexile_ru',
+        'itsd_slug': 'path-of-exile',
+        'tw_bsn': '18966',
+        'jp_search': 'POE',
+        'kr_dc': 'pathofexile',
+    },
+    'Marathon': {
+        'steam_appid': 3065800,  # 未发售，先加入监控
+        'subreddit': 'Marathon',
+        'vk_group': 'marathon_bungie',
+        'itsd_slug': None,
+        'tw_bsn': None,
+        'jp_search': 'マラソン Bungie',
+        'kr_dc': 'marathon',
+    },
+    'Albion Online': {
+        'steam_appid': 761890,
+        'subreddit': 'albiononline',
+        'vk_group': 'albiononline_ru',
+        'itsd_slug': 'albion-online',
+        'tw_bsn': None,
+        'jp_search': 'アルビオンオンライン',
+        'kr_dc': 'albiononline',
+    },
+    'The Quinfall': {
+        'steam_appid': 2294660,
+        'subreddit': 'TheQuinfall',
+        'vk_group': 'thequinfall',
+        'itsd_slug': None,
+        'tw_bsn': None,
+        'jp_search': 'Quinfall',
+        'kr_dc': 'thequinfall',
+    },
+    'ARC Raiders': {
+        'steam_appid': 1808500,
+        'subreddit': 'ARC_Raiders',
+        'vk_group': 'arcraiders',
+        'itsd_slug': None,
+        'tw_bsn': None,
+        'jp_search': 'ARC Raiders',
+        'kr_dc': 'arcraiders',
+    },
 }
 
 
