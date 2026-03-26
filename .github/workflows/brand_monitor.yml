@@ -30,6 +30,10 @@ jobs:
           restore-keys: |
             brand-snapshots-
 
+      # ===== 初始化舆情报告文件 =====
+      - name: Init brand report
+        run: python -c "from utils.brand_report import init_report; init_report()"
+
       # ===== 品牌舆情（每 24 小时）=====
       - name: Run GearUP Reddit Monitor
         env:
@@ -86,3 +90,12 @@ jobs:
           POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
         run: python brand_monitor/japan_monitor.py
+
+      # ===== 推送舆情报告到仓库 =====
+      - name: Push brand report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add reports/brand_report_latest.md
+          git diff --staged --quiet || git commit -m "docs: update brand sentiment report [auto]"
+          git push

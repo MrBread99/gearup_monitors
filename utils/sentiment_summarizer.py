@@ -92,21 +92,12 @@ def summarize_sentiment(brand_name, region_name, positive_posts, negative_posts,
         )
         ai_text = str(response.choices[0].message.content).strip()
 
-        # 从 AI 输出中提取引用的帖子编号，附上对应链接
-        import re
-        referenced_ids = set(int(x) for x in re.findall(r'\[(\d+)\]', ai_text))
+        # 来源链接写入报告文件，不放在报警里
+        from utils.brand_report import add_report_section, get_report_url
+        add_report_section(region_name, brand_name, positive_posts, negative_posts, neutral_posts, ai_text)
 
-        if referenced_ids:
-            link_lines = []
-            for idx in sorted(referenced_ids):
-                if 1 <= idx <= len(unique_posts):
-                    p = unique_posts[idx - 1]
-                    url = p.get('url', '')
-                    title = p.get('title', '')[:50]
-                    if url:
-                        link_lines.append(f"[{idx}] {title} ({url})")
-            if link_lines:
-                ai_text += '\n来源链接:\n' + '\n'.join(link_lines)
+        # 报警里只附报告链接
+        ai_text += f'\n详细来源: {get_report_url()}'
 
         return ai_text
 
