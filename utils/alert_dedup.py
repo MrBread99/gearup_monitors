@@ -69,36 +69,41 @@ def process_alerts(issues):
             # 🟢 和 🟡 正常输出，不去重
             effective_issues.append(issue)
 
-    # 合并 🔴 报警为一条摘要
+    # 处理 🔴 报警
     if ineffective_items:
-        game_list = []
-        for item in ineffective_items:
-            game = item.get('game', '?')
-            region = item.get('region', '')
-            country = item.get('country', '')
-            location = f" [{country}]" if country else (f" [{region}]" if region and region != 'Global' else '')
-            
-            # 从 issue 文本中提取简短原因（去掉标签前缀）
-            text = item.get('issue', '').replace('🔴 [加速器无效] ', '')
-            first_line = text.split('\n')[0][:80]
-            game_list.append(f"{game}{location}: {first_line}")
+        if len(ineffective_items) == 1:
+            # 只有 1 条，不合并，直接输出原始报警
+            effective_issues.append(ineffective_items[0])
+        else:
+            # 多条合并为一条摘要
+            game_list = []
+            for item in ineffective_items:
+                game = item.get('game', '?')
+                region = item.get('region', '')
+                country = item.get('country', '')
+                location = f" [{country}]" if country else (f" [{region}]" if region and region != 'Global' else '')
+                
+                # 从 issue 文本中提取简短原因（去掉标签前缀）
+                text = item.get('issue', '').replace('🔴 [加速器无效] ', '')
+                first_line = text.split('\n')[0][:80]
+                game_list.append(f"{game}{location}: {first_line}")
 
-        summary = f"🔴 [加速器无效] 以下 {len(ineffective_items)} 项为官方维护/宕机，加速器无法解决:\n"
-        summary += '\n'.join(f"    - {g}" for g in game_list)
+            summary = f"🔴 [加速器无效] 以下 {len(ineffective_items)} 项为官方维护/宕机，加速器无法解决:\n"
+            summary += '\n'.join(f"    - {g}" for g in game_list)
 
-        merged_issue = {
-            'game': '汇总',
-            'region': 'Global',
-            'country': '',
-            'issue': summary,
-            'source_name': '多来源',
-            'source_url': '',
-        }
-        # 复制第一条的 alert_type（如有）
-        if ineffective_items[0].get('alert_type'):
-            merged_issue['alert_type'] = ineffective_items[0]['alert_type']
+            merged_issue = {
+                'game': '汇总',
+                'region': 'Global',
+                'country': '',
+                'issue': summary,
+                'source_name': '多来源',
+                'source_url': '',
+            }
+            # 复制第一条的 alert_type（如有）
+            if ineffective_items[0].get('alert_type'):
+                merged_issue['alert_type'] = ineffective_items[0]['alert_type']
 
-        effective_issues.append(merged_issue)
+            effective_issues.append(merged_issue)
 
     # 保存去重快照
     _save_seen_ineffective(seen)
