@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBHOOK_URL
 
 # ==========================================
 # Trustpilot 品牌评价监控
@@ -47,6 +47,11 @@ def fetch_trustpilot_data(slug):
         response = requests.get(url, headers=HEADERS, timeout=15)
         if response.status_code != 200:
             print(f"[Trustpilot] {slug}: HTTP {response.status_code}")
+            try:
+                from utils.notifier import report_scrape_block
+                report_scrape_block('trustpilot', url=url, status_code=response.status_code)
+            except Exception:
+                pass
             return None
 
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -207,5 +212,6 @@ if __name__ == "__main__":
             print(f"[{r['game']}] {r['issue']}")
         if POPO_WEBHOOK_URL:
             send_popo_alert(POPO_WEBHOOK_URL, results)
+            flush_scrape_block_alerts(POPO_WEBHOOK_URL)
     else:
         print("无结果")

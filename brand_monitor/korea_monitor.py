@@ -5,7 +5,7 @@ import sys
 import urllib.parse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBHOOK_URL
 from utils.sentiment_summarizer import summarize_sentiment
 
 # ==========================================
@@ -68,9 +68,19 @@ def search_naver_blog(query):
             response = requests.get(url, params=params, headers=api_headers, timeout=15)
             if response.status_code == 401:
                 print(f"[KR] Naver API 认证失败（{search_type}），请检查 NAVER_CLIENT_ID/SECRET")
+                try:
+                    from utils.notifier import report_scrape_block
+                    report_scrape_block('naver_api_401', url=url, status_code=401)
+                except Exception:
+                    pass
                 break
             if response.status_code != 200:
                 print(f"[KR] Naver API ({search_type}) HTTP {response.status_code}: {query}")
+                try:
+                    from utils.notifier import report_scrape_block
+                    report_scrape_block('naver_api_other', url=url, status_code=response.status_code)
+                except Exception:
+                    pass
                 continue
 
             data = response.json()
@@ -225,5 +235,6 @@ if __name__ == "__main__":
             print(r['issue'])
         if POPO_WEBHOOK_URL:
             send_popo_alert(POPO_WEBHOOK_URL, results)
+            flush_scrape_block_alerts(POPO_WEBHOOK_URL)
     else:
         print("无结果")

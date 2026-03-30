@@ -4,7 +4,7 @@ import sys
 from datetime import datetime, timezone, timedelta
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBHOOK_URL
 from utils.reddit_client import reddit_get
 from utils.google_client import google_search
 from utils.sentiment_summarizer import summarize_sentiment
@@ -247,5 +247,6 @@ if __name__ == "__main__":
             print(r['issue'])
         if POPO_WEBHOOK_URL:
             send_popo_alert(POPO_WEBHOOK_URL, results)
+            flush_scrape_block_alerts(POPO_WEBHOOK_URL)
     else:
         print("无中东区相关讨论。")

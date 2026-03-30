@@ -8,7 +8,7 @@ import time
 import random
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBHOOK_URL
 
 # ==========================================
 # 竞品多地区定价监控
@@ -107,7 +107,12 @@ def fetch_pricing_for_region(region_code, competitor_name='ExitLag'):
     
     try:
         if response.status_code == 403:
-            # Cloudflare 拦截，静默跳过（不刷日志）
+            # Cloudflare 拦截：登记反爬事件后跳过
+            try:
+                from utils.notifier import report_scrape_block
+                report_scrape_block('cloudflare_pricing', url=url, status_code=403)
+            except Exception:
+                pass
             return None
         elif response.status_code != 200:
             print(f"[{competitor_name}] {region_code}: HTTP {response.status_code}")
@@ -252,5 +257,6 @@ if __name__ == "__main__":
             print(f"[{r['game']} - {r['region']}] {r['issue']}")
         if POPO_WEBHOOK_URL:
             send_popo_alert(POPO_WEBHOOK_URL, results)
+            flush_scrape_block_alerts(POPO_WEBHOOK_URL)
     else:
         print("无定价变动（或首次运行已保存基线）。")

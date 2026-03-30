@@ -5,7 +5,7 @@ import sys
 import urllib.parse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBHOOK_URL
 from utils.sentiment_summarizer import summarize_sentiment
 
 # ==========================================
@@ -56,6 +56,11 @@ def search_vk(query):
     try:
         response = requests.get(search_url, headers=HEADERS_VK, timeout=15)
         if response.status_code != 200:
+            try:
+                from utils.notifier import report_scrape_block
+                report_scrape_block('vk_brand', url=search_url, status_code=response.status_code)
+            except Exception:
+                pass
             return []
 
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -85,6 +90,11 @@ def search_otzovik(query):
     try:
         response = requests.get(url, headers=HEADERS_WEB, timeout=15)
         if response.status_code != 200:
+            try:
+                from utils.notifier import report_scrape_block
+                report_scrape_block('otzovik', url=url, status_code=response.status_code)
+            except Exception:
+                pass
             return []
 
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -200,5 +210,6 @@ if __name__ == "__main__":
             print(r['issue'])
         if POPO_WEBHOOK_URL:
             send_popo_alert(POPO_WEBHOOK_URL, results)
+            flush_scrape_block_alerts(POPO_WEBHOOK_URL)
     else:
         print("无结果")

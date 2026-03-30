@@ -4,6 +4,10 @@ import urllib.parse
 import time
 import random
 import re
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # ==========================================
 # 独联体/俄语区 (CIS/Russia) 监控配置
@@ -133,6 +137,13 @@ def check_cis_vk(game_name):
                     'source_name': 'VK.com (俄语社群)',
                     'source_url': url
                 }
+        else:
+            print(f"[CIS] VK {game_name}: HTTP {response.status_code}")
+            try:
+                from utils.notifier import report_scrape_block
+                report_scrape_block('vk_game', url=url, status_code=response.status_code)
+            except Exception:
+                pass
     except Exception as e:
         print(f"[CIS] 抓取 VK 俄语社区 ({game_name}) 失败: {e}")
         
@@ -154,6 +165,11 @@ def check_detector404(game_name):
         response = requests.get(url, headers=HEADERS_WEB, timeout=15)
         if response.status_code != 200:
             print(f"[CIS] detector404 {game_name}: HTTP {response.status_code}")
+            try:
+                from utils.notifier import report_scrape_block
+                report_scrape_block('detector404', url=url, status_code=response.status_code)
+            except Exception:
+                pass
             return None
 
         soup = BeautifulSoup(response.text, 'html.parser')

@@ -13,7 +13,7 @@ import downdetector_osint # 引入聚合报错监控模块
 import cis_osint # 引入独联体/俄语区 OSINT 模块
 import steam_osint # 引入 Steam 差评监控模块
 from game_registry import get_apac_configs, get_game_config, get_all_game_names  # 统一游戏注册表
-from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBHOOK_URL
 from utils.reddit_client import reddit_get
 
 # 通义千问 API 客户端（用于总结玩家反馈内容）
@@ -307,13 +307,6 @@ def check_apac_osint_for_game(game_name):
         tw_res = apac_osint.check_taiwan_bahamut(game_name, config['tw_bsn'])
         if tw_res: issues.append(tw_res)
         
-    # 2. 日本 - Yahoo 实时推特
-    jp_res = apac_osint.check_japan_yahoo_realtime(config['jp_search'])
-    # 因为函数内游戏名被替换成了日文搜索词，为了报警美观统一改回原英文游戏名
-    if jp_res:
-        jp_res['game'] = game_name
-        issues.append(jp_res)
-        
     # 3. 韩国 - DC Inside
     kr_res = apac_osint.check_korea_dcinside(game_name, config['kr_dc'])
     if kr_res: issues.append(kr_res)
@@ -380,6 +373,8 @@ def main():
     
     # 发送通知汇总（游戏+平台合并一条消息）
     send_popo_alert(POPO_WEBHOOK_URL, all_issues)
+    # 发送反爬拦截警告（如有）
+    flush_scrape_block_alerts(POPO_WEBHOOK_URL)
 
 if __name__ == "__main__":
     main()

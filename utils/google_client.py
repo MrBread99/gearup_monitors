@@ -90,6 +90,12 @@ def _search_google(query, lang_code=None, site=None, max_results=10):
         or 'sorry/index' in response.url        # Google CAPTCHA 重定向页
         or len(soup.select('noscript')) > 2     # JS 渲染验证页通常有多个 noscript 块
     ):
+        # 登记反爬拦截事件（懒导入避免循环依赖）
+        try:
+            from utils.notifier import report_scrape_block
+            report_scrape_block('google_captcha', url=url, status_code=response.status_code)
+        except Exception:
+            pass
         return None
 
     results = []

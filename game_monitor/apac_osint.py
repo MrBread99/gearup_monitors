@@ -2,6 +2,11 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import urllib.parse
+import os
+import sys
+
+# 确保 utils/ 可以被 import（无论从哪个目录运行）
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # ==========================================
 # 区域配置与本地化关键词库
@@ -51,6 +56,11 @@ def check_taiwan_bahamut(game_name, bsn_id):
         response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code != 200:
             print(f"[TW] Bahamut {game_name}: HTTP {response.status_code}")
+            try:
+                from utils.notifier import report_scrape_block
+                report_scrape_block('bahamut', url=url, status_code=response.status_code)
+            except Exception:
+                pass
             return None
 
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -91,6 +101,11 @@ def check_korea_dcinside(game_name, gallery_id):
         response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code != 200:
             print(f"[KR] DC Inside {game_name}: HTTP {response.status_code}")
+            try:
+                from utils.notifier import report_scrape_block
+                report_scrape_block('dcinside_game', url=url, status_code=response.status_code)
+            except Exception:
+                pass
             return None
 
         soup = BeautifulSoup(response.text, 'html.parser')
