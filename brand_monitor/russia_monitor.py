@@ -44,24 +44,30 @@ HEADERS_WEB = {
 
 
 def search_vk(query):
-    """搜索 VK 移动版（免登录）"""
+    """
+    搜索 VK 移动版（免登录）。
+    注意：VK 移动版搜索结果页不提供单帖固定 URL，
+    每条帖子的 url 统一指向搜索结果页（不同查询词），
+    去重通过帖子文本内容（title[:30]）实现。
+    """
     encoded = urllib.parse.quote(query)
-    url = f"https://m.vk.com/search?c%5Bq%5D={encoded}&c%5Bsection%5D=auto"
+    search_url = f"https://m.vk.com/search?c%5Bq%5D={encoded}&c%5Bsection%5D=auto"
 
     try:
-        response = requests.get(url, headers=HEADERS_VK, timeout=15)
+        response = requests.get(search_url, headers=HEADERS_VK, timeout=15)
         if response.status_code != 200:
             return []
 
         soup = BeautifulSoup(response.text, 'html.parser')
         results = []
 
-        for post in soup.find_all('div', class_='pi_text'):
+        for i, post in enumerate(soup.find_all('div', class_='pi_text')):
             text = post.get_text(strip=True)
             if text and len(text) > 20:
                 results.append({
                     'title': text[:150],
-                    'url': f"https://vk.com/search?q={encoded}",
+                    # 用 query+index 组成唯一 anchor，避免所有条目 URL 完全相同
+                    'url': f"{search_url}#result-{i}",
                     'source': 'VK'
                 })
 
@@ -90,7 +96,7 @@ def search_otzovik(query):
             if title:
                 results.append({
                     'title': title,
-                    'url': f"https://otzovik.com{link}" if link.startswith('/') else link,
+                    'url': f"https://otzovik.com{link}" if str(link).startswith('/') else str(link),
                     'source': 'Otzovik'
                 })
 

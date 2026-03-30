@@ -37,7 +37,7 @@ SEA_SUBREDDITS = [
     'singapore',
 ]
 
-# 各语言情感关键词
+# 各语言情感关键词（大写，匹配时对内容做 .upper()）
 VI_NEGATIVE = ["LỪA ĐẢO", "DỞ", "TỆ", "KHÔNG NÊN MUA", "PHÍ TIỀN", "RÁC", "VÔ DỤNG"]
 VI_POSITIVE = ["HAY", "TỐT", "ĐÁNG MUA", "GIẢM PING", "MƯỢT", "ỔN ĐỊNH", "KHUYÊN DÙNG"]
 
@@ -47,13 +47,15 @@ TL_POSITIVE = ["MAGANDA", "SULIT", "GANDA", "WORTH IT", "OKAY NAMAN", "GOODS"]
 ID_NEGATIVE = ["PENIPUAN", "JELEK", "SAMPAH", "JANGAN BELI", "BUANG UANG", "GAK GUNA", "ZONK"]
 ID_POSITIVE = ["BAGUS", "MANTAP", "RECOMMENDED", "WORTH IT", "LANCAR", "KEREN", "SMOOTH"]
 
+# 泰语关键词保持原始大小写（泰语 .upper() 是无操作，必须直接匹配原文）
 TH_NEGATIVE = ["ห่วย", "แย่", "โกง", "ไม่ดี", "เสียเงิน", "ไร้ประโยชน์"]
 TH_POSITIVE = ["ดี", "เยี่ยม", "แนะนำ", "คุ้ม", "ลดปิง", "เร็ว", "สุดยอด"]
 
-ALL_NEGATIVE = VI_NEGATIVE + TL_NEGATIVE + ID_NEGATIVE + TH_NEGATIVE + [
+# 非泰语关键词（统一大写）
+ALL_NEGATIVE_UPPER = VI_NEGATIVE + TL_NEGATIVE + ID_NEGATIVE + [
     "SCAM", "TRASH", "GARBAGE", "WORST", "TERRIBLE", "USELESS"
 ]
-ALL_POSITIVE = VI_POSITIVE + TL_POSITIVE + ID_POSITIVE + TH_POSITIVE + [
+ALL_POSITIVE_UPPER = VI_POSITIVE + TL_POSITIVE + ID_POSITIVE + [
     "GREAT", "AMAZING", "RECOMMEND", "BEST", "WORKS"
 ]
 
@@ -112,16 +114,26 @@ def search_google_local(query, lang_code):
 
 
 def analyze_sentiment_sea(posts):
-    """分析东南亚多语言帖子情感"""
+    """
+    分析东南亚多语言帖子情感。
+    - 非泰语关键词：内容转大写后匹配（越南/菲律宾/印尼语关键词全大写）
+    - 泰语关键词：直接匹配原始文本（泰语 .upper() 是无操作，不能大写匹配）
+    """
     negative = []
     positive = []
     neutral = []
 
     for post in posts:
-        content = (post.get('title', '') + ' ' + post.get('text', '')).upper()
+        raw_content = post.get('title', '') + ' ' + post.get('text', '')
+        upper_content = raw_content.upper()
 
-        neg = sum(1 for kw in ALL_NEGATIVE if kw in content)
-        pos = sum(1 for kw in ALL_POSITIVE if kw in content)
+        # 非泰语（大写匹配）
+        neg = sum(1 for kw in ALL_NEGATIVE_UPPER if kw in upper_content)
+        pos = sum(1 for kw in ALL_POSITIVE_UPPER if kw in upper_content)
+
+        # 泰语（原文直接匹配）
+        neg += sum(1 for kw in TH_NEGATIVE if kw in raw_content)
+        pos += sum(1 for kw in TH_POSITIVE if kw in raw_content)
 
         if neg > pos:
             post['sentiment'] = 'negative'

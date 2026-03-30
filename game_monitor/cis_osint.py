@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import urllib.parse
 import time
+import random
 import re
 
 # ==========================================
@@ -278,12 +279,17 @@ def check_detector404_batch(game_names):
     批量检测 detector404，自动合并中等级别的报警。
     - 中等（умеренно）：合并成一条，只列游戏名
     - 大量/严重/大规模：逐条详细报告
+    每次请求之间加入 1-3 秒随机延迟，避免 60 个请求无间隔触发封禁。
     返回 issues 列表。
     """
     issues = []
     moderate_games = []
 
-    for name in game_names:
+    for i, name in enumerate(game_names):
+        # 随机延迟 1-3 秒，避免批量请求被 detector404.ru 封禁
+        if i > 0:
+            time.sleep(random.uniform(1.0, 3.0))
+
         result = check_detector404(name)
         if not result:
             continue

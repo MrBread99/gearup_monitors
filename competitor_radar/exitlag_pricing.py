@@ -4,6 +4,8 @@ import json
 import os
 import sys
 import re
+import time
+import random
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
@@ -92,11 +94,12 @@ def fetch_pricing_for_region(region_code, competitor_name='ExitLag'):
         scraper = cloudscraper.create_scraper(
             browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False}
         )
+        # cloudscraper 路径：每次请求前随机延迟 2-5 秒，避免 19 个连续请求触发封禁
+        time.sleep(random.uniform(2.0, 5.0))
         response = scraper.get(url, timeout=20)
     except ImportError:
-        # cloudscraper 未安装，用普通 requests
-        import time
-        time.sleep(1)  # 简单延迟降低被拦概率
+        # cloudscraper 未安装，用普通 requests（保留原有 1s 延迟）
+        time.sleep(random.uniform(1.0, 3.0))
         response = requests.get(url, headers=HEADERS, timeout=15)
     except Exception as e:
         print(f"[{competitor_name}] cloudscraper {region_code} 失败: {e}")

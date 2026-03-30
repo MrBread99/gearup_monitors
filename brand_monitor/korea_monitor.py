@@ -9,9 +9,16 @@ from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
 from utils.sentiment_summarizer import summarize_sentiment
 
 # ==========================================
-# 韩国区品牌舆情监控（DC Inside + Naver）
+# 韩国区品牌舆情监控（DC Inside + Naver Search Open API）
 # ==========================================
 # 监控韩国玩家对 GearUP Booster 及竞品加速器的讨论。
+#
+# Naver Search Open API（官方，免费）:
+#   申请地址: https://developers.naver.com/apps/#/register
+#   需在 GitHub Secrets 中配置:
+#     NAVER_CLIENT_ID  — 应用 Client ID
+#     NAVER_CLIENT_SECRET — 应用 Client Secret
+#   未配置时自动跳过 Naver 搜索（不会崩溃）。
 # ==========================================
 
 SEARCH_BRANDS = {
@@ -23,6 +30,10 @@ SEARCH_BRANDS = {
 NEGATIVE_KR = ["쓰레기", "사기", "환불", "별로", "나쁜", "안됨", "느림", "효과없음"]
 POSITIVE_KR = ["추천", "좋음", "최고", "효과있음", "빠름", "안정", "핑감소"]
 
+# Naver Search Open API 认证（从环境变量读取）
+NAVER_CLIENT_ID = os.environ.get('NAVER_CLIENT_ID', '')
+NAVER_CLIENT_SECRET = os.environ.get('NAVER_CLIENT_SECRET', '')
+
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
                   '(KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
@@ -31,32 +42,64 @@ HEADERS = {
 
 
 def search_naver_blog(query):
-    """通过 Naver 搜索博客和论坛帖子"""
-    encoded = urllib.parse.quote(query)
-    url = f"https://search.naver.com/search.naver?where=article&query={encoded}&sm=tab_opt&sort=1"
-
-    try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
-        if response.status_code != 200:
-            return []
-
-        soup = BeautifulSoup(response.text, 'html.parser')
-        results = []
-
-        for item in soup.select('.total_tit, .api_txt_lines.total_tit'):
-            title = item.get_text(strip=True)
-            link = item.get('href', '')
-            if title:
-                results.append({
-                    'title': title,
-                    'url': link,
-                    'source': 'Naver'
-                })
-
-        return results[:15]
-    except Exception as e:
-        print(f"[KR] 搜索 Naver '{query}' 失败: {e}")
+    """
+    通过 Naver Search Open API 搜索博客和咖啡帖。
+    官方 API 端点: https://openapi.naver.com/v1/search/blog.json
+    需配置 NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 环境变量。
+    """
+    if not NAVER_CLIENT_ID or not NAVER_CLIENT_SECRET:
+        print(f"[KR] Naver API 未配置（缺少 NAVER_CLIENT_ID/NAVER_CLIENT_SECRET），跳过 Naver 搜索")
         return []
+
+    results = []
+    # 同时搜索博客 (blog) 和咖啡帖 (cafearticle)
+    for search_type in ('blog', 'cafearticle'):
+        url = 'https://openapi.naver.com/v1/search/{}.json'.format(search_type)
+        params = {
+            'query': query,
+            'display': 10,
+            'sort': 'date',   # 最新优先
+        }
+        api_headers = {
+            'X-Naver-Client-Id': NAVER_CLIENT_ID,
+            'X-Naver-Client-Secret': NAVER_CLIENT_SECRET,
+        }
+        try:
+            response = requests.get(url, params=params, headers=api_headers, timeout=15)
+            if response.status_code == 401:
+                print(f"[KR] Naver API 认证失败（{search_type}），请检查 NAVER_CLIENT_ID/SECRET")
+                break
+            if response.status_code != 200:
+                print(f"[KR] Naver API ({search_type}) HTTP {response.status_code}: {query}")
+                continue
+
+            data = response.json()
+            for item in data.get('items', []):
+                # 移除 HTML 标签（API 返回带 <b> 标签的标题）
+                from html.parser import HTMLParser
+
+                class _Stripper(HTMLParser):
+                    def __init__(self):
+                        super().__init__()
+                        self.fed = []
+                    def handle_data(self, data):
+                        self.fed.append(data)
+                    def get_data(self):
+                        return ''.join(self.fed)
+
+                s = _Stripper()
+                s.feed(item.get('title', ''))
+                clean_title = s.get_data()
+
+                results.append({
+                    'title': clean_title,
+                    'url': item.get('link', item.get('bloggername', '')),
+                    'source': f'Naver ({search_type})'
+                })
+        except Exception as e:
+            print(f"[KR] 搜索 Naver ({search_type}) '{query}' 失败: {e}")
+
+    return results[:20]
 
 
 def search_dcinside_search(query):
@@ -78,7 +121,7 @@ def search_dcinside_search(query):
             if title:
                 results.append({
                     'title': title,
-                    'url': link if link.startswith('http') else f"https://search.dcinside.com{link}",
+                    'url': str(link) if str(link).startswith('http') else f"https://search.dcinside.com{link}",
                     'source': 'DC Inside'
                 })
 

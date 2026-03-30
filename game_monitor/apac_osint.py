@@ -8,8 +8,7 @@ import urllib.parse
 # ==========================================
 KEYWORDS = {
     "TW": ["斷線", "爆ping", "卡頓", "連不上", "進不去", "伺服器", "馬鈴薯"],
-    "JP": ["鯖落ち", "ラグい", "ラグ", "繋がらない", "落ちた", "通信エラー", "マッチしない",
-           "回線落ち", "回線", "切断", "ピング", "パケロス", "パケットロス", "重い", "カクカク"],
+    # Yahoo JP 实时搜索已废弃（JS 渲染 SPA，requests 无法获取任何数据）
     "KR": ["섭터짐", "핑", "렉", "접속불가", "튕김", "서버 다운"]
 }
 
@@ -50,6 +49,10 @@ def check_taiwan_bahamut(game_name, bsn_id):
     url = f"https://forum.gamer.com.tw/B.php?bsn={bsn_id}"
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
+        if response.status_code != 200:
+            print(f"[TW] Bahamut {game_name}: HTTP {response.status_code}")
+            return None
+
         soup = BeautifulSoup(response.text, 'html.parser')
         
         # 提取帖子标题
@@ -70,45 +73,13 @@ def check_taiwan_bahamut(game_name, bsn_id):
     return None
 
 # ==========================================
-# 2. 日本: Yahoo 实时搜索 (抓取 Twitter 趋势)
+# 注意：日本 Yahoo 实时搜索已废弃
+# Yahoo JP 为 JS 渲染 SPA，requests 无法获取任何实际数据，
+# 该数据源已删除，待后续接入 Twitter/X API 替代。
 # ==========================================
-def check_japan_yahoo_realtime(game_name):
-    """
-    爬取日本 Yahoo 实时搜索，监控游戏名+鯖落ち相关的推文频率
-    """
-    # 搜索词: 游戏名 + 常见崩溃词
-    search_query = f"{game_name} 鯖落ち OR {game_name} ラグ"
-    encoded_query = urllib.parse.quote(search_query)
-    url = f"https://search.yahoo.co.jp/realtime/search?p={encoded_query}"
-    
-    try:
-        # 添加一个代理支持或者更复杂的Header以防被断开连接，同时降低超时时间
-        session = requests.Session()
-        session.headers.update(HEADERS)
-        response = session.get(url, timeout=15)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # 提取推文文本 (注：Yahoo DOM 结构常变，此处为通用 class 占位，需根据实际情况微调)
-        tweets = [div.text for div in soup.select('.Tweet_body__text')] 
-        
-        is_down, count, matched = analyze_text_for_issues(tweets, "JP", threshold=5) # Twitter 数据量大，阈值调高
-        if is_down:
-            return {
-                "game": game_name,
-                "region": "APAC",
-                "country": "Japan",
-                "issue": f"日本 X(Twitter) 涌现大量网络故障反馈 (匹配词: {', '.join(matched)}, 样本数: {count})",
-                "source_name": "Yahoo Realtime (Twitter)",
-                "source_url": url
-            }
-    except requests.exceptions.ConnectionError:
-        print(f"[JP] Failed to scrape Yahoo Realtime for {game_name}: Connection Reset/Aborted. May require VPN or proxy.")
-    except Exception as e:
-        print(f"[JP] Failed to scrape Yahoo Realtime for {game_name}: {e}")
-    return None
 
 # ==========================================
-# 3. 韩国: DC Inside 爬虫
+# 2. 韩国: DC Inside 爬虫
 # ==========================================
 def check_korea_dcinside(game_name, gallery_id):
     """
@@ -118,6 +89,10 @@ def check_korea_dcinside(game_name, gallery_id):
     url = f"https://gall.dcinside.com/board/lists/?id={gallery_id}"
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
+        if response.status_code != 200:
+            print(f"[KR] DC Inside {game_name}: HTTP {response.status_code}")
+            return None
+
         soup = BeautifulSoup(response.text, 'html.parser')
         
         # 提取帖子标题
@@ -140,7 +115,8 @@ def check_korea_dcinside(game_name, gallery_id):
 if __name__ == "__main__":
     # 测试用例：模拟运行监控
     import sys
-    sys.stdout.reconfigure(encoding='utf-8')
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
     
     issues = []
     
@@ -151,9 +127,7 @@ if __name__ == "__main__":
     tw_issue = check_taiwan_bahamut("Valorant", "37714")
     if tw_issue: issues.append(tw_issue)
         
-    # 测试日本 Yahoo 实时
-    jp_issue = check_japan_yahoo_realtime("Valorant")
-    if jp_issue: issues.append(jp_issue)
+    # Yahoo JP 已废弃（JS 渲染 SPA），已删除测试用例
         
     # 测试韩国 DC Inside
     kr_issue = check_korea_dcinside("Valorant", "valorant")

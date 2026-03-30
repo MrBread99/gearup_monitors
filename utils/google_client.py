@@ -81,8 +81,15 @@ def _search_google(query, lang_code=None, site=None, max_results=10):
 
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    # 检测 CAPTCHA
-    if 'captcha' in response.text.lower() or 'unusual traffic' in response.text.lower():
+    # 检测 CAPTCHA（文本检测 + noscript 标签检测，覆盖 JS 渲染的 CAPTCHA 页面）
+    text_lower = response.text.lower()
+    if (
+        'captcha' in text_lower
+        or 'unusual traffic' in text_lower
+        or 'g-recaptcha' in text_lower          # JS 渲染的 reCAPTCHA 挑战
+        or 'sorry/index' in response.url        # Google CAPTCHA 重定向页
+        or len(soup.select('noscript')) > 2     # JS 渲染验证页通常有多个 noscript 块
+    ):
         return None
 
     results = []
