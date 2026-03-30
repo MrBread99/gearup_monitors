@@ -4,7 +4,23 @@
 
 ---
 
-## [v4.0.0] - 基础设施大修 + 俄罗斯深度覆盖 (Current)
+## [v4.1.0] - 反爬/数据源全面修复 (Current)
+
+### 🔴 Critical 级修复
+- **apac_osint.py**: 删除 Yahoo JP 实时搜索（JS 渲染 SPA，`requests` 完全无法获取数据，一直静默返回空）
+- **apac_osint.py**: Bahamut/DC Inside 加 HTTP status_code 检查，不再直接解析错误响应体
+- **korea_monitor.py**: Naver 搜索从 HTML 爬虫改为官方 Search Open API（blog + cafearticle 双路），需在 GitHub Secrets 配置 `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET`，未配置时跳过不崩溃
+- **google_client.py**: CAPTCHA 检测补强，新增 `g-recaptcha` 标签检测、`sorry/index` 重定向检测、多 `noscript` 块检测（覆盖 JS 渲染的验证页面）
+
+### 🟠 High 级修复
+- **cis_osint.py**: `check_detector404_batch` 每次请求前加随机延迟 1-3 秒，避免 60 个请求无间隔触发 detector404.ru 封禁
+- **russia_monitor.py**: VK 搜索结果每条帖子 URL 改为带 index anchor（`#result-{i}`），修复所有条目 URL 完全相同导致的去重失效问题
+- **exitlag_pricing.py**: cloudscraper 路径加随机延迟 2-5 秒/请求，requests fallback 路径加 1-3 秒，避免 19 个定价页面无间隔请求
+- **southeast_asia_monitor.py**: 泰语情感分析修复 —— 泰语 `.upper()` 是无操作，关键词匹配改为对原始文本直接匹配泰语词，对其他语言内容 `.upper()` 后匹配大写关键词
+
+---
+
+## [v4.0.0] - 基础设施大修 + 俄罗斯深度覆盖
 
 ### 🔧 基础设施大修 (Critical Fixes)
 - **快照持久化**: GitHub Actions 新增 `actions/cache`，6 个快照文件跨运行持久化，去重和变动检测在线上真正生效。
