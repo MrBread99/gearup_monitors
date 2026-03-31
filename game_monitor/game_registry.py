@@ -40,7 +40,7 @@ GAME_REGISTRY = {
         'steam_appid': 730,
         'subreddit': 'GlobalOffensive',
         'vk_group': 'csgo',
-        'itsd_slug': 'counter-strike',
+        'itsd_slug': 'counter-strike-csgo',
         'tw_bsn': '4212',
         'jp_search': 'CS2',
         'kr_dc': None,  # DC Inside 无对应画廊
@@ -60,7 +60,7 @@ GAME_REGISTRY = {
         'steam_appid': 578080,
         'subreddit': 'PUBATTLEGROUNDS',
         'vk_group': 'pubg',
-        'itsd_slug': 'playerunknown-s-battlegrounds-pubg',
+        'itsd_slug': 'playerunknowns-battlegrounds',
         'tw_bsn': '33700',
         'jp_search': 'PUBG',
         'kr_dc': 'pubg',
@@ -70,7 +70,7 @@ GAME_REGISTRY = {
         'steam_appid': 2357570,
         'subreddit': 'Overwatch',
         'vk_group': 'overwatchrus',
-        'itsd_slug': 'overwatch',
+        'itsd_slug': 'overwatch-game',
         'tw_bsn': '29220',
         'jp_search': 'オーバーウォッチ2',
         'kr_dc': 'overwatch',
@@ -80,7 +80,7 @@ GAME_REGISTRY = {
         'steam_appid': 359550,
         'subreddit': 'Rainbow6',
         'vk_group': 'rainbow6russia',
-        'itsd_slug': 'tom-clancy-s-rainbow-six-siege',
+        'itsd_slug': 'tom-clancy-rainbow-six-siege',
         'tw_bsn': '28498',
         'jp_search': 'R6S',
         'kr_dc': None,  # DC Inside 无对应画廊
@@ -90,7 +90,7 @@ GAME_REGISTRY = {
         'steam_appid': 570,
         'subreddit': 'DotA2',
         'vk_group': 'dota2',
-        'itsd_slug': 'dota-2',
+        'itsd_slug': 'dota2',
         'tw_bsn': '22901',
         'jp_search': 'Dota2',
         'kr_dc': 'dota2',
@@ -132,7 +132,7 @@ GAME_REGISTRY = {
         'steam_appid': 1422440,
         'subreddit': 'EscapefromTarkov',
         'vk_group': 'eft_ru',
-        'itsd_slug': 'escape-from-tarkov',
+        'itsd_slug': None,  # ITSD 上不存在
         'tw_bsn': '35405',
         'jp_search': 'タルコフ',
         'kr_dc': None,  # DC Inside 无对应画廊
@@ -164,7 +164,7 @@ GAME_REGISTRY = {
         'steam_appid': 381210,
         'subreddit': 'deadbydaylight',
         'vk_group': 'deadbydaylight_ru',
-        'itsd_slug': 'dead-by-daylight',
+        'itsd_slug': None,  # ITSD 上不存在
         'tw_bsn': '32603',
         'jp_search': 'デッドバイデイライト',
         'kr_dc': None,  # DC Inside 无对应画廊
@@ -174,7 +174,7 @@ GAME_REGISTRY = {
         'steam_appid': 252490,
         'subreddit': 'playrust',
         'vk_group': 'rust_game',
-        'itsd_slug': 'rust',
+        'itsd_slug': None,  # ITSD 上不存在
         'tw_bsn': None,
         'jp_search': 'Rust',
         'kr_dc': 'rust',
@@ -184,7 +184,7 @@ GAME_REGISTRY = {
         'steam_appid': 271590,
         'subreddit': 'gtaonline',
         'vk_group': 'gtaonline',
-        'itsd_slug': 'grand-theft-auto-online',
+        'itsd_slug': 'gta-v-grand-theft-auto-v',
         'tw_bsn': '25196',
         'jp_search': 'GTAオンライン',
         'kr_dc': 'gta',
@@ -194,7 +194,7 @@ GAME_REGISTRY = {
         'steam_appid': 1085660,
         'subreddit': 'DestinyTheGame',
         'vk_group': 'destiny2_ru',
-        'itsd_slug': 'destiny-2',
+        'itsd_slug': 'destiny',
         'tw_bsn': '33689',
         'jp_search': 'Destiny2',
         'kr_dc': None,  # DC Inside 无对应画廊
@@ -264,7 +264,7 @@ GAME_REGISTRY = {
         'steam_appid': 1599340,
         'subreddit': 'lostarkgame',
         'vk_group': 'lostark_ru',
-        'itsd_slug': 'lost-ark',
+        'itsd_slug': None,  # ITSD 上不存在
         'tw_bsn': '27410',
         'jp_search': 'ロストアーク',
         'kr_dc': 'lostark',
@@ -274,7 +274,7 @@ GAME_REGISTRY = {
         'steam_appid': 2669320,
         'subreddit': 'EASportsFC',
         'vk_group': 'eafc',
-        'itsd_slug': 'ea-sports-fc',
+        'itsd_slug': 'fifa-ea-sports',
         'tw_bsn': None,
         'jp_search': 'EA FC',
         'kr_dc': None,  # DC Inside 无对应画廊
@@ -296,7 +296,7 @@ GAME_REGISTRY = {
         'steam_appid': None,
         'subreddit': 'Genshin_Impact',
         'vk_group': 'genshinimpact_ru',
-        'itsd_slug': 'genshin-impact',
+        'itsd_slug': None,  # ITSD 上不存在
         'tw_bsn': '36730',
         'jp_search': '原神',
         'kr_dc': None,  # DC Inside 无对应画廊
@@ -368,7 +368,7 @@ GAME_REGISTRY = {
         'steam_appid': 761890,
         'subreddit': 'albiononline',
         'vk_group': 'albiononline_ru',
-        'itsd_slug': 'albion-online',
+        'itsd_slug': None,  # ITSD 上不存在
         'tw_bsn': None,
         'jp_search': 'アルビオンオンライン',
         'kr_dc': 'albiononline',
@@ -420,7 +420,7 @@ GAME_REGISTRY = {
         'steam_appid': 236390,
         'subreddit': 'Warthunder',
         'vk_group': 'warthunder',
-        'itsd_slug': 'war-thunder',
+        'itsd_slug': None,  # ITSD 上不存在
         'tw_bsn': '20947',
         'jp_search': 'WarThunder',
         'kr_dc': 'warthunder',
@@ -440,7 +440,7 @@ GAME_REGISTRY = {
         'steam_appid': 221100,
         'subreddit': 'dayz',
         'vk_group': 'dayz_ru',
-        'itsd_slug': 'dayz',
+        'itsd_slug': None,  # ITSD 上不存在
         'tw_bsn': None,
         'jp_search': 'DayZ',
         'kr_dc': 'dayz',
@@ -472,7 +472,7 @@ GAME_REGISTRY = {
         'steam_appid': 39210,
         'subreddit': 'ffxiv',
         'vk_group': 'ffxiv_ru',
-        'itsd_slug': 'final-fantasy-xiv',
+        'itsd_slug': None,  # ITSD 上不存在
         'tw_bsn': '23137',
         'jp_search': 'FF14',
         'kr_dc': 'ff14',
@@ -482,7 +482,7 @@ GAME_REGISTRY = {
         'steam_appid': 582660,
         'subreddit': 'blackdesertonline',
         'vk_group': 'blackdesert_ru',
-        'itsd_slug': 'black-desert-online',
+        'itsd_slug': None,  # ITSD 上不存在
         'tw_bsn': '29095',
         'jp_search': '黒い砂漠',
         'kr_dc': None,  # DC Inside 无对应画廊
@@ -562,7 +562,7 @@ GAME_REGISTRY = {
         'steam_appid': 440,
         'subreddit': 'tf2',
         'vk_group': 'tf2',
-        'itsd_slug': 'team-fortress-2',
+        'itsd_slug': None,  # ITSD 上不存在
         'tw_bsn': None,
         'jp_search': 'TF2',
         'kr_dc': None,  # DC Inside 无对应画廊
