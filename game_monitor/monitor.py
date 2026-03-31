@@ -308,7 +308,7 @@ def check_apac_osint_for_game(game_name):
         if tw_res: issues.append(tw_res)
         
     # 3. 韩国 - DC Inside
-    kr_res = apac_osint.check_korea_dcinside(game_name, config['kr_dc'])
+    kr_res = apac_osint.check_korea_dcinside(game_name, config['kr_dc'], gallery_type=config.get('kr_dc_type', 'major'))
     if kr_res: issues.append(kr_res)
         
     return issues

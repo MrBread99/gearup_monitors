@@ -91,12 +91,18 @@ def check_taiwan_bahamut(game_name, bsn_id):
 # ==========================================
 # 2. 韩国: DC Inside 爬虫
 # ==========================================
-def check_korea_dcinside(game_name, gallery_id):
+def check_korea_dcinside(game_name, gallery_id, gallery_type='major'):
     """
     爬取韩国 DC Inside 指定游戏版块的最新帖子
     :param gallery_id: 画廊ID (例如：Valorant 是 valorant)
+    :param gallery_type: 'major' (正规画廊) 或 'minor' (마이너画廊)
     """
-    url = f"https://gall.dcinside.com/board/lists/?id={gallery_id}"
+    if not gallery_id:
+        return None
+    if gallery_type == 'minor':
+        url = f"https://gall.dcinside.com/mgallery/board/lists/?id={gallery_id}"
+    else:
+        url = f"https://gall.dcinside.com/board/lists/?id={gallery_id}"
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code != 200:

@@ -14,6 +14,7 @@ GAME_REGISTRY = {
         'tw_bsn': '36322',
         'jp_search': 'ヴァロラント',
         'kr_dc': 'valorant',
+        'kr_dc_type': 'major',
     },
     'League of Legends': {
         'steam_appid': None,
@@ -22,7 +23,8 @@ GAME_REGISTRY = {
         'itsd_slug': 'league-of-legends',
         'tw_bsn': '17532',
         'jp_search': 'LoL',
-        'kr_dc': 'lol',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
     'APEX Legends': {
         'steam_appid': 1172470,
@@ -32,6 +34,7 @@ GAME_REGISTRY = {
         'tw_bsn': '36276',
         'jp_search': 'Apex',
         'kr_dc': 'apexlegends',
+        'kr_dc_type': 'minor',
     },
     'CS2': {
         'steam_appid': 730,
@@ -40,7 +43,8 @@ GAME_REGISTRY = {
         'itsd_slug': 'counter-strike',
         'tw_bsn': '4212',
         'jp_search': 'CS2',
-        'kr_dc': 'cs2',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
     'Fortnite': {
         'steam_appid': None,
@@ -49,7 +53,8 @@ GAME_REGISTRY = {
         'itsd_slug': 'fortnite',
         'tw_bsn': '33703',
         'jp_search': 'フォートナイト',
-        'kr_dc': 'fortnite',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
     'PUBG': {
         'steam_appid': 578080,
@@ -59,6 +64,7 @@ GAME_REGISTRY = {
         'tw_bsn': '33700',
         'jp_search': 'PUBG',
         'kr_dc': 'pubg',
+        'kr_dc_type': 'minor',
     },
     'Overwatch 2': {
         'steam_appid': 2357570,
@@ -68,6 +74,7 @@ GAME_REGISTRY = {
         'tw_bsn': '29220',
         'jp_search': 'オーバーウォッチ2',
         'kr_dc': 'overwatch',
+        'kr_dc_type': 'major',
     },
     'Rainbow Six Siege': {
         'steam_appid': 359550,
@@ -76,7 +83,8 @@ GAME_REGISTRY = {
         'itsd_slug': 'tom-clancy-s-rainbow-six-siege',
         'tw_bsn': '28498',
         'jp_search': 'R6S',
-        'kr_dc': 'rainbow6',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
     'Dota 2': {
         'steam_appid': 570,
@@ -86,6 +94,7 @@ GAME_REGISTRY = {
         'tw_bsn': '22901',
         'jp_search': 'Dota2',
         'kr_dc': 'dota2',
+        'kr_dc_type': 'major',
     },
     'Call of Duty': {
         'steam_appid': None,
@@ -95,6 +104,7 @@ GAME_REGISTRY = {
         'tw_bsn': '5371',
         'jp_search': 'CoD',
         'kr_dc': 'callofduty',
+        'kr_dc_type': 'minor',
     },
 
     # === 新增 5 款游戏 ===
@@ -105,7 +115,8 @@ GAME_REGISTRY = {
         'itsd_slug': None,
         'tw_bsn': '77498',
         'jp_search': '燕雲十六声',
-        'kr_dc': 'wherewindsmeet',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
     'Aion 2': {
         'steam_appid': None,
@@ -115,6 +126,7 @@ GAME_REGISTRY = {
         'tw_bsn': None,
         'jp_search': 'AION2',
         'kr_dc': 'aion',
+        'kr_dc_type': 'major',
     },
     'Escape from Tarkov': {
         'steam_appid': 1422440,
@@ -123,7 +135,8 @@ GAME_REGISTRY = {
         'itsd_slug': 'escape-from-tarkov',
         'tw_bsn': '35405',
         'jp_search': 'タルコフ',
-        'kr_dc': 'tarkov',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
     'Arena Breakout Infinite': {
         'steam_appid': 2073620,
@@ -133,6 +146,7 @@ GAME_REGISTRY = {
         'tw_bsn': None,
         'jp_search': 'ArenaBreakout',
         'kr_dc': 'arenabreakout',
+        'kr_dc_type': 'minor',
     },
     'Path of Exile 2': {
         'steam_appid': 2694490,
@@ -142,6 +156,7 @@ GAME_REGISTRY = {
         'tw_bsn': '18966',
         'jp_search': 'POE2',
         'kr_dc': 'pathofexile',
+        'kr_dc_type': 'minor',
     },
 
     # === 新增 14 款游戏 ===
@@ -152,7 +167,8 @@ GAME_REGISTRY = {
         'itsd_slug': 'dead-by-daylight',
         'tw_bsn': '32603',
         'jp_search': 'デッドバイデイライト',
-        'kr_dc': 'deadbydaylight',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
     'Rust': {
         'steam_appid': 252490,
@@ -162,6 +178,7 @@ GAME_REGISTRY = {
         'tw_bsn': None,
         'jp_search': 'Rust',
         'kr_dc': 'rust',
+        'kr_dc_type': 'minor',
     },
     'GTA Online': {
         'steam_appid': 271590,
@@ -171,6 +188,7 @@ GAME_REGISTRY = {
         'tw_bsn': '25196',
         'jp_search': 'GTAオンライン',
         'kr_dc': 'gta',
+        'kr_dc_type': 'major',
     },
     'Destiny 2': {
         'steam_appid': 1085660,
@@ -179,7 +197,8 @@ GAME_REGISTRY = {
         'itsd_slug': 'destiny-2',
         'tw_bsn': '33689',
         'jp_search': 'Destiny2',
-        'kr_dc': 'destiny2',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
     'Monster Hunter Wilds': {
         'steam_appid': 2246340,
@@ -189,6 +208,7 @@ GAME_REGISTRY = {
         'tw_bsn': '5786',
         'jp_search': 'モンハンワイルズ',
         'kr_dc': 'monsterhunter',
+        'kr_dc_type': 'major',
     },
     'The Finals': {
         'steam_appid': 2073850,
@@ -198,6 +218,7 @@ GAME_REGISTRY = {
         'tw_bsn': None,
         'jp_search': 'THE FINALS',
         'kr_dc': 'thefinals',
+        'kr_dc_type': 'minor',
     },
     'Marvel Rivals': {
         'steam_appid': 2767030,
@@ -207,6 +228,7 @@ GAME_REGISTRY = {
         'tw_bsn': '79940',
         'jp_search': 'マーベルライバルズ',
         'kr_dc': 'marvelrivals',
+        'kr_dc_type': 'minor',
     },
     'Rocket League': {
         'steam_appid': 252950,  # Steam 下架但 AppID 仍有效
@@ -216,6 +238,7 @@ GAME_REGISTRY = {
         'tw_bsn': '29089',
         'jp_search': 'ロケットリーグ',
         'kr_dc': 'rocketleague',
+        'kr_dc_type': 'minor',
     },
     'Palworld': {
         'steam_appid': 1623730,
@@ -225,6 +248,7 @@ GAME_REGISTRY = {
         'tw_bsn': '71458',
         'jp_search': 'パルワールド',
         'kr_dc': 'palworld',
+        'kr_dc_type': 'minor',
     },
     'Naraka Bladepoint': {
         'steam_appid': 1203220,
@@ -233,7 +257,8 @@ GAME_REGISTRY = {
         'itsd_slug': None,
         'tw_bsn': '38832',
         'jp_search': 'ナラカ',
-        'kr_dc': 'naraka',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
     'Lost Ark': {
         'steam_appid': 1599340,
@@ -243,6 +268,7 @@ GAME_REGISTRY = {
         'tw_bsn': '27410',
         'jp_search': 'ロストアーク',
         'kr_dc': 'lostark',
+        'kr_dc_type': 'major',
     },
     'EA FC': {
         'steam_appid': 2669320,
@@ -251,7 +277,8 @@ GAME_REGISTRY = {
         'itsd_slug': 'ea-sports-fc',
         'tw_bsn': None,
         'jp_search': 'EA FC',
-        'kr_dc': 'fifa',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
     'Warframe': {
         'steam_appid': 230410,
@@ -261,6 +288,7 @@ GAME_REGISTRY = {
         'tw_bsn': '23498',
         'jp_search': 'Warframe',
         'kr_dc': 'warframe',
+        'kr_dc_type': 'major',
     },
 
     # === 非 Steam 热门游戏 ===
@@ -271,7 +299,8 @@ GAME_REGISTRY = {
         'itsd_slug': 'genshin-impact',
         'tw_bsn': '36730',
         'jp_search': '原神',
-        'kr_dc': 'genshinimpact',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
     'Honkai Star Rail': {
         'steam_appid': None,
@@ -281,6 +310,7 @@ GAME_REGISTRY = {
         'tw_bsn': '73498',
         'jp_search': '崩壊スターレイル',
         'kr_dc': 'honkaistarrail',
+        'kr_dc_type': 'minor',
     },
     'Wuthering Waves': {
         'steam_appid': None,
@@ -290,6 +320,7 @@ GAME_REGISTRY = {
         'tw_bsn': '74934',
         'jp_search': '鳴潮',
         'kr_dc': 'wutheringwaves',
+        'kr_dc_type': 'minor',
     },
     'Zenless Zone Zero': {
         'steam_appid': None,
@@ -298,7 +329,8 @@ GAME_REGISTRY = {
         'itsd_slug': None,
         'tw_bsn': '74860',
         'jp_search': 'ゼンレスゾーンゼロ',
-        'kr_dc': 'zenlesszonezero',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
     'Roblox': {
         'steam_appid': None,
@@ -308,6 +340,7 @@ GAME_REGISTRY = {
         'tw_bsn': None,
         'jp_search': 'Roblox',
         'kr_dc': 'roblox',
+        'kr_dc_type': 'minor',
     },
 
     # === 补充热门联机游戏 ===
@@ -319,6 +352,7 @@ GAME_REGISTRY = {
         'tw_bsn': '18966',
         'jp_search': 'POE',
         'kr_dc': 'pathofexile',
+        'kr_dc_type': 'minor',
     },
     'Marathon': {
         'steam_appid': 3065800,  # 2026.3.5 已发售，PvPvE 提取射击
@@ -327,7 +361,8 @@ GAME_REGISTRY = {
         'itsd_slug': None,
         'tw_bsn': None,
         'jp_search': 'マラソン Bungie',
-        'kr_dc': 'marathon',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
     'Albion Online': {
         'steam_appid': 761890,
@@ -337,6 +372,7 @@ GAME_REGISTRY = {
         'tw_bsn': None,
         'jp_search': 'アルビオンオンライン',
         'kr_dc': 'albiononline',
+        'kr_dc_type': 'minor',
     },
     'The Quinfall': {
         'steam_appid': 2294660,
@@ -346,6 +382,7 @@ GAME_REGISTRY = {
         'tw_bsn': None,
         'jp_search': 'Quinfall',
         'kr_dc': 'thequinfall',
+        'kr_dc_type': 'minor',
     },
     'ARC Raiders': {
         'steam_appid': 1808500,
@@ -355,6 +392,7 @@ GAME_REGISTRY = {
         'tw_bsn': None,
         'jp_search': 'ARC Raiders',
         'kr_dc': 'arcraiders',
+        'kr_dc_type': 'minor',
     },
 
     # === Tier 1: 高玩家量 + 高加速需求 ===
@@ -366,6 +404,7 @@ GAME_REGISTRY = {
         'tw_bsn': '37615',
         'jp_search': 'クリムゾンデザート',
         'kr_dc': 'crimsondesert',
+        'kr_dc_type': 'minor',
     },
     'Delta Force': {
         'steam_appid': 2612680,
@@ -375,6 +414,7 @@ GAME_REGISTRY = {
         'tw_bsn': '78342',
         'jp_search': 'デルタフォース',
         'kr_dc': 'deltaforce',
+        'kr_dc_type': 'minor',
     },
     'War Thunder': {
         'steam_appid': 236390,
@@ -384,6 +424,7 @@ GAME_REGISTRY = {
         'tw_bsn': '20947',
         'jp_search': 'WarThunder',
         'kr_dc': 'warthunder',
+        'kr_dc_type': 'minor',
     },
     'HELLDIVERS 2': {
         'steam_appid': 553850,
@@ -392,7 +433,8 @@ GAME_REGISTRY = {
         'itsd_slug': None,
         'tw_bsn': '24827',
         'jp_search': 'ヘルダイバー2',
-        'kr_dc': 'helldivers',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
     'DayZ': {
         'steam_appid': 221100,
@@ -402,6 +444,7 @@ GAME_REGISTRY = {
         'tw_bsn': None,
         'jp_search': 'DayZ',
         'kr_dc': 'dayz',
+        'kr_dc_type': 'minor',
     },
     'Street Fighter 6': {
         'steam_appid': 1364780,
@@ -411,6 +454,7 @@ GAME_REGISTRY = {
         'tw_bsn': '38124',
         'jp_search': 'スト6',
         'kr_dc': 'streetfighter',
+        'kr_dc_type': 'minor',
     },
     'Hunt Showdown': {
         'steam_appid': 594650,
@@ -420,6 +464,7 @@ GAME_REGISTRY = {
         'tw_bsn': None,
         'jp_search': 'HuntShowdown',
         'kr_dc': 'huntshowdown',
+        'kr_dc_type': 'minor',
     },
 
     # === Tier 2: 稳定玩家群 / 区域热门 ===
@@ -431,6 +476,7 @@ GAME_REGISTRY = {
         'tw_bsn': '23137',
         'jp_search': 'FF14',
         'kr_dc': 'ff14',
+        'kr_dc_type': 'major',
     },
     'Black Desert Online': {
         'steam_appid': 582660,
@@ -439,7 +485,8 @@ GAME_REGISTRY = {
         'itsd_slug': 'black-desert-online',
         'tw_bsn': '29095',
         'jp_search': '黒い砂漠',
-        'kr_dc': 'blackdesert',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
     'Throne and Liberty': {
         'steam_appid': 2429640,
@@ -449,6 +496,7 @@ GAME_REGISTRY = {
         'tw_bsn': '33317',
         'jp_search': 'ThroneAndLiberty',
         'kr_dc': 'throneandliberty',
+        'kr_dc_type': 'minor',
     },
     'Tekken 8': {
         'steam_appid': 2573770,
@@ -457,7 +505,8 @@ GAME_REGISTRY = {
         'itsd_slug': None,
         'tw_bsn': '161',
         'jp_search': '鉄拳8',
-        'kr_dc': 'tekken',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
     'ARK Survival Ascended': {
         'steam_appid': 2399830,
@@ -467,6 +516,7 @@ GAME_REGISTRY = {
         'tw_bsn': None,
         'jp_search': 'ARK',
         'kr_dc': 'ark',
+        'kr_dc_type': 'minor',
     },
     'Elden Ring Nightreign': {
         'steam_appid': 2584040,
@@ -476,6 +526,7 @@ GAME_REGISTRY = {
         'tw_bsn': None,
         'jp_search': 'エルデンリング ナイトレイン',
         'kr_dc': 'eldenring',
+        'kr_dc_type': 'minor',
     },
     'STALCRAFT X': {
         'steam_appid': 1818450,
@@ -485,6 +536,7 @@ GAME_REGISTRY = {
         'tw_bsn': None,
         'jp_search': 'STALCRAFT',
         'kr_dc': 'stalcraft',
+        'kr_dc_type': 'minor',
     },
     'Dont Starve Together': {
         'steam_appid': 322330,
@@ -494,6 +546,7 @@ GAME_REGISTRY = {
         'tw_bsn': None,
         'jp_search': 'ドンスタ',
         'kr_dc': 'dontstarve',
+        'kr_dc_type': 'minor',
     },
     'Once Human': {
         'steam_appid': 2388800,
@@ -502,7 +555,8 @@ GAME_REGISTRY = {
         'itsd_slug': None,
         'tw_bsn': None,
         'jp_search': 'OnceHuman',
-        'kr_dc': 'oncehuman',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
     'Team Fortress 2': {
         'steam_appid': 440,
@@ -511,7 +565,8 @@ GAME_REGISTRY = {
         'itsd_slug': 'team-fortress-2',
         'tw_bsn': None,
         'jp_search': 'TF2',
-        'kr_dc': 'tf2',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
 
     # === 非 Steam 顶级 MMO ===
@@ -522,7 +577,8 @@ GAME_REGISTRY = {
         'itsd_slug': 'world-of-warcraft',
         'tw_bsn': '5219',
         'jp_search': 'WoW',
-        'kr_dc': 'wow',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
     },
 }
 
@@ -550,11 +606,12 @@ def get_itsd_game_map():
 
 
 def get_apac_configs():
-    """返回 {游戏名: {tw_bsn, jp_search, kr_dc}} 映射，兼容 monitor.py"""
+    """返回 {游戏名: {tw_bsn, jp_search, kr_dc, kr_dc_type}} 映射，兼容 monitor.py"""
     return {name: {
         'tw_bsn': cfg.get('tw_bsn'),
         'jp_search': cfg.get('jp_search'),
         'kr_dc': cfg.get('kr_dc'),
+        'kr_dc_type': cfg.get('kr_dc_type'),
     } for name, cfg in GAME_REGISTRY.items()}
 
 

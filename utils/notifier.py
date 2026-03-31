@@ -255,6 +255,19 @@ def flush_scrape_block_alerts(webhook_url: str = None):
         short_term  = advice.get('short_term', '暂无建议')
         long_term   = advice.get('long_term', '暂无建议')
 
+        # 根据实际 HTTP 状态码动态覆盖原因描述和建议
+        # 404 = URL 失效/slug 不匹配（非反爬）；403/429 = 真正的反爬拦截
+        actual_codes = entry.get('codes', set())
+        all_404 = actual_codes and all(c == 404 for c in actual_codes)
+        has_anti_scrape = any(c in (403, 429) for c in actual_codes)
+
+        if all_404:
+            reason = 'URL 返回 404（页面不存在），数据源的 URL slug 或板块 ID 可能已失效/变更'
+            short_term = '本次已跳过该数据源；需排查并更新失效的 URL 路径或板块 ID'
+            long_term = '定期验证数据源 URL 可达性，或改用官方 API 避免路径变更导致的数据盲区'
+        elif has_anti_scrape and not all_404:
+            pass  # 保持 _SCRAPE_ADVICE 中的原始反爬描述
+
         count = entry['count']
         codes = ', '.join(str(c) for c in sorted(entry['codes'])) if entry['codes'] else '未知'
         # 最多显示 2 个 URL，超出时显示省略
