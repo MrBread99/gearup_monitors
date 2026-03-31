@@ -246,7 +246,7 @@ def report_scrape_block(source_key: str, url: str = '', status_code: int = None)
     advice = _SCRAPE_ADVICE.get(source_key, {})
     display = advice.get('display_name', source_key)
     code_str = f" HTTP {status_code}" if status_code else ""
-    print(f"[反爬拦截] {display}{code_str}: {url[:80] if url else '(无 URL)'} "
+    print(f"[数据源异常] {display}{code_str}: {url[:80] if url else '(无 URL)'} "
           f"（本次运行第 {entry['count']} 次，将在脚本结束时合并发送 POPO）")
 
 
@@ -264,7 +264,7 @@ def flush_scrape_block_alerts(webhook_url: str = None):
     effective_url = webhook_url or POPO_WEBHOOK_URL
     current_time = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
 
-    lines = [f"【监控系统警告 — 数据源被拦截】\n时间: {current_time} (UTC+8)\n"]
+    lines = [f"【监控系统警告 — 数据源异常】\n时间: {current_time} (UTC+8)\n"]
 
     for source_key, entry in _scrape_block_registry.items():
         advice = _SCRAPE_ADVICE.get(source_key, {})
@@ -274,16 +274,31 @@ def flush_scrape_block_alerts(webhook_url: str = None):
         long_term   = advice.get('long_term', '暂无建议')
 
         # 根据实际 HTTP 状态码动态覆盖原因描述和建议
-        # 404 = URL 失效/slug 不匹配（非反爬）；403/429 = 真正的反爬拦截
+        # 404         = URL 失效/slug 不匹配（非反爬）
+        # 403/429     = 真正的反爬拦截
+        # 5xx (≥500)  = 数据源服务端故障（与爬虫无关）
         actual_codes = entry.get('codes', set())
         all_404 = actual_codes and all(c == 404 for c in actual_codes)
         has_anti_scrape = any(c in (403, 429) for c in actual_codes)
+        all_5xx = actual_codes and all(c >= 500 for c in actual_codes)
+        has_5xx = any(c >= 500 for c in actual_codes)
 
         if all_404:
             reason = 'URL 返回 404（页面不存在），数据源的 URL slug 或板块 ID 可能已失效/变更'
             short_term = '本次已跳过该数据源；需排查并更新失效的 URL 路径或板块 ID'
             long_term = '定期验证数据源 URL 可达性，或改用官方 API 避免路径变更导致的数据盲区'
-        elif has_anti_scrape and not all_404:
+        elif all_5xx:
+            codes_str = ', '.join(str(c) for c in sorted(actual_codes))
+            reason = f'数据源服务端返回 {codes_str}，属于对方服务器临时故障，与爬虫频率或 IP 无关'
+            short_term = '本次已跳过该数据源；此类错误通常自动恢复，等待下次运行即可'
+            long_term = '若 5xx 持续出现（连续多次运行），可检查该数据源官网是否停服或迁移'
+        elif has_5xx and not has_anti_scrape:
+            # 混有 5xx 但无 403/429 —— 以 5xx 为主
+            codes_str = ', '.join(str(c) for c in sorted(actual_codes))
+            reason = f'数据源返回 {codes_str}，包含服务端故障（5xx），与反爬无关'
+            short_term = '本次已跳过该数据源；等待下次运行自动重试'
+            long_term = '若 5xx 持续出现，排查数据源官网可用性'
+        elif has_anti_scrape:
             pass  # 保持 _SCRAPE_ADVICE 中的原始反爬描述
 
         count = entry['count']
@@ -315,7 +330,7 @@ def flush_scrape_block_alerts(webhook_url: str = None):
     lines.append("如频繁出现此警告，请及时处理以免监控盲区扩大。")
     content = '\n'.join(lines)
 
-    print(f"\n[反爬汇总] 本次运行共检测到 {len(_scrape_block_registry)} 个数据源被拦截，正在发送 POPO 警告...")
+    print(f"\n[数据源异常汇总] 本次运行共检测到 {len(_scrape_block_registry)} 个数据源异常，正在发送 POPO 警告...")
 
     if not effective_url:
         print("未配置 POPO_WEBHOOK_URL，反爬警告内容如下：\n")
