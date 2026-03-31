@@ -66,8 +66,11 @@ def fetch_trustpilot_data(slug):
                 score = float(num.group())
 
         # 提取评论总数
+        # 注意：不能用 r'([\d,]+)\s+reviews'，因为页面顶部"Suggested companies"
+        # 区域也包含 "374 reviews" 之类的文本，会误匹配为其他品牌的评论数。
+        # 品牌自身的评论数出现在 "All reviews X,XXX total" 区域，用 'total' 锚定。
         review_count = None
-        count_match = re.search(r'([\d,]+)\s+reviews', text)
+        count_match = re.search(r'([\d,]+)\s+total', text)
         if count_match:
             review_count = int(count_match.group(1).replace(',', ''))
 
