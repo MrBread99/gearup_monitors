@@ -1,6 +1,10 @@
 import requests
 import json
 import time
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 很多时候，直接访问 Downdetector.com 会遭遇极强的 Cloudflare 403 拦截（如刚才的测试结果）
 # 作为专业爬虫/自动化工具，我们应该寻找它暴露出的非官方 API 或 RSS feed。
@@ -34,9 +38,17 @@ def check_downdetector_global(game_name):
         session = requests.Session()
         response = session.get(url, headers=HEADERS, timeout=15)
         
+        if response.status_code != 200:
+            print(f"[Outage Aggregator] IsTheServiceDown {game_name}: HTTP {response.status_code}")
+            try:
+                from utils.notifier import report_scrape_block
+                report_scrape_block('itsd', url=url, status_code=response.status_code)
+            except Exception:
+                pass
+            return None
+
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
-            
             # 查找页面上的状态文字
             # 例如: "No problems at ...", "Possible problems at ...", "Problems at ..."
             status_element = soup.find('div', class_='service-status-alert')

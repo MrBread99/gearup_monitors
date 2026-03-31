@@ -86,6 +86,24 @@ _SCRAPE_ADVICE = {
         'short_term': '本次已跳过 Naver 数据，DC Inside 搜索数据不受影响',
         'long_term': 'Naver 免费配额 25,000次/天，日常使用通常不会超限；若持续出现请检查 Naver 开发者后台配额用量',
     },
+    'dcinside_brand': {
+        'display_name': 'DC Inside（品牌舆情搜索）',
+        'reason': 'DC Inside 全站搜索接口返回非 200，可能为 Cloudflare 拦截、429 频控或接口路径变更',
+        'short_term': '本次已跳过 DC Inside 品牌舆情数据，Naver 数据不受影响',
+        'long_term': '暂无官方搜索 API；可增大请求间隔或与游戏监控 dcinside_game 合并使用 Playwright 方案',
+    },
+    'itsd': {
+        'display_name': 'IsTheServiceDown（故障聚合监控）',
+        'reason': 'IsTheServiceDown 返回非 200，可能为 CI 固定 IP 被限速（429）或网站暂时不可用',
+        'short_term': '本次已跳过该游戏的 ITSD 故障聚合数据；等待下次运行自动重试',
+        'long_term': '暂无官方 API；若频繁出现可考虑增加请求间隔或切换至备用故障聚合源',
+    },
+    'youtube_quota': {
+        'display_name': 'YouTube Data API v3（配额耗尽）',
+        'reason': 'YouTube API 返回 403 quotaExceeded，当日 10,000 单位免费配额已耗尽（search 操作每次消耗 100 单位）',
+        'short_term': '本次已跳过剩余搜索词；配额将在 UTC 00:00 自动重置，下次运行恢复正常',
+        'long_term': '当前 10 个搜索词 × 100 = 1,000 单位/次，每天跑 10 次会耗尽；可在 Google Cloud Console 申请提升配额，或减少搜索词数量',
+    },
 }
 
 def send_popo_alert(webhook_url, issues_list):

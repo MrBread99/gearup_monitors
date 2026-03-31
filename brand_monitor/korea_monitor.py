@@ -120,6 +120,12 @@ def search_dcinside_search(query):
     try:
         response = requests.get(url, headers=HEADERS, timeout=15)
         if response.status_code != 200:
+            print(f"[KR] DC Inside 品牌搜索 HTTP {response.status_code}: {query}")
+            try:
+                from utils.notifier import report_scrape_block
+                report_scrape_block('dcinside_brand', url=url, status_code=response.status_code)
+            except Exception:
+                pass
             return []
 
         soup = BeautifulSoup(response.text, 'html.parser')

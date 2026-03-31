@@ -110,8 +110,24 @@ def search_youtube_videos(query, max_results=25, hours_window=168):
     try:
         response = requests.get(search_url, headers=HEADERS, timeout=15)
         if response.status_code != 200:
-            error_info = response.json().get('error', {}).get('message', response.status_code)
-            print(f"[YouTube] 搜索 '{query}' 失败: {error_info}")
+            try:
+                error_info = response.json().get('error', {})
+                error_message = error_info.get('message', str(response.status_code))
+                # 判断是否为配额耗尽（errors[].reason == 'quotaExceeded' 或 message 含关键字）
+                error_reasons = [e.get('reason', '') for e in error_info.get('errors', [])]
+                is_quota = 'quotaExceeded' in error_reasons or 'quota' in error_message.lower()
+            except Exception:
+                error_message = str(response.status_code)
+                is_quota = False
+
+            print(f"[YouTube] 搜索 '{query}' 失败: {error_message}")
+
+            if is_quota:
+                try:
+                    from utils.notifier import report_scrape_block
+                    report_scrape_block('youtube_quota', url=search_url, status_code=response.status_code)
+                except Exception:
+                    pass
             return []
 
         data = response.json()
