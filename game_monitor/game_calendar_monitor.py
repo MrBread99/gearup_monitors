@@ -2,6 +2,8 @@ import requests
 import json
 import os
 import sys
+import html
+import re
 from datetime import datetime, timezone, timedelta
 from openai import OpenAI
 
@@ -40,9 +42,18 @@ from game_registry import get_steam_app_map
 TRACKED_GAMES = {name: appid for name, appid in get_steam_app_map().items() if appid is not None}
 
 # 非 Steam 游戏通过 Reddit 检测更新（含预告）
+# riot_rss: Riot 官方 patch notes RSS 地址（优先于 Reddit）
 NON_STEAM_GAMES = {
-    'Valorant': {'subreddit': 'VALORANT', 'keywords': ['patch', 'update', 'season', 'episode', 'act', 'upcoming', 'preview', 'roadmap']},
-    'League of Legends': {'subreddit': 'leagueoflegends', 'keywords': ['patch', 'update', 'season', 'preseason', 'preview', 'upcoming', 'pbe']},
+    'Valorant': {
+        'subreddit': 'VALORANT',
+        'keywords': ['patch', 'update', 'season', 'episode', 'act', 'upcoming', 'preview', 'roadmap'],
+        'riot_rss': 'https://www.riotgames.com/en/news/game-updates/valorant',
+    },
+    'League of Legends': {
+        'subreddit': 'leagueoflegends',
+        'keywords': ['patch', 'update', 'season', 'preseason', 'preview', 'upcoming', 'pbe'],
+        'riot_rss': 'https://www.leagueoflegends.com/en-us/news/game-updates/',
+    },
     'Fortnite': {'subreddit': 'FortNiteBR', 'keywords': ['update', 'season', 'chapter', 'patch', 'downtime', 'upcoming', 'teaser', 'countdown']},
     'Overwatch 2': {'subreddit': 'Overwatch', 'keywords': ['patch', 'update', 'season', 'hero', 'preview', 'ptr', 'upcoming']},
     'Call of Duty': {'subreddit': 'CallOfDuty', 'keywords': ['update', 'season', 'patch', 'warzone', 'upcoming', 'roadmap', 'preview']},
@@ -548,6 +559,72 @@ def check_steam_news_updates():
     return issues
 
 
+def check_riot_official_updates(game_name, page_url):
+    """
+    抓取 Riot 官方 game-updates 页面，检测 48 小时内的 patch notes。
+    返回 issue dict 或 None。
+    """
+    try:
+        response = requests.get(page_url, headers=HEADERS, timeout=15)
+        if response.status_code != 200:
+            return None
+
+        text = response.text
+
+        # 查找 patch notes 条目：标题含 "Patch X.X" 或 "patch-notes"
+        # Riot 页面里 patch notes 链接通常包含 "patch-" 或 "patch-notes"
+        PATCH_TITLE_RE = re.compile(
+            r'(?i)(patch\s*\d+[\.\-]\d+\s*notes?|patch\s*notes?\s*\d+[\.\-]\d+)',
+        )
+
+        # 提取所有带 patch 标记的标题文本
+        # Riot 页面结构：<h2> 或 <h3> 或 data-testid 属性中含标题
+        soup_text = html.unescape(text)
+        matches = PATCH_TITLE_RE.findall(soup_text)
+
+        if not matches:
+            return None
+
+        patch_title = matches[0].strip()
+
+        # 检查页面是否有 48 小时内的时间戳
+        # Riot 页面里有 ISO 8601 时间戳如 "2026-04-01T..."
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
+        DATE_RE = re.compile(r'(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})')
+        date_matches = DATE_RE.findall(soup_text)
+
+        is_recent = False
+        for date_str, time_str in date_matches:
+            try:
+                dt = datetime.fromisoformat(f"{date_str}T{time_str}:00+00:00")
+                if dt >= cutoff:
+                    is_recent = True
+                    break
+            except Exception:
+                continue
+
+        if not is_recent:
+            return None
+
+        accel_need = analyze_acceleration_need(game_name, update_content=patch_title)
+        update_priority = estimate_update_priority(reddit_score=500, accel_need_text=accel_need)
+
+        return {
+            'game': game_name,
+            'region': 'Global',
+            'country': '',
+            'issue': f"🎮 [版本更新] {patch_title}\n    加速需求: {accel_need}",
+            'alert_type': 'game_update',
+            'update_priority': update_priority,
+            'source_name': '官方 Patch Notes',
+            'source_url': page_url,
+        }
+
+    except Exception as e:
+        print(f"[Calendar] {game_name} 官方页面检测失败: {e}")
+        return None
+
+
 def check_non_steam_updates():
     """
     通过 Reddit 检测非 Steam 游戏的大版本更新/新赛季/预告。
@@ -563,10 +640,19 @@ def check_non_steam_updates():
         subreddit = config['subreddit']
         keywords = config['keywords']
 
-        query = '+OR+'.join(keywords)
+        # 优先：有官方页面的游戏直接抓官网
+        riot_rss = config.get('riot_rss')
+        if riot_rss:
+            result = check_riot_official_updates(game_name, riot_rss)
+            if result:
+                issues.append(result)
+                continue  # 官网已命中，跳过 Reddit
+
+        # 修复 URL 拼接：关键词之间用 %20OR%20，避免 + 被解释为空格
+        query = '%20OR%20'.join(keywords)
         url = (
             f"https://www.reddit.com/r/{subreddit}/search.json"
-            f"?q=flair%3Aofficial+OR+flair%3Anews+{query}"
+            f"?q=flair%3Aofficial%20OR%20flair%3Anews%20OR%20flair%3Apatch%20{query}"
             f"&restrict_sr=on&sort=new&t=week&limit=10"
         )
 
@@ -589,7 +675,10 @@ def check_non_steam_updates():
 
                 title_upper = title.upper()
                 is_update = any(kw.upper() in title_upper for kw in keywords)
-                is_official = 'OFFICIAL' in flair or 'NEWS' in flair or 'PATCH' in flair
+                is_official = any(kw in flair for kw in (
+                    'OFFICIAL', 'NEWS', 'PATCH', 'ANNOUNCEMENT',
+                    'MEGATHREAD', 'SUB-META', 'GAME UPDATE', 'UPDATE',
+                ))
                 is_hot = score > 100
 
                 # 区分预告 vs 已上线
