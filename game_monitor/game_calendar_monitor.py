@@ -42,29 +42,51 @@ from game_registry import get_steam_app_map
 TRACKED_GAMES = {name: appid for name, appid in get_steam_app_map().items() if appid is not None}
 
 # 非 Steam 游戏通过 Reddit 检测更新（含预告）
-# riot_rss: Riot 官方 patch notes RSS 地址（优先于 Reddit）
+# official_url:   直接抓取的官方 game-updates 页面（Riot 系）
+# blizzard_url:   Blizzard 官方新闻页面（OW2/WoW）
+# hoyolab_gid:    HoyoLab API game ID（原神=2, 崩铁=6, 绝区零=8）
 NON_STEAM_GAMES = {
-    'Valorant': {
-        'subreddit': 'VALORANT',
-        'keywords': ['patch', 'update', 'season', 'episode', 'act', 'upcoming', 'preview', 'roadmap'],
-        'riot_rss': 'https://www.riotgames.com/en/news/game-updates/valorant',
-    },
     'League of Legends': {
         'subreddit': 'leagueoflegends',
         'keywords': ['patch', 'update', 'season', 'preseason', 'preview', 'upcoming', 'pbe'],
-        'riot_rss': 'https://www.leagueoflegends.com/en-us/news/game-updates/',
+        'official_url': 'https://www.leagueoflegends.com/en-us/news/game-updates/',
     },
+    'Valorant': {
+        'subreddit': 'VALORANT',
+        'keywords': ['patch', 'update', 'season', 'episode', 'act', 'upcoming', 'preview', 'roadmap'],
+        'official_url': 'https://playvalorant.com/en-us/news/game-updates/',
+    },
+    'Overwatch 2': {
+        'subreddit': 'Overwatch',
+        'keywords': ['patch', 'update', 'season', 'hero', 'preview', 'ptr', 'upcoming'],
+        'blizzard_url': 'https://overwatch.blizzard.com/en-us/news/patch-notes/',
+    },
+    'World of Warcraft': {
+        'subreddit': 'wow',
+        'keywords': ['patch', 'update', 'expansion', 'season', 'hotfix', 'maintenance', 'ptr', 'upcoming'],
+        'blizzard_url': 'https://worldofwarcraft.blizzard.com/en-us/news',
+    },
+    'Genshin Impact': {
+        'subreddit': 'Genshin_Impact',
+        'keywords': ['update', 'version', 'patch', 'banner', 'preview', 'livestream', 'maintenance'],
+        'hoyolab_gid': 2,
+    },
+    'Honkai Star Rail': {
+        'subreddit': 'HonkaiStarRail',
+        'keywords': ['update', 'version', 'patch', 'banner', 'preview', 'livestream', 'maintenance'],
+        'hoyolab_gid': 6,
+    },
+    'Zenless Zone Zero': {
+        'subreddit': 'ZenlessZoneZero',
+        'keywords': ['update', 'version', 'patch', 'banner', 'preview', 'maintenance', 'livestream'],
+        'hoyolab_gid': 8,
+    },
+    # 以下游戏无可靠官方 API，继续用 Reddit
     'Fortnite': {'subreddit': 'FortNiteBR', 'keywords': ['update', 'season', 'chapter', 'patch', 'downtime', 'upcoming', 'teaser', 'countdown']},
-    'Overwatch 2': {'subreddit': 'Overwatch', 'keywords': ['patch', 'update', 'season', 'hero', 'preview', 'ptr', 'upcoming']},
     'Call of Duty': {'subreddit': 'CallOfDuty', 'keywords': ['update', 'season', 'patch', 'warzone', 'upcoming', 'roadmap', 'preview']},
-    'Aion 2': {'subreddit': 'aion', 'keywords': ['update', 'patch', 'maintenance', 'launch', 'upcoming', 'beta', 'release date']},
-    # 非 Steam 游戏补充
-    'Genshin Impact': {'subreddit': 'Genshin_Impact', 'keywords': ['update', 'version', 'patch', 'banner', 'preview', 'livestream', 'maintenance']},
-    'Honkai Star Rail': {'subreddit': 'HonkaiStarRail', 'keywords': ['update', 'version', 'patch', 'banner', 'preview', 'livestream', 'maintenance']},
     'Wuthering Waves': {'subreddit': 'WutheringWaves', 'keywords': ['update', 'version', 'patch', 'banner', 'preview', 'maintenance', 'convene']},
-    'Zenless Zone Zero': {'subreddit': 'ZenlessZoneZero', 'keywords': ['update', 'version', 'patch', 'banner', 'preview', 'maintenance', 'livestream']},
     'Roblox': {'subreddit': 'roblox', 'keywords': ['update', 'patch', 'outage', 'down', 'maintenance', 'change']},
-    'World of Warcraft': {'subreddit': 'wow', 'keywords': ['patch', 'update', 'expansion', 'season', 'hotfix', 'maintenance', 'ptr', 'upcoming']},
+    'Aion 2': {'subreddit': 'aion', 'keywords': ['update', 'patch', 'maintenance', 'launch', 'upcoming', 'beta', 'release date']},
 }
 
 # 大版本更新 + 预告关键词（出现在 Steam News 标题中）
@@ -559,42 +581,34 @@ def check_steam_news_updates():
     return issues
 
 
-def check_riot_official_updates(game_name, page_url):
+def check_official_page_updates(game_name, page_url):
     """
     抓取 Riot 官方 game-updates 页面，检测 48 小时内的 patch notes。
+    识别页面内的 ISO 8601 时间戳（如 2026-04-01T...）。
     返回 issue dict 或 None。
     """
     try:
         response = requests.get(page_url, headers=HEADERS, timeout=15)
         if response.status_code != 200:
+            print(f"[Calendar] {game_name} 官方页面返回 {response.status_code}")
             return None
 
-        text = response.text
+        soup_text = html.unescape(response.text)
 
-        # 查找 patch notes 条目：标题含 "Patch X.X" 或 "patch-notes"
-        # Riot 页面里 patch notes 链接通常包含 "patch-" 或 "patch-notes"
+        # 查找 patch notes 标题：匹配 "Patch X.X Notes" 等变体
         PATCH_TITLE_RE = re.compile(
             r'(?i)(patch\s*\d+[\.\-]\d+\s*notes?|patch\s*notes?\s*\d+[\.\-]\d+)',
         )
-
-        # 提取所有带 patch 标记的标题文本
-        # Riot 页面结构：<h2> 或 <h3> 或 data-testid 属性中含标题
-        soup_text = html.unescape(text)
         matches = PATCH_TITLE_RE.findall(soup_text)
-
         if not matches:
             return None
-
         patch_title = matches[0].strip()
 
-        # 检查页面是否有 48 小时内的时间戳
-        # Riot 页面里有 ISO 8601 时间戳如 "2026-04-01T..."
+        # 检查页面是否有 48 小时内的 ISO 8601 时间戳
         cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
         DATE_RE = re.compile(r'(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})')
-        date_matches = DATE_RE.findall(soup_text)
-
         is_recent = False
-        for date_str, time_str in date_matches:
+        for date_str, time_str in DATE_RE.findall(soup_text):
             try:
                 dt = datetime.fromisoformat(f"{date_str}T{time_str}:00+00:00")
                 if dt >= cutoff:
@@ -625,6 +639,145 @@ def check_riot_official_updates(game_name, page_url):
         return None
 
 
+def check_blizzard_updates(game_name, page_url):
+    """
+    抓取 Blizzard 官方新闻/Patch Notes 页面，检测 48 小时内的更新。
+    Blizzard 页面使用 "Month DD, YYYY" 格式日期（如 "March 31, 2026"）。
+    返回 issue dict 或 None。
+    """
+    MONTH_MAP = {
+        'january': 1, 'february': 2, 'march': 3, 'april': 4,
+        'may': 5, 'june': 6, 'july': 7, 'august': 8,
+        'september': 9, 'october': 10, 'november': 11, 'december': 12,
+    }
+    try:
+        response = requests.get(page_url, headers=HEADERS, timeout=15)
+        if response.status_code != 200:
+            print(f"[Calendar] {game_name} Blizzard 页面返回 {response.status_code}")
+            return None
+
+        soup_text = html.unescape(response.text)
+
+        # 从页面标题/h2/h3 中找到最新的 patch/update 标题
+        TITLE_RE = re.compile(
+            r'(?i)(?:patch|update|hotfix|season|maintenance)[^<"]{0,80}',
+        )
+        title_matches = TITLE_RE.findall(soup_text)
+        patch_title = title_matches[0].strip() if title_matches else f"{game_name} 更新"
+
+        # 检测 48h 内的 "Month DD, YYYY" 日期
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
+        DATE_RE = re.compile(
+            r'(january|february|march|april|may|june|july|august|'
+            r'september|october|november|december)\s+(\d{1,2}),?\s+(\d{4})',
+            re.IGNORECASE,
+        )
+        is_recent = False
+        for month_str, day_str, year_str in DATE_RE.findall(soup_text):
+            try:
+                month_num = MONTH_MAP[month_str.lower()]
+                dt = datetime(int(year_str), month_num, int(day_str), tzinfo=timezone.utc)
+                if dt >= cutoff:
+                    is_recent = True
+                    break
+            except Exception:
+                continue
+
+        if not is_recent:
+            return None
+
+        accel_need = analyze_acceleration_need(game_name, update_content=patch_title)
+        update_priority = estimate_update_priority(reddit_score=500, accel_need_text=accel_need)
+
+        return {
+            'game': game_name,
+            'region': 'Global',
+            'country': '',
+            'issue': f"🎮 [版本更新] {patch_title}\n    加速需求: {accel_need}",
+            'alert_type': 'game_update',
+            'update_priority': update_priority,
+            'source_name': '官方 Patch Notes',
+            'source_url': page_url,
+        }
+
+    except Exception as e:
+        print(f"[Calendar] {game_name} Blizzard 页面检测失败: {e}")
+        return None
+
+
+def check_hoyolab_updates(game_name, gid):
+    """
+    调用 HoyoLab 官方 API 检测原神/崩铁/绝区零的版本更新。
+    筛选条件：官方账号发布 + 标题含版本/更新关键词 + 48h 内发布。
+    gid: 2=原神, 6=崩坏:星穹铁道, 8=绝区零
+    返回 issue dict 或 None。
+    """
+    UPDATE_KEYWORDS_ZH = [
+        'version', 'update', 'maintenance', 'patch',
+        '版本', '更新', '维护', '公告', 'preview', '预告',
+    ]
+    api_url = (
+        f"https://bbs-api-os.hoyoverse.com/community/post/wapi/getNewsList"
+        f"?gids={gid}&type=3&page_size=10"
+    )
+    try:
+        response = requests.get(api_url, headers=HEADERS, timeout=15)
+        if response.status_code != 200:
+            print(f"[Calendar] {game_name} HoyoLab API 返回 {response.status_code}")
+            return None
+
+        data = response.json()
+        posts = data.get('data', {}).get('list', [])
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
+
+        for item in posts:
+            post = item.get('post', {})
+            user = item.get('user', {})
+            subject = post.get('subject', '')
+            created_at = post.get('created_at', 0)  # Unix timestamp
+            nickname = user.get('nickname', '')
+
+            # 仅接受官方账号发布的内容
+            if 'official' not in nickname.lower():
+                continue
+
+            # 标题需含更新相关关键词
+            subject_lower = subject.lower()
+            if not any(kw in subject_lower for kw in UPDATE_KEYWORDS_ZH):
+                continue
+
+            # 48h 内发布
+            try:
+                dt = datetime.fromtimestamp(created_at, tz=timezone.utc)
+            except Exception:
+                continue
+            if dt < cutoff:
+                continue
+
+            # 命中
+            post_id = post.get('post_id', '')
+            post_url = f"https://www.hoyolab.com/article/{post_id}" if post_id else api_url
+            accel_need = analyze_acceleration_need(game_name, update_content=subject)
+            update_priority = estimate_update_priority(reddit_score=500, accel_need_text=accel_need)
+
+            return {
+                'game': game_name,
+                'region': 'Global',
+                'country': '',
+                'issue': f"🎮 [版本更新] {subject}\n    加速需求: {accel_need}",
+                'alert_type': 'game_update',
+                'update_priority': update_priority,
+                'source_name': 'HoyoLab 官方公告',
+                'source_url': post_url,
+            }
+
+        return None  # 48h 内无官方更新公告
+
+    except Exception as e:
+        print(f"[Calendar] {game_name} HoyoLab API 检测失败: {e}")
+        return None
+
+
 def check_non_steam_updates():
     """
     通过 Reddit 检测非 Steam 游戏的大版本更新/新赛季/预告。
@@ -637,16 +790,36 @@ def check_non_steam_updates():
                      "NEXT SEASON", "ANNOUNCED"]
 
     for game_name, config in NON_STEAM_GAMES.items():
-        subreddit = config['subreddit']
         keywords = config['keywords']
 
-        # 优先：有官方页面的游戏直接抓官网
-        riot_rss = config.get('riot_rss')
-        if riot_rss:
-            result = check_riot_official_updates(game_name, riot_rss)
+        # --- 优先级 1：Riot 系官网（ISO 时间戳）---
+        official_url = config.get('official_url')
+        if official_url:
+            result = check_official_page_updates(game_name, official_url)
             if result:
                 issues.append(result)
-                continue  # 官网已命中，跳过 Reddit
+            continue  # 无论是否命中，Riot 系不走 Reddit
+
+        # --- 优先级 2：Blizzard 官网（Month DD, YYYY 日期）---
+        blizzard_url = config.get('blizzard_url')
+        if blizzard_url:
+            result = check_blizzard_updates(game_name, blizzard_url)
+            if result:
+                issues.append(result)
+            continue  # 无论是否命中，Blizzard 系不走 Reddit
+
+        # --- 优先级 3：HoyoLab API（原神/崩铁/绝区零）---
+        hoyolab_gid = config.get('hoyolab_gid')
+        if hoyolab_gid:
+            result = check_hoyolab_updates(game_name, hoyolab_gid)
+            if result:
+                issues.append(result)
+            continue  # 无论是否命中，米哈游系不走 Reddit
+
+        # --- 优先级 4：Reddit 兜底（Fortnite/CoD/鸣潮/Roblox/Aion 2）---
+        subreddit = config.get('subreddit', '')
+        if not subreddit:
+            continue
 
         # 修复 URL 拼接：关键词之间用 %20OR%20，避免 + 被解释为空格
         query = '%20OR%20'.join(keywords)
