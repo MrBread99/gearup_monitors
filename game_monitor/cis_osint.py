@@ -183,8 +183,8 @@ def check_detector404(game_name):
             complaint_level = level_match.group(1).lower()
             complaint_level_zh = LEVEL_TRANSLATE.get(complaint_level, complaint_level)
 
-        # 如果投诉量级为"无"或"少"，跳过
-        if complaint_level and complaint_level.lower() in ('нет', 'мало', 'минимально'):
+        # 只报大量/严重/大规模，过滤掉中等及以下
+        if complaint_level and complaint_level.lower() in ('нет', 'мало', 'минимально', 'умеренно'):
             return None
 
         # 提取受影响区域 TOP，并翻译俄语地名
@@ -237,11 +237,9 @@ def check_detector404(game_name):
                 fault_types.append(f"{label} {match.group(1)}%")
 
         # 根据投诉量级分级处理
-        high_levels = ['много', 'критично', 'массово']  # 大量/严重/大规模 → 详细报
-        moderate_levels = ['умеренно']                    # 中等 → 简要汇总
+        high_levels = ['много', 'критично', 'массово']  # 大量/严重/大规模
 
         is_high = complaint_level and any(lvl in complaint_level for lvl in high_levels)
-        is_moderate = complaint_level and any(lvl in complaint_level for lvl in moderate_levels)
 
         if is_high:
             # 高级别：详细报告（含区域和故障类型）
@@ -256,19 +254,6 @@ def check_detector404(game_name):
                 'region': 'CIS / Russia',
                 'country': 'Russia',
                 'issue': '\n    '.join(issue_parts),
-                'detail_level': 'high',
-                'source_name': 'detector404.ru',
-                'source_url': url
-            }
-        elif is_moderate:
-            # 中等级别：只返回基本信息，由调用方汇总
-            return {
-                'game': game_name,
-                'region': 'CIS / Russia',
-                'country': 'Russia',
-                'issue': '',  # 占位，由 batch 函数填充
-                'detail_level': 'moderate',
-                'complaint_level_zh': complaint_level_zh,
                 'source_name': 'detector404.ru',
                 'source_url': url
             }
@@ -281,14 +266,11 @@ def check_detector404(game_name):
 
 def check_detector404_batch(game_names):
     """
-    批量检测 detector404，自动合并中等级别的报警。
-    - 中等（умеренно）：合并成一条，只列游戏名
-    - 大量/严重/大规模：逐条详细报告
-    每次请求之间加入 1-3 秒随机延迟，避免 60 个请求无间隔触发封禁。
+    批量检测 detector404，只报大量/严重/大规模级别。
+    每次请求之间加入 1-3 秒随机延迟，避免批量请求触发封禁。
     返回 issues 列表。
     """
     issues = []
-    moderate_games = []
 
     for i, name in enumerate(game_names):
         # 随机延迟 1-3 秒，避免批量请求被 detector404.ru 封禁
@@ -296,25 +278,8 @@ def check_detector404_batch(game_names):
             time.sleep(random.uniform(1.0, 3.0))
 
         result = check_detector404(name)
-        if not result:
-            continue
-
-        if result.get('detail_level') == 'high':
-            # 高级别：直接加入
+        if result:
             issues.append(result)
-        elif result.get('detail_level') == 'moderate':
-            moderate_games.append(result.get('game', '?'))
-
-    # 中等级别合并成一条
-    if moderate_games:
-        issues.append({
-            'game': 'detector404.ru',
-            'region': 'CIS / Russia',
-            'country': 'Russia',
-            'issue': f"🇷🇺 俄罗斯区投诉量中等的服务: {', '.join(moderate_games)}",
-            'source_name': 'detector404.ru',
-            'source_url': 'https://detector404.ru/'
-        })
 
     return issues
 
