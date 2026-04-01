@@ -29,7 +29,6 @@ jobs:
             game_monitor/platform_incidents_snapshot.json
             game_monitor/ineffective_alerts_snapshot.json
             game_monitor/russia_events_snapshot.json
-            competitor_radar/exitlag_pricing_snapshot.json
           key: monitor-snapshots-${{ github.run_id }}
           restore-keys: |
             monitor-snapshots-
@@ -61,16 +60,4 @@ jobs:
           REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
         run: python game_monitor/game_calendar_monitor.py
 
-      # ===== 竞品情报（每 2 小时）=====
-      - name: Run Discord Intelligence Listener
-        env:
-          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
-          TARGET_CHANNEL_ID: ${{ secrets.TARGET_CHANNEL_ID }}
-          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
-          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
-        run: python competitor_radar/discord_listener.py
-
-      - name: Run Competitor Pricing Monitor
-        env:
-          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
-        run: python competitor_radar/exitlag_pricing.py
+      # 竞品情报（Discord + 定价）已移至独立的 competitor_radar.yml，每 24 小时运行一次。

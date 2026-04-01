@@ -1,0 +1,43 @@
+name: Competitor Radar
+
+on:
+  schedule:
+    - cron: '0 1 * * *' # 每天 UTC 01:00 运行一次（北京时间 09:00）
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  competitor-radar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4 openai cloudscraper discord.py
+
+      # ===== 快照持久化 =====
+      - name: Restore snapshot cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            competitor_radar/exitlag_pricing_snapshot.json
+          key: competitor-snapshots-${{ github.run_id }}
+          restore-keys: |
+            competitor-snapshots-
+
+      # ===== 竞品情报聚合（Discord 24h + 定价变动），一条消息发出 =====
+      - name: Run Competitor Radar (All)
+        env:
+          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
+          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          TARGET_CHANNEL_ID: ${{ secrets.TARGET_CHANNEL_ID }}
+        run: python competitor_radar/run_all.py

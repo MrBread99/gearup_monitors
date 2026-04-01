@@ -33,66 +33,15 @@ jobs:
           restore-keys: |
             brand-snapshots-
 
-      # ===== 初始化舆情报告文件 =====
-      - name: Init brand report
-        run: python -c "from utils.brand_report import init_report; init_report()"
-
-      # ===== 品牌舆情（每 24 小时）=====
-      - name: Run GearUP Reddit Monitor
+      # ===== 品牌舆情聚合（所有地区），一条消息发出 =====
+      - name: Run Brand Monitor (All Regions)
         env:
           POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
           REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
           REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
-        run: python brand_monitor/gearup_reddit.py
-
-      - name: Run GearUP YouTube Monitor
-        env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
-          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
-        run: python brand_monitor/gearup_youtube.py
-
-      - name: Run Trustpilot Monitor
-        env:
-          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
-        run: python brand_monitor/trustpilot_monitor.py
-
-      - name: Run Taiwan Brand Monitor
-        env:
-          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
-          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
-        run: python brand_monitor/taiwan_monitor.py
-
-      - name: Run Korea Brand Monitor
-        env:
-          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
-          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
-        run: python brand_monitor/korea_monitor.py
-
-      - name: Run Russia Brand Monitor
-        env:
-          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
-          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
-        run: python brand_monitor/russia_monitor.py
-
-      - name: Run Middle East Brand Monitor
-        env:
-          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
-          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
-        run: python brand_monitor/mideast_monitor.py
-
-      - name: Run Southeast Asia Brand Monitor
-        env:
-          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
-          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
-        run: python brand_monitor/southeast_asia_monitor.py
-
-      - name: Run Japan Brand Monitor
-        env:
-          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
-          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
-        run: python brand_monitor/japan_monitor.py
+        run: python brand_monitor/run_all.py
 
       # ===== 推送舆情报告到仓库 =====
       - name: Push brand report
