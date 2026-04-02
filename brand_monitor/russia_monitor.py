@@ -7,12 +7,14 @@ import urllib.parse
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBHOOK_URL
 from utils.sentiment_summarizer import summarize_sentiment
+from utils.google_client import google_search
 
 # ==========================================
-# 俄语区品牌舆情监控（VK + Otzovik）
+# 俄语区品牌舆情监控（VK + Google 俄语搜索）
 # ==========================================
 # 监控俄罗斯和独联体玩家对 GearUP Booster 及竞品加速器的讨论和评价。
-# Otzovik (otzovik.com) 是俄罗斯最大的产品评价网站。
+# 原 Otzovik 直连已被 CAPTCHA 封锁，改为通过 Google 间接索引
+# Otzovik 评价 + 俄语全网讨论。
 # ==========================================
 
 SEARCH_BRANDS = {
@@ -34,12 +36,6 @@ HEADERS_VK = {
     'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 '
                   '(KHTML, like Gecko) Chrome/81.0.4044.138 Mobile Safari/537.36',
     'Accept-Language': 'ru-RU,ru;q=0.9'
-}
-
-HEADERS_WEB = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-                  '(KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
-    'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8'
 }
 
 
@@ -82,38 +78,37 @@ def search_vk(query):
         return []
 
 
-def search_otzovik(query):
-    """搜索 Otzovik 产品评价"""
-    encoded = urllib.parse.quote(query)
-    url = f"https://otzovik.com/search/?search_text={encoded}"
+def search_google_ru(query):
+    """
+    通过 Google 俄语搜索间接获取 Otzovik 评价 + 俄语全网讨论。
+    Otzovik 全站启用 CAPTCHA，无法直连，但 Google 索引了其评价页面。
+    分两轮搜索：
+      1. site:otzovik.com — 间接获取 Otzovik 上的产品评价
+      2. 俄语全网 — 论坛、博客等补充讨论
+    """
+    results = []
 
+    # 第一轮：Google 索引的 Otzovik 评价
     try:
-        response = requests.get(url, headers=HEADERS_WEB, timeout=15)
-        if response.status_code != 200:
-            try:
-                from utils.notifier import report_scrape_block
-                report_scrape_block('otzovik', url=url, status_code=response.status_code)
-            except Exception:
-                pass
-            return []
-
-        soup = BeautifulSoup(response.text, 'html.parser')
-        results = []
-
-        for item in soup.select('.product-name a, .review-title'):
-            title = item.get_text(strip=True)
-            link = item.get('href', '')
-            if title:
-                results.append({
-                    'title': title,
-                    'url': f"https://otzovik.com{link}" if str(link).startswith('/') else str(link),
-                    'source': 'Otzovik'
-                })
-
-        return results[:15]
+        print(f"    [Google] site:otzovik.com '{query}'...")
+        otzovik_results = google_search(query, lang_code='ru', site='otzovik.com', max_results=10)
+        for item in otzovik_results:
+            item['source'] = 'Otzovik (Google索引)'
+        results.extend(otzovik_results)
     except Exception as e:
-        print(f"[RU] 搜索 Otzovik '{query}' 失败: {e}")
-        return []
+        print(f"[RU] Google 搜索 Otzovik '{query}' 失败: {e}")
+
+    # 第二轮：俄语全网讨论（排除 VK 避免与 search_vk 重复）
+    try:
+        print(f"    [Google] 俄语全网 '{query}'...")
+        web_results = google_search(f"{query} отзыв OR обзор -site:vk.com", lang_code='ru', max_results=10)
+        for item in web_results:
+            item['source'] = 'Google RU'
+        results.extend(web_results)
+    except Exception as e:
+        print(f"[RU] Google 俄语搜索 '{query}' 失败: {e}")
+
+    return results
 
 
 def analyze_sentiment_ru(posts):
@@ -149,8 +144,8 @@ def check_russia_brand():
         for q in queries:
             print(f"  - 正在搜索 VK: '{q}'...")
             all_posts.extend(search_vk(q))
-            print(f"  - 正在搜索 Otzovik: '{q}'...")
-            all_posts.extend(search_otzovik(q))
+            print(f"  - 正在搜索 Google 俄语: '{q}'...")
+            all_posts.extend(search_google_ru(q))
 
     if not all_posts:
         return issues
@@ -189,8 +184,8 @@ def check_russia_brand():
         'country': 'Russia',
         'alert_type': 'brand_monitor',
         'issue': issue_desc,
-        'source_name': 'VK / Otzovik',
-        'source_url': 'https://otzovik.com/'
+        'source_name': 'VK / Google RU / Otzovik(索引)',
+        'source_url': 'https://www.google.com/search?q=GearUP+Booster&lr=lang_ru'
     })
 
     return issues

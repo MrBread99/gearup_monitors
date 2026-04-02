@@ -56,12 +56,8 @@ _SCRAPE_ADVICE = {
         'short_term': '本次已跳过 VK 品牌舆情数据，Otzovik 数据不受影响',
         'long_term': '注册 VK 开发者账号并获取 Service Token，接入 VK API（官方，免费）',
     },
-    'otzovik': {
-        'display_name': 'Otzovik（俄语产品评价）',
-        'reason': 'Otzovik 全站启用了 CAPTCHA 反爬（返回 507 "Вы робот?" 验证页），GitHub Actions IP 段可能直接返回 404',
-        'short_term': '本次已跳过 Otzovik 数据；此数据源无法通过普通 HTTP 请求访问，不影响 VK 数据',
-        'long_term': 'Otzovik 无官方 API，且 CAPTCHA 无法绕过；建议将 Otzovik 替换为 Google 俄语搜索（site:otzovik.com OR 全网）间接获取评价摘要',
-    },
+    # 注：Otzovik 条目已移除 —— 原 search_otzovik() 已替换为 Google 俄语间接索引，
+    #     不再直连 otzovik.com，不会再触发 report_scrape_block('otzovik')。
     'cloudflare_pricing': {
         'display_name': '竞品定价页（Cloudflare 防护）',
         'reason': 'Cloudflare 规则更新，cloudscraper 指纹被识别，返回 HTTP 403',
