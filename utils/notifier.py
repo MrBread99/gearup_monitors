@@ -58,9 +58,9 @@ _SCRAPE_ADVICE = {
     },
     'otzovik': {
         'display_name': 'Otzovik（俄语产品评价）',
-        'reason': 'Otzovik 返回非 200，可能有基础反爬或暂时不可用',
-        'short_term': '本次已跳过 Otzovik 数据；可尝试增大请求间隔至 3-5s 或更换 User-Agent',
-        'long_term': 'Otzovik 暂无官方 API，继续 HTML 爬取；若频繁拦截可考虑搜索引擎间接索引',
+        'reason': 'Otzovik 全站启用了 CAPTCHA 反爬（返回 507 "Вы робот?" 验证页），GitHub Actions IP 段可能直接返回 404',
+        'short_term': '本次已跳过 Otzovik 数据；此数据源无法通过普通 HTTP 请求访问，不影响 VK 数据',
+        'long_term': 'Otzovik 无官方 API，且 CAPTCHA 无法绕过；建议将 Otzovik 替换为 Google 俄语搜索（site:otzovik.com OR 全网）间接获取评价摘要',
     },
     'cloudflare_pricing': {
         'display_name': '竞品定价页（Cloudflare 防护）',
@@ -274,16 +274,20 @@ def flush_scrape_block_alerts(webhook_url: str = None):
         long_term   = advice.get('long_term', '暂无建议')
 
         # 根据实际 HTTP 状态码动态覆盖原因描述和建议
+        # 仅对没有专属建议的数据源做泛化覆盖（有专属条目的优先用人工维护的描述）
         # 404         = URL 失效/slug 不匹配（非反爬）
-        # 403/429     = 真正的反爬拦截
+        # 403/429/507 = 真正的反爬拦截
         # 5xx (≥500)  = 数据源服务端故障（与爬虫无关）
+        has_custom_advice = source_key in _SCRAPE_ADVICE
         actual_codes = entry.get('codes', set())
         all_404 = actual_codes and all(c == 404 for c in actual_codes)
-        has_anti_scrape = any(c in (403, 429) for c in actual_codes)
+        has_anti_scrape = any(c in (403, 429, 507) for c in actual_codes)
         all_5xx = actual_codes and all(c >= 500 for c in actual_codes)
         has_5xx = any(c >= 500 for c in actual_codes)
 
-        if all_404:
+        if has_custom_advice:
+            pass  # 保持 _SCRAPE_ADVICE 中人工维护的专属描述
+        elif all_404:
             reason = 'URL 返回 404（页面不存在），数据源的 URL slug 或板块 ID 可能已失效/变更'
             short_term = '本次已跳过该数据源；需排查并更新失效的 URL 路径或板块 ID'
             long_term = '定期验证数据源 URL 可达性，或改用官方 API 避免路径变更导致的数据盲区'
