@@ -339,12 +339,17 @@ if __name__ == "__main__":
         except AttributeError:
             pass
 
-    print("Testing Russia Event Monitor...")
-    results = check_russia_events()
-    if results:
-        for r in results:
-            print(r['issue'])
-        if POPO_WEBHOOK_URL:
-            send_popo_alert(POPO_WEBHOOK_URL, results)
-    else:
-        print("近期无俄罗斯大型活动或网络管控动态。")
+    try:
+        print("Testing Russia Event Monitor...")
+        results = check_russia_events()
+        if results:
+            for r in results:
+                print(r['issue'])
+            if POPO_WEBHOOK_URL:
+                send_popo_alert(POPO_WEBHOOK_URL, results)
+        else:
+            print("近期无俄罗斯大型活动或网络管控动态。")
+    except Exception as e:
+        print(f"[RussiaEventMonitor] 顶层异常: {e}")
+        import traceback
+        traceback.print_exc()

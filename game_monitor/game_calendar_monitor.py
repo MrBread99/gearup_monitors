@@ -1418,12 +1418,17 @@ if __name__ == "__main__":
         except AttributeError:
             pass
 
-    print("Testing Game Calendar Monitor...")
-    results = check_game_calendar()
-    if results:
-        for r in results:
-            print(f"[{r['game']}] {r['issue']}")
-        if POPO_WEBHOOK_URL:
-            send_popo_alert(POPO_WEBHOOK_URL, results)
-    else:
-        print("暂无游戏更新或热门新游。")
+    try:
+        print("Testing Game Calendar Monitor...")
+        results = check_game_calendar()
+        if results:
+            for r in results:
+                print(f"[{r['game']}] {r['issue']}")
+            if POPO_WEBHOOK_URL:
+                send_popo_alert(POPO_WEBHOOK_URL, results)
+        else:
+            print("暂无游戏更新或热门新游。")
+    except Exception as e:
+        print(f"[GameCalendarMonitor] 顶层异常: {e}")
+        import traceback
+        traceback.print_exc()

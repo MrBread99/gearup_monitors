@@ -348,25 +348,34 @@ def main():
     
     # 从统一游戏注册表 (game_registry.py) 加载所有游戏名，动态遍历
     for game_name in get_all_game_names():
-        config = get_game_config(game_name)
-        subreddit = config.get('subreddit', '')
-        
-        print(f"正在检测 {game_name}...")
-        
-        # Fortnite 额外检查 Epic Games 官方状态 API
-        if game_name == 'Fortnite':
-            all_issues.extend(check_epic_games_status())
-        
-        all_issues.extend(check_all_channels_for_game(game_name, subreddit, game_name))
+        try:
+            config = get_game_config(game_name)
+            subreddit = config.get('subreddit', '')
+            
+            print(f"正在检测 {game_name}...")
+            
+            # Fortnite 额外检查 Epic Games 官方状态 API
+            if game_name == 'Fortnite':
+                all_issues.extend(check_epic_games_status())
+            
+            all_issues.extend(check_all_channels_for_game(game_name, subreddit, game_name))
+        except Exception as e:
+            print(f"[Monitor] {game_name} 检测失败，跳过: {e}")
     
     # detector404.ru 批量检测（中等合并，高级别逐条）
-    print("正在批量检测 detector404.ru 俄罗斯区故障...")
-    all_issues.extend(cis_osint.check_detector404_batch(get_all_game_names()))
+    try:
+        print("正在批量检测 detector404.ru 俄罗斯区故障...")
+        all_issues.extend(cis_osint.check_detector404_batch(get_all_game_names()))
+    except Exception as e:
+        print(f"[Monitor] detector404.ru 批量检测失败: {e}")
     
     # 平台与通讯工具状态检测（合并到同一条消息）
-    print("正在检测平台与通讯工具状态...")
-    import platform_status_monitor
-    all_issues.extend(platform_status_monitor.check_all_platforms())
+    try:
+        print("正在检测平台与通讯工具状态...")
+        import platform_status_monitor
+        all_issues.extend(platform_status_monitor.check_all_platforms())
+    except Exception as e:
+        print(f"[Monitor] 平台状态检测失败: {e}")
     
     # 处理报警：🔴 加速器无效合并去重，🟢🟡 正常输出
     all_issues = process_alerts(all_issues)
@@ -377,4 +386,9 @@ def main():
     flush_scrape_block_alerts(POPO_WEBHOOK_URL)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"[Monitor] main() 顶层异常: {e}")
+        import traceback
+        traceback.print_exc()
