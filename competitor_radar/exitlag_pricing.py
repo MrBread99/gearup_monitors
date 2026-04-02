@@ -19,6 +19,8 @@ from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBH
 # 当前监控竞品:
 # 1. ExitLag — /en/pricing, /zh/pricing, /kr/pricing 等
 # 2. LagoFast — /en/, /ko/, /ja/ 等（定价信息在首页或子页面）
+#
+# 抓取优先级：Playwright + stealth > cloudscraper > requests
 # ==========================================
 
 # 竞品配置
@@ -79,67 +81,206 @@ HEADERS = {
 }
 
 
+# ==========================================
+# Playwright 浏览器会话管理（单例复用）
+# ==========================================
+_pw_browser = None
+_pw_context = None
+_pw_page = None
+_pw_available = None  # None = 未检测, True/False = 已确认
+
+
+def _ensure_playwright():
+    """
+    懒初始化 Playwright 浏览器（整个进程生命周期只启动一次）。
+    返回 page 对象；不可用时返回 None。
+    """
+    global _pw_browser, _pw_context, _pw_page, _pw_available
+
+    if _pw_available is False:
+        return None
+    if _pw_page is not None:
+        return _pw_page
+
+    try:
+        from playwright.sync_api import sync_playwright
+        pw = sync_playwright().start()
+        _pw_browser = pw.chromium.launch(headless=True)
+        _pw_context = _pw_browser.new_context(
+            user_agent=(
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+            ),
+            viewport={'width': 1920, 'height': 1080},
+            locale='en-US',
+        )
+
+        # 尝试应用 playwright-stealth 隐身补丁
+        try:
+            from playwright_stealth import stealth_sync
+            _pw_page = _pw_context.new_page()
+            stealth_sync(_pw_page)
+        except ImportError:
+            print("[Pricing] playwright-stealth 未安装，使用原生 Playwright")
+            _pw_page = _pw_context.new_page()
+
+        _pw_available = True
+        print("[Pricing] Playwright 浏览器已启动")
+        return _pw_page
+
+    except Exception as e:
+        print(f"[Pricing] Playwright 不可用，将使用 fallback: {e}")
+        _pw_available = False
+        return None
+
+
+def _close_playwright():
+    """关闭 Playwright 浏览器（进程结束时调用）。"""
+    global _pw_browser, _pw_context, _pw_page, _pw_available
+    try:
+        if _pw_page:
+            _pw_page.close()
+        if _pw_context:
+            _pw_context.close()
+        if _pw_browser:
+            _pw_browser.close()
+    except Exception:
+        pass
+    _pw_browser = _pw_context = _pw_page = None
+    _pw_available = None
+
+
+def _fetch_with_playwright(url):
+    """
+    用 Playwright 真实浏览器访问 URL，等待页面加载完成后返回 HTML。
+    成功返回 (html_text, status_code)，失败返回 (None, 0)。
+    """
+    page = _ensure_playwright()
+    if page is None:
+        return None, 0
+
+    try:
+        # 每次请求前随机延迟 2-4 秒，模拟人类浏览间隔
+        time.sleep(random.uniform(2.0, 4.0))
+        response = page.goto(url, wait_until='networkidle', timeout=30000)
+        status = response.status if response else 0
+
+        if status == 200:
+            html = page.content()
+            return html, 200
+        else:
+            return None, status
+    except Exception as e:
+        print(f"[Pricing] Playwright 访问 {url} 失败: {e}")
+        return None, 0
+
+
+# ==========================================
+# cloudscraper 会话（单例复用）
+# ==========================================
+_cs_session = None
+_cs_available = None
+
+
+def _get_cloudscraper_session():
+    """获取或创建 cloudscraper 会话（复用同一 TLS 指纹）。"""
+    global _cs_session, _cs_available
+    if _cs_available is False:
+        return None
+    if _cs_session is not None:
+        return _cs_session
+    try:
+        import cloudscraper
+        _cs_session = cloudscraper.create_scraper(
+            browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False}
+        )
+        _cs_available = True
+        return _cs_session
+    except ImportError:
+        _cs_available = False
+        return None
+    except Exception as e:
+        print(f"[Pricing] cloudscraper 初始化失败: {e}")
+        _cs_available = False
+        return None
+
+
 def fetch_pricing_for_region(region_code, competitor_name='ExitLag'):
     """
     抓取指定竞品指定地区的定价页面，解析出价格和折扣信息。
-    支持 Cloudflare 绕过（cloudscraper 优先，fallback 到 requests）。
+    优先级：Playwright + stealth > cloudscraper (会话复用) > requests
     """
     config = COMPETITORS.get(competitor_name, {})
     url_template = config.get('url_template', '')
     url = url_template.replace('{region}', region_code)
 
-    # 尝试用 cloudscraper 绕过 Cloudflare（如果安装了）
-    try:
-        import cloudscraper
-        scraper = cloudscraper.create_scraper(
-            browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False}
-        )
-        # cloudscraper 路径：每次请求前随机延迟 2-5 秒，避免 19 个连续请求触发封禁
-        time.sleep(random.uniform(2.0, 5.0))
-        response = scraper.get(url, timeout=20)
-    except ImportError:
-        # cloudscraper 未安装，用普通 requests（保留原有 1s 延迟）
-        time.sleep(random.uniform(1.0, 3.0))
-        response = requests.get(url, headers=HEADERS, timeout=15)
-    except Exception as e:
-        print(f"[{competitor_name}] cloudscraper {region_code} 失败: {e}")
-        response = requests.get(url, headers=HEADERS, timeout=15)
-    
-    try:
-        if response.status_code == 403:
-            # Cloudflare 拦截：登记反爬事件后跳过
+    html_text = None
+    status_code = 0
+
+    # === Tier 1: Playwright（真实浏览器，最可靠） ===
+    html_text, status_code = _fetch_with_playwright(url)
+
+    # === Tier 2: cloudscraper（会话复用） ===
+    if html_text is None and status_code != 403:
+        scraper = _get_cloudscraper_session()
+        if scraper:
             try:
-                from utils.notifier import report_scrape_block
-                report_scrape_block('cloudflare_pricing', url=url, status_code=403)
-            except Exception:
-                pass
-            return None
-        elif response.status_code != 200:
-            print(f"[{competitor_name}] {region_code}: HTTP {response.status_code}")
-            return None
-        
-        soup = BeautifulSoup(response.text, 'html.parser')
+                time.sleep(random.uniform(2.0, 5.0))
+                response = scraper.get(url, timeout=20)
+                status_code = response.status_code
+                if status_code == 200:
+                    html_text = response.text
+            except Exception as e:
+                print(f"[{competitor_name}] cloudscraper {region_code} 失败: {e}")
+
+    # === Tier 3: 普通 requests（最后兜底） ===
+    if html_text is None and status_code != 403:
+        try:
+            time.sleep(random.uniform(1.0, 3.0))
+            response = requests.get(url, headers=HEADERS, timeout=15)
+            status_code = response.status_code
+            if status_code == 200:
+                html_text = response.text
+        except Exception as e:
+            print(f"[{competitor_name}] requests {region_code} 失败: {e}")
+
+    # === 结果处理 ===
+    if status_code == 403:
+        try:
+            from utils.notifier import report_scrape_block
+            report_scrape_block('cloudflare_pricing', url=url, status_code=403)
+        except Exception:
+            pass
+        return None
+
+    if html_text is None:
+        if status_code:
+            print(f"[{competitor_name}] {region_code}: HTTP {status_code}")
+        return None
+
+    try:
+        soup = BeautifulSoup(html_text, 'html.parser')
         text = soup.get_text()
-        
+
         # 提取所有价格数字 (格式: US$X.XX 或 R$X.XX 或 ¥XXX 等)
         prices = re.findall(r'(?:US\$|R\$|€|¥|₩|£|\$)\s*[\d,]+\.?\d*', text)
-        
+
         # 提取所有折扣百分比
         discounts = re.findall(r'(\d+)%\s*(?:OFF|off|Save|save|discount)', text, re.IGNORECASE)
-        
+
         # 用价格+折扣的 hash 做变动检测（而非整个页面 hash，避免动态内容误报）
         pricing_fingerprint = str(sorted(prices)) + '|' + str(sorted(discounts))
-        
+
         pricing_data = {
             'prices_raw': prices,
             'discounts': discounts,
             'pricing_hash': str(hash(pricing_fingerprint)),
         }
-        
+
         return pricing_data
-        
+
     except Exception as e:
-        print(f"[{competitor_name}] 抓取 {region_code} 定价失败: {e}")
+        print(f"[{competitor_name}] 解析 {region_code} 定价失败: {e}")
         return None
 
 
@@ -236,10 +377,13 @@ def check_exitlag_pricing():
 
 
 def check_all_competitor_pricing():
-    """检查所有竞品的定价变动"""
+    """检查所有竞品的定价变动，完成后关闭浏览器。"""
     all_issues = []
-    for competitor_name in COMPETITORS:
-        all_issues.extend(check_competitor_pricing(competitor_name))
+    try:
+        for competitor_name in COMPETITORS:
+            all_issues.extend(check_competitor_pricing(competitor_name))
+    finally:
+        _close_playwright()
     return all_issues
 
 
@@ -250,13 +394,20 @@ if __name__ == "__main__":
         except AttributeError:
             pass
 
-    print("Testing Competitor Pricing Monitor...")
-    results = check_all_competitor_pricing()
-    if results:
-        for r in results:
-            print(f"[{r['game']} - {r['region']}] {r['issue']}")
-        if POPO_WEBHOOK_URL:
-            send_popo_alert(POPO_WEBHOOK_URL, results)
-            flush_scrape_block_alerts(POPO_WEBHOOK_URL)
-    else:
-        print("无定价变动（或首次运行已保存基线）。")
+    try:
+        print("Testing Competitor Pricing Monitor...")
+        results = check_all_competitor_pricing()
+        if results:
+            for r in results:
+                print(f"[{r['game']} - {r['region']}] {r['issue']}")
+            if POPO_WEBHOOK_URL:
+                send_popo_alert(POPO_WEBHOOK_URL, results)
+                flush_scrape_block_alerts(POPO_WEBHOOK_URL)
+        else:
+            print("无定价变动（或首次运行已保存基线）。")
+    except Exception as e:
+        print(f"[Pricing] 顶层异常: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        _close_playwright()

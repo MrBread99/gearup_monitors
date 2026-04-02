@@ -21,7 +21,10 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4 openai cloudscraper discord.py
+        run: pip install requests beautifulsoup4 openai cloudscraper discord.py playwright playwright-stealth
+
+      - name: Install Playwright browsers
+        run: playwright install chromium
 
       # ===== 快照持久化 =====
       - name: Restore snapshot cache
