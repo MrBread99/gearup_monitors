@@ -22,7 +22,7 @@ VK_GAME_MAP = get_vk_game_map()
 
 # detector404.ru（俄罗斯版 Downdetector）游戏/平台 slug 映射
 DETECTOR404_MAP = {
-    # 游戏
+    # === 已追踪游戏（GAME_REGISTRY 中也有） ===
     'Valorant': 'valorant',
     'League of Legends': 'leagueoflegends',
     'APEX Legends': 'apex-legends',
@@ -57,7 +57,20 @@ DETECTOR404_MAP = {
     'Elden Ring Nightreign': 'eldenring',
     'STALCRAFT X': 'stalcraft',
     'World of Warcraft': 'world-of-warcraft',
-    # 平台
+    # === 新增：detector404 上有页面的俄区热门 PC 联机游戏 ===
+    'Minecraft': 'minecraft',
+    'Warface': 'warface',
+    'Lineage 2': 'lineage2',
+    'Battlefield 2042': 'battlefield2042',
+    'Fallout 76': 'fallout76',
+    'New World': 'newworld',
+    'Dark and Darker': 'darkanddarker',
+    'EVE Online': 'eveonline',
+    'Forza Horizon 5': 'forza5',
+    'Diablo III': 'diablo-iii',
+    'Hearthstone': 'hearthstone',
+    'Elder Scrolls Online': 'theelderscrolls',
+    # === 平台 ===
     'Steam': 'steam',
     'Discord': 'discord',
     'Telegram': 'telegram',
@@ -264,15 +277,18 @@ def check_detector404(game_name):
     return None
 
 
-def check_detector404_batch(game_names):
+def check_detector404_batch(game_names=None):
     """
     批量检测 detector404，只报大量/严重/大规模级别。
+    game_names: 指定要检测的名称列表；为 None 时遍历 DETECTOR404_MAP 中所有条目
+               （含不在 GAME_REGISTRY 中的俄区热门游戏）。
     每次请求之间加入 1-3 秒随机延迟，避免批量请求触发封禁。
     返回 issues 列表。
     """
     issues = []
+    names = game_names if game_names is not None else list(DETECTOR404_MAP.keys())
 
-    for i, name in enumerate(game_names):
+    for i, name in enumerate(names):
         # 随机延迟 1-3 秒，避免批量请求被 detector404.ru 封禁
         if i > 0:
             time.sleep(random.uniform(1.0, 3.0))

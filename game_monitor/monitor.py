@@ -365,7 +365,7 @@ def main():
     # detector404.ru 批量检测（中等合并，高级别逐条）
     try:
         print("正在批量检测 detector404.ru 俄罗斯区故障...")
-        all_issues.extend(cis_osint.check_detector404_batch(get_all_game_names()))
+        all_issues.extend(cis_osint.check_detector404_batch())
     except Exception as e:
         print(f"[Monitor] detector404.ru 批量检测失败: {e}")
     
