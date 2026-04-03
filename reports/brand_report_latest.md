@@ -1,6 +1,6 @@
 # 品牌舆情监控详细报告
 
-> 生成时间: 2026-04-02 09:09 (UTC+8)
+> 生成时间: 2026-04-03 09:12 (UTC+8)
 > 本报告每 24 小时更新一次
 
 ---
@@ -8,36 +8,36 @@
 ## Global (YouTube) - GearUP Booster
 ### AI 分析
 ```
-正面评价: 多数帖子强调GearUP Booster能有效降低延迟、稳定Ping、解决丢包和卡顿问题，尤其在Brawl Stars、Apex Legends、PUBG Mobile、Valorant等游戏中被推荐为实用工具 [1][3][5][6][9][13]。  
+正面评价: 多数教程类和效果宣传类视频强调GearUP Booster能稳定Ping、消除丢包、解决延迟和卡顿问题，突出其在Apex Legends、Brawl Stars、PUBG Mobile等热门游戏中的实用性 [1][5][6][7][10][12]  
 负面评价: 暂无  
-中性讨论: 包含基础教程类（如何使用）、促销信息（优惠券、路由器捆绑销售）、设备兼容性探讨（Android/iPhone免费获取方式）、平台活动联动（Twitch愚人节活动）及极简互动类（仅@品牌或标签堆砌） [2][4][7][8][10][11][12][14]。  
+中性讨论: 包含基础使用指南（Android端、分步操作）、促销信息（优惠码、HYPEREV路由器捆绑销售）、非直接评测的短视频（如Apex Shorts、愚人节活动），未体现明确情感倾向 [2][3][4][8][9][11][13]  
 涉及竞品: ExitLag  
-商业洞察: 应强化与ExitLag等竞品的实测对比内容输出，并针对中东（如迪拜/巴林服务器）和拉美用户优化本地化宣传话术，突出跨区域低延迟优势。
+商业洞察: 应强化与ExitLag等竞品的实测对比内容，并在教程类视频中自然植入核心优势（如低延迟稳定性、多游戏适配），以转化中性流量为信任背书。
 ```
 ### 正面评价 (1 篇)
 - Fix your Ping ms and fake damage with Gear Up Booster💀🔥#for you  #Viral ￼￼ - [](https://www.youtube.com/watch?v=zC1usehMDks)
 
 ### 负面评价 (2 篇)
+- How to Use GearUp Booster on Android - [](https://www.youtube.com/watch?v=hbhjp7xHYiw)
 - How to Use GearUp Booster - Step by Step - [](https://www.youtube.com/watch?v=FxHBOOhVYkM)
-- How to fix lag! #gearupbooster #brawlstars - [](https://www.youtube.com/watch?v=BHUKwGU1jhE)
 
-### 中性讨论 (11 篇)
+### 中性讨论 (10 篇)
+- 【Apex Legends】玩具槍汗洛(指聲音) #shorts - [](https://www.youtube.com/watch?v=asmnhcO7niw)
 - GearUP Booster Coupon Code &amp; HYPEREV Sale: Save 43% OFF 🎮HYPEREV Wi-Fi 6 Gaming Router! - [](https://www.youtube.com/watch?v=Q753xSrhoIw)
 - Ping estável sem perda de pacote conheça o GearUP Booster #gearup #gearupbooster #gearupvpn #vpn - [](https://www.youtube.com/watch?v=FwHBk7WdP9U)
 - Upgrade Your Gaming Connection with GearUP Booster - [](https://www.youtube.com/watch?v=p2Tu16e28yY)
 - como tener gearup booster (*premium/gratis*) en moviles android iphone 2026 - [](https://www.youtube.com/watch?v=04OTV14DjjU)
-- 【Apex Legends】來送貨了，把貨交上 #shorts - [](https://www.youtube.com/watch?v=tMH8BAzjjfs)
 
 ---
 
 ## South Korea - GearUP Booster
 ### AI 分析
 ```
-正面评价: 用户明确推荐GearUP Booster用于解决游戏延迟问题，强调其必要性，体现对产品功能的认可 [12]。  
-负面评价: 暂无。  
-中性讨论: 多篇帖子将GearUP Booster作为VPN/加速工具选项之一列入泛用推荐清单，未评价效果，仅提及名称或询问用途 [1][2][3][4][5][6][7][9][10][11][13][14][15]。  
-涉及竞品: 无。  
-商业洞察: 应主动在DC Inside高频游戏话题（如GMS、OW、BF6、WOT）下提供GearUP Booster对比竞品的实测数据和简易教程，抢占用户决策入口。
+正面评价: 用户将GearUP Booster作为解决高延迟、卡顿问题的推荐方案，强调其在游戏联机（如《守望先锋》《战地6》）和Twitch Drops自动领取场景中的实用性 [7][13][14]。  
+负面评价: 用户对GearUP Booster的付费模式提出质疑，怀疑其收费合理性，并对新出现的加速器功能缺乏了解而表现出困惑或不信任 [7][8]。  
+中性讨论: 多数帖子为泛VPN/加速器推荐合集或技术讨论帖，仅将GearUP Booster列为可选工具之一，未体现明确态度；部分涉及OpenWRT路由器集成等技术探讨 [1][2][3][4][5][6][9][10][11][12][15]。  
+涉及竞品: 无  
+商业洞察: 应加强韩语区用户教育，针对“为何需要GearUP”“与免费方案差异”等核心疑问制作简明对比指南，降低认知门槛。
 ```
 ### 正面评价 (0 篇)
 - 暂无
@@ -49,12 +49,12 @@
 - GMS VPN 추천, 하는법 정리 (GMS VPN없이 가능할까?) - [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=gmsreboot&no=705)
 - 트위치 드롭스 받을 때 쓰는 프로그램 추천함 - [DC Inside](https://gall.dcinside.com/board/view/?id=worldoftanks&no=4053200)
 
-### 中性讨论 (75 篇)
+### 中性讨论 (76 篇)
+- gearup프리미엄 유료 쓰는데 이거 맞냐 - [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=dota&no=92130)
 - 이번에GearUP이라는거 사용하라는 업뎃 떴던데 뭐임? - [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=wherewindsmeets&no=93348)
 - 드롭스 받아라 - [DC Inside](https://gall.dcinside.com/board/view/?id=worldoftanks&no=4262456)
 - 얘네 쓸만함? - [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=jett&no=1034981)
 - GearupBooster Hyperev에 얹힐 openwrt 공유기? - [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=gongu&no=44678)
-- 드롭스 방송안보고 프로그램으로 완료하는법 - [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=dad&no=709409)
 
 ---
 
