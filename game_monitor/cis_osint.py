@@ -82,6 +82,17 @@ DETECTOR404_MAP = {
     'Ubisoft Connect': 'ubisoft',
 }
 
+# 平台名称集合（用于区分游戏和平台，避免 monitor.py 与 platform_status_monitor.py 重复检测）
+DETECTOR404_PLATFORMS = {
+    'Steam', 'Discord', 'Telegram', 'Epic Games',
+    'Battle.net', 'PlayStation', 'Xbox Live', 'FACEIT', 'Ubisoft Connect',
+}
+
+
+def get_detector404_game_only_names():
+    """返回 DETECTOR404_MAP 中仅游戏条目（排除平台），供 monitor.py 使用。"""
+    return [name for name in DETECTOR404_MAP if name not in DETECTOR404_PLATFORMS]
+
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Mobile Safari/537.36',
     'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7'

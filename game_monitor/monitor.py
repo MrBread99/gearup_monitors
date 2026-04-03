@@ -362,10 +362,10 @@ def main():
         except Exception as e:
             print(f"[Monitor] {game_name} 检测失败，跳过: {e}")
     
-    # detector404.ru 批量检测（中等合并，高级别逐条）
+    # detector404.ru 批量检测 — 仅游戏（平台由 platform_status_monitor 负责，避免重复报警）
     try:
         print("正在批量检测 detector404.ru 俄罗斯区故障...")
-        all_issues.extend(cis_osint.check_detector404_batch())
+        all_issues.extend(cis_osint.check_detector404_batch(cis_osint.get_detector404_game_only_names()))
     except Exception as e:
         print(f"[Monitor] detector404.ru 批量检测失败: {e}")
     
