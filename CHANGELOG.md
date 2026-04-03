@@ -4,7 +4,59 @@
 
 ---
 
-## [v4.1.0] - 反爬/数据源全面修复 (Current)
+## [v4.2.1] - detector404 平台重复报警修复 (Current)
+
+### 🔴 Bug Fix
+
+- **cis_osint.py**: 新增 `DETECTOR404_PLATFORMS` 集合（9 个平台名称），明确标识哪些条目属于平台；新增 `get_detector404_game_only_names()` 函数，返回 `DETECTOR404_MAP` 中仅游戏的条目列表（排除平台）
+- **monitor.py**: `check_detector404_batch()` 无参调用改为 `check_detector404_batch(cis_osint.get_detector404_game_only_names())`，只扫描游戏；平台（Steam/Discord/Telegram/Epic Games/Battle.net/PlayStation/Xbox Live/FACEIT/Ubisoft Connect）由 `platform_status_monitor.py` 独占负责，消除全部平台的 detector404 重复报警
+
+**根因**: `monitor.py` 无参调用 `check_detector404_batch()` 遍历全量 `DETECTOR404_MAP`（含 9 个平台），随后 `platform_status_monitor.check_all_platforms()` 又对相同 9 个平台执行一次，导致所有平台的 detector404 报警均重复输出两次。
+
+---
+
+## [v4.2.0] - 数据源可靠性全面升级
+
+### 🚀 新增功能
+
+- **competitor_radar/run_all.py**: 新建竞品情报聚合入口，Discord 24h 摘要 + 定价变动合并为**一条消息**发出，避免多条刷屏
+- **brand_monitor/run_all.py**: 新建品牌舆情聚合入口，9 个地区所有舆情合并为**一条消息**发出
+- **competitor_radar.yml**: 独立为每天 UTC 01:00（北京 09:00）运行的专属工作流；包含 `playwright install chromium` 步骤
+
+### 🔴 Critical 修复
+
+- **game_calendar_monitor.py**: 非 Steam 游戏更新检测全面切换官方 API，不再依赖容易漏报的 Reddit
+
+  | 游戏 | 替换前 | 替换后 |
+  |------|-------|-------|
+  | League of Legends / Valorant | Reddit | 官方 game-updates 页 `check_official_page_updates()` ISO 8601 时间戳 |
+  | Overwatch 2 / World of Warcraft | Reddit | Blizzard 官方新闻 `check_blizzard_updates()` "Month DD, YYYY" 日期解析 |
+  | Genshin Impact(gid=2) / Honkai Star Rail(gid=6) / Zenless Zone Zero(gid=8) | Reddit | HoyoLab API `check_hoyolab_updates()` Unix 时间戳 JSON |
+  | Fortnite / CoD / Wuthering Waves / Roblox / Aion 2 | Reddit | Reddit（无可靠官方 API，维持原逻辑） |
+
+  漏报根因：Reddit 帖子热度不稳定、r/FortNiteBR 等版块内容量大但噪音多，官方 API 直接拿第一条公告的时间戳，更及时可靠。
+
+- **monitor.py + russia_event_monitor.py + game_calendar_monitor.py**: 全面加入 try/except 防级联失败
+  - `monitor.py`：逐游戏 `try/except`（56 款游戏任意一个异常不中断整体）+ 顶层 `try/except`
+  - `russia_event_monitor.py` / `game_calendar_monitor.py`：`__main__` 入口加顶层 `try/except`
+
+- **monitor.yml**: 三个 Python 步骤均加 `continue-on-error: true`，任何脚本崩溃不阻止后续步骤（修复永劫无间等游戏漏报问题的根因：此前 `monitor.py` 异常会导致 `game_calendar_monitor.py` 根本不运行）
+
+### 🟠 High 修复
+
+- **russia_monitor.py**: Otzovik 因全站 CAPTCHA（"Вы робот?"）本地返回 507、GitHub Actions 返回 404，已将 `search_otzovik()` 替换为 `search_google_ru()`，通过 Google 俄语搜索间接索引 Otzovik 内容
+- **exitlag_pricing.py**: cloudscraper TLS 指纹已被 Cloudflare 识别（ExitLag 全部 9 个区域 403），改为三层降级架构：
+  1. **Playwright headless Chromium + playwright-stealth**（首选）
+  2. **cloudscraper 单例会话复用**（`_cs_session`，替代原来每次请求新建实例）
+  3. **requests fallback**（最终兜底）
+  `check_all_competitor_pricing()` 新增 `finally: _close_playwright()` 确保浏览器释放
+- **cis_osint.py**: DETECTOR404_MAP 新增 12 个俄区热门 PC 联机游戏（Minecraft / Warface / Lineage 2 / Battlefield 2042 / Fallout 76 / New World / Dark and Darker / EVE Online / Forza Horizon 5 / Diablo III / Hearthstone / Elder Scrolls Online），监控条目从 31+9 扩至 46+9 = 55 条；`check_detector404_batch()` 默认遍历 `DETECTOR404_MAP.keys()`（原来遍历 `get_all_game_names()`，无法覆盖不在 GAME_REGISTRY 的俄区游戏）
+- **notifier.py**: 507 加入反爬状态码集合 `(403, 429, 507)`；有专属 `_SCRAPE_ADVICE` 条目的数据源不再被泛化状态码逻辑覆盖；新增 `cloudflare_pricing` 专属建议条目；移除 Otzovik 死代码
+- **google_client.py**: 新增 `'ru'` 语言映射（`Accept-Language: ru-RU,ru;q=0.9`），供 `russia_monitor.py` 的 Google RU 搜索使用
+
+---
+
+## [v4.1.0] - 反爬/数据源全面修复
 
 ### 🔴 Critical 级修复
 - **apac_osint.py**: 删除 Yahoo JP 实时搜索（JS 渲染 SPA，`requests` 完全无法获取数据，一直静默返回空）
