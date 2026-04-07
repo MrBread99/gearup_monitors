@@ -60,9 +60,9 @@ _SCRAPE_ADVICE = {
     #     不再直连 otzovik.com，不会再触发 report_scrape_block('otzovik')。
     'cloudflare_pricing': {
         'display_name': '竞品定价页（Cloudflare 防护）',
-        'reason': 'Cloudflare 规则更新，cloudscraper 指纹被识别，返回 HTTP 403',
-        'short_term': '本次已跳过该地区定价数据，下次运行通常可自动恢复；可尝试 pip install -U cloudscraper 更新版本',
-        'long_term': '考虑使用 Playwright + playwright-stealth 真实浏览器方案替代 cloudscraper',
+        'reason': 'Playwright + stealth 首选方案也被 Cloudflare 识别，返回 HTTP 403（已自动用新 page 重试一次）',
+        'short_term': '本次已跳过该地区定价数据，下次运行通常可自动恢复；少量 URL 偶发 403 属于正常波动',
+        'long_term': '若持续大面积 403，考虑升级 Chromium 版本、更换 stealth 插件、或引入代理 IP 轮换',
     },
     'trustpilot': {
         'display_name': 'Trustpilot（品牌评分监控）',

@@ -153,6 +153,7 @@ def _close_playwright():
 def _fetch_with_playwright(url):
     """
     用 Playwright 真实浏览器访问 URL，等待页面加载完成后返回 HTML。
+    若首次返回 403，用新 page（重新注入 stealth）重试一次。
     成功返回 (html_text, status_code)，失败返回 (None, 0)。
     """
     page = _ensure_playwright()
@@ -168,8 +169,32 @@ def _fetch_with_playwright(url):
         if status == 200:
             html = page.content()
             return html, 200
-        else:
-            return None, status
+
+        # Cloudflare 403: 同一 page 多次导航可能累积指纹被识别
+        # 用新 page + 重新注入 stealth 重试一次
+        if status == 403 and _pw_context is not None:
+            print(f"[Pricing] Playwright 403，用新 page 重试: {url}")
+            try:
+                retry_page = _pw_context.new_page()
+                try:
+                    from playwright_stealth import stealth_sync
+                    stealth_sync(retry_page)
+                except ImportError:
+                    pass
+                time.sleep(random.uniform(3.0, 6.0))
+                response2 = retry_page.goto(url, wait_until='networkidle', timeout=30000)
+                status2 = response2.status if response2 else 0
+                if status2 == 200:
+                    html = retry_page.content()
+                    retry_page.close()
+                    return html, 200
+                retry_page.close()
+                return None, status2
+            except Exception as e:
+                print(f"[Pricing] Playwright 重试失败: {e}")
+                return None, 403
+
+        return None, status
     except Exception as e:
         print(f"[Pricing] Playwright 访问 {url} 失败: {e}")
         return None, 0

@@ -148,14 +148,6 @@ def check_trustpilot():
                 direction = "↑" if new_score > old_score else "↓"
                 changes.append(f"评分 {old_score} -> {new_score} {direction}")
 
-            # 评论数变动
-            old_count = old_data.get('review_count', 0)
-            new_count = data.get('review_count', 0)
-            if old_count and new_count:
-                diff = new_count - old_count
-                if diff > 0:
-                    changes.append(f"新增 {diff} 条评论 (总计 {new_count})")
-
             # 1 星评论占比变动（负面舆情指标）
             old_1star = old_data.get('star_distribution', {}).get('1', 0)
             new_1star = data.get('star_distribution', {}).get('1', 0)
