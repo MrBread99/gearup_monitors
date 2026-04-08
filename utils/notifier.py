@@ -217,6 +217,52 @@ def send_popo_alert(webhook_url, issues_list):
                     print(f"发送 POPO 警报最终失败: {e}")
 
 
+def has_scrape_block_alerts() -> bool:
+    """返回本次运行中是否登记过数据源异常。"""
+    return bool(_scrape_block_registry)
+
+
+def send_system_heartbeat(webhook_url: str, task_name: str, summary: str):
+    """
+    发送低噪音系统心跳，用于确认定时任务确实执行过。
+    仅建议给每天 1 次的聚合任务使用，避免高频刷屏。
+    """
+    current_time = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
+    content = (
+        f"【监控系统心跳】\n"
+        f"时间: {current_time} (UTC+8)\n\n"
+        f"任务: {task_name}\n"
+        f"状态: 本次定时任务已正常执行\n"
+        f"结果: {summary}\n"
+    )
+
+    if not webhook_url:
+        print("未配置 POPO_WEBHOOK_URL，系统心跳内容如下：\n")
+        print(content)
+        return
+
+    headers = {'Content-Type': 'application/json'}
+    payload = {"message": content}
+
+    import time as _time
+    for attempt in range(3):
+        try:
+            response = requests.post(
+                webhook_url, headers=headers,
+                data=json.dumps(payload), timeout=10
+            )
+            response.raise_for_status()
+            print(f"[系统心跳] {task_name} 心跳发送成功。")
+            break
+        except Exception as e:
+            if attempt < 2:
+                wait = 2 ** (attempt + 1)
+                print(f"[系统心跳] 发送失败 (第 {attempt+1} 次)，{wait} 秒后重试: {e}")
+                _time.sleep(wait)
+            else:
+                print(f"[系统心跳] 发送最终失败: {e}")
+
+
 def report_scrape_block(source_key: str, url: str = '', status_code: int = None):
     """
     登记一次反爬拦截事件。同一 source_key 在一次运行内会被合并。
@@ -283,9 +329,8 @@ def flush_scrape_block_alerts(webhook_url: str = None):
         all_5xx = actual_codes and all(c >= 500 for c in actual_codes)
         has_5xx = any(c >= 500 for c in actual_codes)
 
-        if has_custom_advice:
-            pass  # 保持 _SCRAPE_ADVICE 中人工维护的专属描述
-        elif all_404:
+        # 404 / 5xx 属于客观状态码语义，优先覆盖静态文案，避免把 500 误解释为 429/反爬。
+        if all_404:
             reason = 'URL 返回 404（页面不存在），数据源的 URL slug 或板块 ID 可能已失效/变更'
             short_term = '本次已跳过该数据源；需排查并更新失效的 URL 路径或板块 ID'
             long_term = '定期验证数据源 URL 可达性，或改用官方 API 避免路径变更导致的数据盲区'
@@ -300,6 +345,8 @@ def flush_scrape_block_alerts(webhook_url: str = None):
             reason = f'数据源返回 {codes_str}，包含服务端故障（5xx），与反爬无关'
             short_term = '本次已跳过该数据源；等待下次运行自动重试'
             long_term = '若 5xx 持续出现，排查数据源官网可用性'
+        elif has_custom_advice:
+            pass  # 保持 _SCRAPE_ADVICE 中人工维护的专属描述
         elif has_anti_scrape:
             pass  # 保持 _SCRAPE_ADVICE 中的原始反爬描述
 

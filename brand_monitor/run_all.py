@@ -6,7 +6,13 @@ import os
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBHOOK_URL
+from utils.notifier import (
+    send_popo_alert,
+    flush_scrape_block_alerts,
+    has_scrape_block_alerts,
+    send_system_heartbeat,
+    POPO_WEBHOOK_URL,
+)
 from utils.brand_report import init_report
 
 
@@ -114,6 +120,12 @@ def main():
         send_popo_alert(POPO_WEBHOOK_URL, all_issues)
     else:
         print("过去 24 小时内无品牌舆情异常，静默退出。")
+        if not has_scrape_block_alerts():
+            send_system_heartbeat(
+                POPO_WEBHOOK_URL,
+                "品牌舆情聚合",
+                "过去 24 小时无新增品牌舆情，且未检测到数据源异常。"
+            )
 
     # 数据源异常汇总（如有）
     flush_scrape_block_alerts(POPO_WEBHOOK_URL)

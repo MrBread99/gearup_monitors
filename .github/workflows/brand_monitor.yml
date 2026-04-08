@@ -51,3 +51,10 @@ jobs:
           git add reports/brand_report_latest.md
           git diff --staged --quiet || git commit -m "docs: update brand sentiment report [auto]"
           git push
+
+      - name: Append run summary
+        if: always()
+        run: |
+          echo "Workflow: brand_monitor.yml" >> $GITHUB_STEP_SUMMARY
+          echo "Completed at (UTC): $(date -u '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
+          echo "Completed at (Asia/Shanghai): $(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY

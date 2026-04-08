@@ -50,3 +50,10 @@ jobs:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           TARGET_CHANNEL_ID: ${{ secrets.TARGET_CHANNEL_ID }}
         run: python competitor_radar/run_all.py
+
+      - name: Append run summary
+        if: always()
+        run: |
+          echo "Workflow: competitor_radar.yml" >> $GITHUB_STEP_SUMMARY
+          echo "Completed at (UTC): $(date -u '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
+          echo "Completed at (Asia/Shanghai): $(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY

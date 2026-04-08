@@ -63,4 +63,11 @@ jobs:
           REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
         run: python game_monitor/game_calendar_monitor.py
 
+      - name: Append run summary
+        if: always()
+        run: |
+          echo "Workflow: monitor.yml" >> $GITHUB_STEP_SUMMARY
+          echo "Completed at (UTC): $(date -u '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
+          echo "Completed at (Asia/Shanghai): $(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
+
       # 竞品情报（Discord + 定价）已移至独立的 competitor_radar.yml，每 24 小时运行一次。
