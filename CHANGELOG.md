@@ -4,7 +4,17 @@
 
 ---
 
-## [v4.2.1] - detector404 平台重复报警修复 (Current)
+## [v4.2.2] - Trustpilot 报警精简 + Playwright 403 重试 (Current)
+
+### 🟠 调整
+
+- **trustpilot_monitor.py**: 移除"新增 X 条评论 (总计 Y)"报警，仅保留**评分变动**和 **1 星差评占比上升**两种有商业价值的变动检测
+- **exitlag_pricing.py**: Playwright 首次遇到 403 时，自动新建 page 并重新注入 playwright-stealth 重试一次（解决同一 page 多次导航导致指纹累积被 Cloudflare 识别的问题）
+- **notifier.py**: `cloudflare_pricing` 的 `_SCRAPE_ADVICE` 更新为反映 Playwright 已是主路径的现状（旧文案还在建议"考虑使用 Playwright"）
+
+---
+
+## [v4.2.1] - detector404 平台重复报警修复
 
 ### 🔴 Bug Fix
 

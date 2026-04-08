@@ -1,6 +1,6 @@
-# GearUP Monitors - 监控脚本总览 (v4.2.1)
+# GearUP Monitors - 监控脚本总览 (v4.2.2)
 
-> **当前版本**: v4.2.1 | **最后更新**: 2026-04-03
+> **当前版本**: v4.2.2 | **最后更新**: 2026-04-08
 >
 > 本文档是供 AI Agent 快速上手的**唯一参考**，描述当前代码的真实状态。
 >
@@ -34,10 +34,11 @@ gearup_monitors/
 │   ├── discord_listener.py          # 竞品 Discord 公告 + Qwen AI 翻译提炼
 │   └── exitlag_pricing.py           # 多竞品定价追踪（Playwright + stealth 三层降级）
 │                                    #   降级顺序：Playwright headless Chromium > cloudscraper 单例 > requests
+│                                    #   403 时自动新建 page + 重注入 stealth 重试一次
 │
 ├── brand_monitor/
 │   ├── run_all.py                   # ★ 聚合入口（9 地区舆情），合并为一条消息
-│   ├── trustpilot_monitor.py        # Trustpilot 评分（GearUP + 5 竞品）
+│   ├── trustpilot_monitor.py        # Trustpilot 评分（GearUP + 5 竞品，仅报评分变动和差评占比上升）
 │   ├── gearup_reddit.py             # Reddit 全站舆情
 │   ├── gearup_youtube.py            # YouTube 多语言舆情（每天 1 次）
 │   ├── taiwan_monitor.py            # 巴哈姆特 / PTT
@@ -160,7 +161,7 @@ gearup_monitors/
 | `discord_listener.py` | Discord 公告监听 + Qwen AI 翻译提炼 | 竞品 Discord 频道 |
 | `exitlag_pricing.py` | 多竞品定价变动追踪，Playwright + stealth 绕 Cloudflare | ExitLag 9 地区 + LagoFast 10 地区 = 19 个 |
 
-**定价抓取降级链**: Playwright headless Chromium (playwright-stealth) → cloudscraper 单例会话复用 → requests
+**定价抓取降级链**: Playwright headless Chromium (playwright-stealth) → cloudscraper 单例会话复用 → requests。Playwright 403 时自动新建 page + 重注入 stealth 重试一次。
 
 多竞品架构：`COMPETITORS` 字典配置，新增竞品只需加一条配置。
 
@@ -170,7 +171,7 @@ gearup_monitors/
 
 | 渠道 | 模块 | 覆盖地区 | 语言 | 备注 |
 |------|------|---------|------|------|
-| Trustpilot | `trustpilot_monitor.py` | 全球 | 英文 | 同时监控 GearUP + 5 竞品评分 |
+| Trustpilot | `trustpilot_monitor.py` | 全球 | 英文 | GearUP + 5 竞品；仅报**评分变动**和 **1 星差评占比上升**，不报评论数增长 |
 | Reddit | `gearup_reddit.py` | 全球 | 英文 | |
 | YouTube | `gearup_youtube.py` | 全球 | 8 语 | 每天 1 次（配额限制） |
 | 巴哈姆特 / PTT | `taiwan_monitor.py` | 台湾 | 繁中 | |
@@ -228,10 +229,11 @@ gearup_monitors/
 1. **手游不监控** — 用户明确要求只监控 PC 端游戏
 2. **detector404 分工** — `monitor.py` 只传游戏名，`platform_status_monitor.py` 只传平台名，不得交叉，否则产生重复报警
 3. **Otzovik 废弃** — `russia_monitor.py` 中 `search_otzovik()` 已替换为 `search_google_ru()`，不要恢复
-4. **竞品定价 Cloudflare** — `exitlag_pricing.py` 必须用 Playwright + stealth 作为首选；cloudscraper 单例（`_cs_session`）和浏览器单例（`_pw_browser`）不得在每次请求时重新创建
+4. **竞品定价 Cloudflare** — `exitlag_pricing.py` 必须用 Playwright + stealth 作为首选；403 时会自动新建 page 重试；cloudscraper 单例（`_cs_session`）和浏览器单例（`_pw_browser`）不得在每次请求时重新创建
 5. **快照持久化** — 本地运行快照文件不提交；GitHub Actions 通过 `actions/cache` 持久化，`restore-keys` 保证跨 run 读到历史数据
 6. **报警时间** — 所有报警时间统一 UTC+8，在 `notifier.py` 内处理，下游模块不需要转换时区
 7. **级联失败防护** — `monitor.py` 中每款游戏的检测已被 `try/except` 包裹；新增检测模块时应遵循相同模式
+8. **Trustpilot 报警范围** — 仅报评分变动和 1 星差评占比上升，不报评论数增长（已确认不需要）
 
 ---
 
