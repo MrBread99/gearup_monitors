@@ -60,9 +60,10 @@ _SCRAPE_ADVICE = {
     #     不再直连 otzovik.com，不会再触发 report_scrape_block('otzovik')。
     'cloudflare_pricing': {
         'display_name': '竞品定价页（Cloudflare 防护）',
-        'reason': 'Playwright + stealth 首选方案也被 Cloudflare 识别，返回 HTTP 403（已自动用新 page 重试一次）',
-        'short_term': '本次已跳过该地区定价数据，下次运行通常可自动恢复；少量 URL 偶发 403 属于正常波动',
-        'long_term': '若持续大面积 403，考虑升级 Chromium 版本、更换 stealth 插件、或引入代理 IP 轮换',
+        'reason': 'Playwright + stealth 已自动重建 context 重试一次，且后续 fallback 仍未拿到页面，说明该 URL 当前被 Cloudflare 持续拦截',
+        'short_term': '本次已跳过该地区定价数据；若仅 1-2 个 URL 偶发触发，通常属于正常波动，下次运行可自动恢复',
+        'long_term': '若持续大面积 403，优先升级 Chromium / playwright-stealth 版本；仍无改善时再考虑代理 IP 轮换',
+        'min_notify_count': 2,
     },
     'trustpilot': {
         'display_name': 'Trustpilot（品牌评分监控）',
@@ -268,6 +269,7 @@ def flush_scrape_block_alerts(webhook_url: str = None):
         reason      = advice.get('reason', '未知原因')
         short_term  = advice.get('short_term', '暂无建议')
         long_term   = advice.get('long_term', '暂无建议')
+        min_notify_count = int(advice.get('min_notify_count', 1) or 1)
 
         # 根据实际 HTTP 状态码动态覆盖原因描述和建议
         # 仅对没有专属建议的数据源做泛化覆盖（有专属条目的优先用人工维护的描述）
@@ -302,6 +304,10 @@ def flush_scrape_block_alerts(webhook_url: str = None):
             pass  # 保持 _SCRAPE_ADVICE 中的原始反爬描述
 
         count = entry['count']
+        if count < min_notify_count:
+            print(f"[数据源异常] {display_name} 本次仅触发 {count} 次，低于通知阈值 {min_notify_count}，仅保留日志不发 POPO。")
+            continue
+
         codes = ', '.join(str(c) for c in sorted(entry['codes'])) if entry['codes'] else '未知'
         # 最多显示 2 个 URL，超出时显示省略
         url_list = entry['urls']
@@ -326,6 +332,9 @@ def flush_scrape_block_alerts(webhook_url: str = None):
             f"{'─' * 35}\n"
         )
         lines.append(block)
+
+    if len(lines) == 1:
+        return
 
     lines.append("如频繁出现此警告，请及时处理以免监控盲区扩大。")
     content = '\n'.join(lines)

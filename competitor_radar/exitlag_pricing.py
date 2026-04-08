@@ -84,10 +84,70 @@ HEADERS = {
 # ==========================================
 # Playwright 浏览器会话管理（单例复用）
 # ==========================================
+_pw_driver = None
 _pw_browser = None
 _pw_context = None
 _pw_page = None
 _pw_available = None  # None = 未检测, True/False = 已确认
+
+
+def _new_playwright_context():
+    """创建统一配置的浏览器上下文。"""
+    if _pw_browser is None:
+        return None
+    return _pw_browser.new_context(
+        user_agent=(
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+            '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+        ),
+        viewport={'width': 1920, 'height': 1080},
+        locale='en-US',
+        extra_http_headers={
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Upgrade-Insecure-Requests': '1',
+        },
+    )
+
+
+def _new_stealth_page(context):
+    """在指定 context 下创建 page，并尽量注入 stealth。"""
+    page = context.new_page()
+    try:
+        from playwright_stealth import stealth_sync
+        stealth_sync(page)
+    except ImportError:
+        print("[Pricing] playwright-stealth 未安装，使用原生 Playwright")
+    return page
+
+
+def _rotate_playwright_context():
+    """
+    关闭当前 context/page，并在同一 browser 上重建一个全新的 context。
+    用于 403 后清掉 cookie / storage / page state，避免后续 URL 继续复用脏状态。
+    """
+    global _pw_context, _pw_page
+
+    if _pw_browser is None:
+        return None
+
+    try:
+        if _pw_page:
+            _pw_page.close()
+    except Exception:
+        pass
+    try:
+        if _pw_context:
+            _pw_context.close()
+    except Exception:
+        pass
+
+    _pw_context = _new_playwright_context()
+    if _pw_context is None:
+        _pw_page = None
+        return None
+
+    _pw_page = _new_stealth_page(_pw_context)
+    return _pw_page
 
 
 def _ensure_playwright():
@@ -95,7 +155,7 @@ def _ensure_playwright():
     懒初始化 Playwright 浏览器（整个进程生命周期只启动一次）。
     返回 page 对象；不可用时返回 None。
     """
-    global _pw_browser, _pw_context, _pw_page, _pw_available
+    global _pw_driver, _pw_browser, _pw_context, _pw_page, _pw_available
 
     if _pw_available is False:
         return None
@@ -104,25 +164,17 @@ def _ensure_playwright():
 
     try:
         from playwright.sync_api import sync_playwright
-        pw = sync_playwright().start()
-        _pw_browser = pw.chromium.launch(headless=True)
-        _pw_context = _pw_browser.new_context(
-            user_agent=(
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-                '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-            ),
-            viewport={'width': 1920, 'height': 1080},
-            locale='en-US',
+        _pw_driver = sync_playwright().start()
+        _pw_browser = _pw_driver.chromium.launch(
+            headless=True,
+            args=[
+                '--disable-blink-features=AutomationControlled',
+                '--disable-dev-shm-usage',
+                '--no-sandbox',
+            ],
         )
-
-        # 尝试应用 playwright-stealth 隐身补丁
-        try:
-            from playwright_stealth import stealth_sync
-            _pw_page = _pw_context.new_page()
-            stealth_sync(_pw_page)
-        except ImportError:
-            print("[Pricing] playwright-stealth 未安装，使用原生 Playwright")
-            _pw_page = _pw_context.new_page()
+        _pw_context = _new_playwright_context()
+        _pw_page = _new_stealth_page(_pw_context)
 
         _pw_available = True
         print("[Pricing] Playwright 浏览器已启动")
@@ -136,7 +188,7 @@ def _ensure_playwright():
 
 def _close_playwright():
     """关闭 Playwright 浏览器（进程结束时调用）。"""
-    global _pw_browser, _pw_context, _pw_page, _pw_available
+    global _pw_driver, _pw_browser, _pw_context, _pw_page, _pw_available
     try:
         if _pw_page:
             _pw_page.close()
@@ -144,16 +196,18 @@ def _close_playwright():
             _pw_context.close()
         if _pw_browser:
             _pw_browser.close()
+        if _pw_driver:
+            _pw_driver.stop()
     except Exception:
         pass
-    _pw_browser = _pw_context = _pw_page = None
+    _pw_driver = _pw_browser = _pw_context = _pw_page = None
     _pw_available = None
 
 
 def _fetch_with_playwright(url):
     """
     用 Playwright 真实浏览器访问 URL，等待页面加载完成后返回 HTML。
-    若首次返回 403，用新 page（重新注入 stealth）重试一次。
+    若首次返回 403，重建全新 context 后重试一次。
     成功返回 (html_text, status_code)，失败返回 (None, 0)。
     """
     page = _ensure_playwright()
@@ -170,25 +224,20 @@ def _fetch_with_playwright(url):
             html = page.content()
             return html, 200
 
-        # Cloudflare 403: 同一 page 多次导航可能累积指纹被识别
-        # 用新 page + 重新注入 stealth 重试一次
-        if status == 403 and _pw_context is not None:
-            print(f"[Pricing] Playwright 403，用新 page 重试: {url}")
+        # Cloudflare 403: 同一 context 的 cookie / storage 可能已被打上风控标记
+        # 重建全新 context 后重试一次，避免“坏状态”污染后续 URL。
+        if status == 403 and _pw_browser is not None:
+            print(f"[Pricing] Playwright 403，重建 context 重试: {url}")
             try:
-                retry_page = _pw_context.new_page()
-                try:
-                    from playwright_stealth import stealth_sync
-                    stealth_sync(retry_page)
-                except ImportError:
-                    pass
+                retry_page = _rotate_playwright_context()
+                if retry_page is None:
+                    return None, 403
                 time.sleep(random.uniform(3.0, 6.0))
                 response2 = retry_page.goto(url, wait_until='networkidle', timeout=30000)
                 status2 = response2.status if response2 else 0
                 if status2 == 200:
                     html = retry_page.content()
-                    retry_page.close()
                     return html, 200
-                retry_page.close()
                 return None, status2
             except Exception as e:
                 print(f"[Pricing] Playwright 重试失败: {e}")
@@ -241,12 +290,15 @@ def fetch_pricing_for_region(region_code, competitor_name='ExitLag'):
 
     html_text = None
     status_code = 0
+    saw_cloudflare_403 = False
 
     # === Tier 1: Playwright（真实浏览器，最可靠） ===
     html_text, status_code = _fetch_with_playwright(url)
+    if status_code == 403:
+        saw_cloudflare_403 = True
 
     # === Tier 2: cloudscraper（会话复用） ===
-    if html_text is None and status_code != 403:
+    if html_text is None:
         scraper = _get_cloudscraper_session()
         if scraper:
             try:
@@ -255,22 +307,26 @@ def fetch_pricing_for_region(region_code, competitor_name='ExitLag'):
                 status_code = response.status_code
                 if status_code == 200:
                     html_text = response.text
+                elif status_code == 403:
+                    saw_cloudflare_403 = True
             except Exception as e:
                 print(f"[{competitor_name}] cloudscraper {region_code} 失败: {e}")
 
     # === Tier 3: 普通 requests（最后兜底） ===
-    if html_text is None and status_code != 403:
+    if html_text is None:
         try:
             time.sleep(random.uniform(1.0, 3.0))
             response = requests.get(url, headers=HEADERS, timeout=15)
             status_code = response.status_code
             if status_code == 200:
                 html_text = response.text
+            elif status_code == 403:
+                saw_cloudflare_403 = True
         except Exception as e:
             print(f"[{competitor_name}] requests {region_code} 失败: {e}")
 
     # === 结果处理 ===
-    if status_code == 403:
+    if html_text is None and saw_cloudflare_403:
         try:
             from utils.notifier import report_scrape_block
             report_scrape_block('cloudflare_pricing', url=url, status_code=403)
