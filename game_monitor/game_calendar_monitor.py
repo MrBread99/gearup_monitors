@@ -127,6 +127,8 @@ SNAPSHOT_FILE = os.path.join(
 CALENDAR_SEEN_KEY_LIMIT = 1000
 CALENDAR_HEARTBEAT_STATE_KEY = 'game_calendar_heartbeat_date'
 PER_SOURCE_ALERT_LIMIT = 2
+STEAM_NEWS_403_FAIL_THRESHOLD = 2
+STEAM_NEWS_403_BACKOFF_DAYS = 7
 
 
 def estimate_game_hype(app_data, rank=None, category_label=''):
@@ -555,6 +557,37 @@ def should_send_calendar_heartbeat():
     return True
 
 
+def fetch_reddit_posts(subreddit, sort='new', limit=25):
+    """Fetch subreddit listing posts through OAuth and return post wrappers."""
+    url = f"https://www.reddit.com/r/{subreddit}/{sort}.json?limit={limit}&raw_json=1"
+    response = reddit_get(url)
+    if response is None:
+        return []
+    if response.status_code != 200:
+        report_scrape_block('reddit_game_calendar', url, response.status_code)
+        return []
+    return response.json().get('data', {}).get('children', [])
+
+
+def is_recent_reddit_post(post_data, hours=None, days=None):
+    created_utc = post_data.get('created_utc')
+    if not created_utc:
+        return True
+
+    if hours is not None:
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+    elif days is not None:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    else:
+        return True
+
+    try:
+        created_at = datetime.fromtimestamp(created_utc, tz=timezone.utc)
+    except Exception:
+        return True
+    return created_at >= cutoff
+
+
 def check_steam_news_updates():
     """
     检查已追踪游戏的 Steam News，检测大版本更新和新赛季。
@@ -563,8 +596,29 @@ def check_steam_news_updates():
     old_snapshot = load_snapshot()
     seen_news = old_snapshot.get('seen_news_ids', [])
     new_seen = list(seen_news)
+    steam_news_403_fail_counts = old_snapshot.get('steam_news_403_fail_counts', {})
+    steam_news_403_suppressed_until = old_snapshot.get('steam_news_403_suppressed_until', {})
 
     for game_name, app_id in TRACKED_GAMES.items():
+        app_key = str(app_id)
+        now_utc = datetime.now(timezone.utc)
+        suppressed_until_raw = steam_news_403_suppressed_until.get(app_key)
+        if suppressed_until_raw:
+            try:
+                suppressed_until = datetime.fromisoformat(suppressed_until_raw)
+                if suppressed_until.tzinfo is None:
+                    suppressed_until = suppressed_until.replace(tzinfo=timezone.utc)
+                if suppressed_until > now_utc:
+                    print(
+                        f"[Calendar] {game_name} Steam News 403 backoff active "
+                        f"until {suppressed_until.astimezone(timezone(timedelta(hours=8))).strftime('%Y-%m-%d %H:%M:%S')}"
+                    )
+                    continue
+            except Exception:
+                pass
+            steam_news_403_suppressed_until.pop(app_key, None)
+            steam_news_403_fail_counts.pop(app_key, None)
+
         url = (
             f"https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/"
             f"?appid={app_id}&count=5&maxlength=2000&format=json"
@@ -573,8 +627,24 @@ def check_steam_news_updates():
         try:
             response = requests.get(url, headers=HEADERS, timeout=10)
             if response.status_code != 200:
-                report_scrape_block('steam_news_api', url, response.status_code)
+                if response.status_code == 403:
+                    fail_count = int(steam_news_403_fail_counts.get(app_key, 0)) + 1
+                    steam_news_403_fail_counts[app_key] = fail_count
+                    if fail_count < STEAM_NEWS_403_FAIL_THRESHOLD:
+                        report_scrape_block('steam_news_api', url, response.status_code)
+                    else:
+                        backoff_until = now_utc + timedelta(days=STEAM_NEWS_403_BACKOFF_DAYS)
+                        steam_news_403_suppressed_until[app_key] = backoff_until.isoformat()
+                        print(
+                            f"[Calendar] {game_name} Steam News returned 403 for {fail_count} consecutive runs; "
+                            f"suppressing this AppID for {STEAM_NEWS_403_BACKOFF_DAYS} days."
+                        )
+                else:
+                    report_scrape_block('steam_news_api', url, response.status_code)
                 continue
+
+            steam_news_403_fail_counts.pop(app_key, None)
+            steam_news_403_suppressed_until.pop(app_key, None)
 
             data = response.json()
             news_items = data.get('appnews', {}).get('newsitems', [])
@@ -642,6 +712,8 @@ def check_steam_news_updates():
 
     # 保持 seen_news 不会无限增长（只保留最近 500 条）
     old_snapshot['seen_news_ids'] = new_seen[-500:]
+    old_snapshot['steam_news_403_fail_counts'] = steam_news_403_fail_counts
+    old_snapshot['steam_news_403_suppressed_until'] = steam_news_403_suppressed_until
     save_snapshot(old_snapshot)
 
     return issues
@@ -890,24 +962,10 @@ def check_non_steam_updates():
         if not subreddit:
             continue
 
-        # 修复 URL 拼接：关键词之间用 %20OR%20，避免 + 被解释为空格
-        query = '%20OR%20'.join(keywords)
-        url = (
-            f"https://www.reddit.com/r/{subreddit}/search.json"
-            f"?q=flair%3Aofficial%20OR%20flair%3Anews%20OR%20flair%3Apatch%20{query}"
-            f"&restrict_sr=on&sort=new&t=week&limit=10"
-        )
-
         try:
-            response = reddit_get(url)
-            if response is None:
+            posts = fetch_reddit_posts(subreddit, sort='new', limit=25)
+            if not posts:
                 continue
-            if response.status_code != 200:
-                report_scrape_block('reddit_game_calendar', url, response.status_code)
-                continue
-
-            data = response.json()
-            posts = data.get('data', {}).get('children', [])
 
             candidates = []
             for post in posts:
@@ -916,9 +974,12 @@ def check_non_steam_updates():
                 selftext = post_data.get('selftext', '')
                 score = post_data.get('ups', 0)
                 flair = (post_data.get('link_flair_text', '') or '').upper()
+                if not is_recent_reddit_post(post_data, days=7):
+                    continue
 
+                haystack_upper = f"{title}\n{selftext}".upper()
                 title_upper = title.upper()
-                is_update = any(kw.upper() in title_upper for kw in keywords)
+                is_update = any(kw.upper() in haystack_upper for kw in keywords)
                 is_official = any(kw in flair for kw in (
                     'OFFICIAL', 'NEWS', 'PATCH', 'ANNOUNCEMENT',
                     'MEGATHREAD', 'SUB-META', 'GAME UPDATE', 'UPDATE',
@@ -1087,46 +1148,48 @@ def check_epic_new_releases():
     reddit_sources = [
         {
             'subreddit': 'EpicGamesPC',
-            'query': 'free+game+OR+new+release+OR+exclusive+OR+launch',
             'label': 'Epic 新游/独占',
+            'sort': 'new',
+            'match_terms': ['EPIC', 'EXCLUSIVE', 'LAUNCH', 'RELEASE', 'FREE'],
         },
         {
             'subreddit': 'FreeGameFindings',
-            'query': 'epic+free',
             'label': 'Epic 免费游戏',
+            'sort': 'new',
+            'match_terms': ['EPIC', 'FREE'],
         },
         {
             'subreddit': 'GameDeals',
-            'query': 'epic+free+OR+epic+launch',
             'label': 'Epic 促销/上线',
+            'sort': 'hot',
+            'match_terms': ['EPIC', 'FREE', 'LAUNCH', 'RELEASE'],
         }
     ]
 
     for source in reddit_sources:
         try:
-            url = (
-                f"https://www.reddit.com/r/{source['subreddit']}/search.json"
-                f"?q={source['query']}&restrict_sr=on&sort=new&t=day&limit=10"
+            posts = fetch_reddit_posts(
+                source['subreddit'],
+                sort=source.get('sort', 'new'),
+                limit=25,
             )
-            response = reddit_get(url)
-            if response is None:
+            if not posts:
                 continue
-            if response.status_code != 200:
-                report_scrape_block('reddit_game_calendar', url, response.status_code)
-                continue
-
-            posts = response.json().get('data', {}).get('children', [])
 
             candidates = []
             for post in posts:
                 pd = post.get('data', {})
                 title = pd.get('title', '')
                 score = pd.get('ups', 0)
+                if not is_recent_reddit_post(pd, days=2):
+                    continue
 
                 # 只报热帖（score > 50）
                 if score > 50:
                     # 检查是否联机相关
                     title_upper = title.upper()
+                    if not any(term in title_upper for term in source.get('match_terms', [])):
+                        continue
                     online_hints = ['MULTIPLAYER', 'ONLINE', 'CO-OP', 'PVP', 'MMO',
                                    'BATTLE ROYALE', 'FPS', 'SHOOTER', 'FREE']
                     if any(kw in title_upper for kw in online_hints) or 'FREE' in title_upper:
@@ -1162,18 +1225,9 @@ def check_playstation_releases():
 
     for config in subreddits:
         try:
-            url = (
-                f"https://www.reddit.com/r/{config['sub']}/search.json"
-                f"?q={config['query']}&restrict_sr=on&sort=hot&t=day&limit=10"
-            )
-            response = reddit_get(url)
-            if response is None:
+            posts = fetch_reddit_posts(config['sub'], sort='hot', limit=20)
+            if not posts:
                 continue
-            if response.status_code != 200:
-                report_scrape_block('reddit_game_calendar', url, response.status_code)
-                continue
-
-            posts = response.json().get('data', {}).get('children', [])
 
             candidates = []
             for post in posts:
@@ -1181,6 +1235,8 @@ def check_playstation_releases():
                 title = pd.get('title', '')
                 score = pd.get('ups', 0)
                 flair = (pd.get('link_flair_text', '') or '').upper()
+                if not is_recent_reddit_post(pd, days=2):
+                    continue
 
                 title_upper = title.upper()
                 is_game_news = any(kw in title_upper for kw in
@@ -1224,24 +1280,17 @@ def check_xbox_gamepass_releases():
 
     for config in subreddits:
         try:
-            url = (
-                f"https://www.reddit.com/r/{config['sub']}/search.json"
-                f"?q={config['query']}&restrict_sr=on&sort=hot&t=day&limit=10"
-            )
-            response = reddit_get(url)
-            if response is None:
+            posts = fetch_reddit_posts(config['sub'], sort='hot', limit=20)
+            if not posts:
                 continue
-            if response.status_code != 200:
-                report_scrape_block('reddit_game_calendar', url, response.status_code)
-                continue
-
-            posts = response.json().get('data', {}).get('children', [])
 
             candidates = []
             for post in posts:
                 pd = post.get('data', {})
                 title = pd.get('title', '')
                 score = pd.get('ups', 0)
+                if not is_recent_reddit_post(pd, days=2):
+                    continue
 
                 title_upper = title.upper()
                 is_gamepass = any(kw in title_upper for kw in
@@ -1285,21 +1334,10 @@ def check_battlenet_updates():
     ]
 
     for game in blizzard_games:
-        query = '+OR+'.join(game['keywords'])
         try:
-            url = (
-                f"https://www.reddit.com/r/{game['sub']}/search.json"
-                f"?q=flair%3Aofficial+OR+flair%3Anews+OR+flair%3Ablizzard+{query}"
-                f"&restrict_sr=on&sort=new&t=day&limit=5"
-            )
-            response = reddit_get(url)
-            if response is None:
+            posts = fetch_reddit_posts(game['sub'], sort='new', limit=15)
+            if not posts:
                 continue
-            if response.status_code != 200:
-                report_scrape_block('reddit_game_calendar', url, response.status_code)
-                continue
-
-            posts = response.json().get('data', {}).get('children', [])
 
             candidates = []
             for post in posts:
@@ -1307,9 +1345,13 @@ def check_battlenet_updates():
                 title = pd.get('title', '')
                 score = pd.get('ups', 0)
                 flair = (pd.get('link_flair_text', '') or '').upper()
+                selftext = pd.get('selftext', '')
+                if not is_recent_reddit_post(pd, days=2):
+                    continue
 
+                haystack_upper = f"{title}\n{selftext}".upper()
                 title_upper = title.upper()
-                is_update = any(kw.upper() in title_upper for kw in game['keywords'])
+                is_update = any(kw.upper() in haystack_upper for kw in game['keywords'])
                 is_official = any(kw in flair for kw in ['OFFICIAL', 'NEWS', 'BLIZZARD', 'PATCH', 'UPDATE'])
                 is_hot = score > 200
 
@@ -1422,25 +1464,17 @@ def check_gamepass_upcoming():
     """
     issues = []
     try:
-        url = (
-            "https://www.reddit.com/r/XboxGamePass/search.json"
-            "?q=coming+soon+OR+coming+to+game+pass+OR+leaving+game+pass+OR+second+half"
-            "&restrict_sr=on&sort=hot&t=week&limit=10"
-        )
-        response = reddit_get(url)
-        if response is None:
+        posts = fetch_reddit_posts('XboxGamePass', sort='hot', limit=20)
+        if not posts:
             return issues
-        if response.status_code != 200:
-            report_scrape_block('reddit_game_calendar', url, response.status_code)
-            return issues
-
-        posts = response.json().get('data', {}).get('children', [])
 
         candidates = []
         for post in posts:
             pd = post.get('data', {})
             title = pd.get('title', '')
             score = pd.get('ups', 0)
+            if not is_recent_reddit_post(pd, days=7):
+                continue
 
             title_upper = title.upper()
             is_upcoming = any(kw in title_upper for kw in
