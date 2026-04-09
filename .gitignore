@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+
+# Local monitor snapshots are cached in GitHub Actions and should not be committed.
+*_snapshot.json
