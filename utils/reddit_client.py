@@ -23,6 +23,22 @@ _access_token = None
 _token_expires = 0
 _last_request_time = 0
 _REQUEST_INTERVAL = 2.0  # 未认证模式下 2 秒间隔，确保不触发 60 请求/分钟限制
+_last_request_meta = {
+    'mode': 'anonymous',
+    'token_state': 'unknown',
+    'request_state': 'idle',
+    'status_code': None,
+    'request_url': '',
+    'final_url': '',
+}
+
+
+def _set_last_request_meta(**kwargs):
+    _last_request_meta.update(kwargs)
+
+
+def get_last_reddit_request_meta():
+    return dict(_last_request_meta)
 
 
 def _get_oauth_token():
@@ -30,9 +46,11 @@ def _get_oauth_token():
     global _access_token, _token_expires
 
     if _access_token and time.time() < _token_expires:
+        _set_last_request_meta(token_state='cached_token')
         return _access_token
 
     if not REDDIT_CLIENT_ID or not REDDIT_CLIENT_SECRET:
+        _set_last_request_meta(token_state='missing_credentials')
         return None
 
     try:
@@ -52,12 +70,26 @@ def _get_oauth_token():
             token_data = response.json()
             _access_token = token_data.get('access_token')
             _token_expires = time.time() + token_data.get('expires_in', 3600) - 60
+            _set_last_request_meta(token_state='oauth_token_ok')
             print("[Reddit] OAuth2 认证成功，限流提升至 600 请求/分钟")
             return _access_token
         else:
+            _set_last_request_meta(
+                token_state='oauth_token_failed',
+                status_code=response.status_code,
+                request_url='https://www.reddit.com/api/v1/access_token',
+                final_url='https://www.reddit.com/api/v1/access_token',
+            )
             print(f"[Reddit] OAuth2 认证失败: {response.status_code}")
             return None
     except Exception as e:
+        _set_last_request_meta(
+            token_state='oauth_token_exception',
+            request_state='token_exception',
+            status_code=None,
+            request_url='https://www.reddit.com/api/v1/access_token',
+            final_url='https://www.reddit.com/api/v1/access_token',
+        )
         print(f"[Reddit] OAuth2 认证异常: {e}")
         return None
 
@@ -90,6 +122,7 @@ def reddit_get(url, timeout=10):
             'Authorization': f'Bearer {token}',
             'User-Agent': 'windows:gearup.monitors:v4.0 (by /u/GearUPMonitor)'
         }
+        mode = 'oauth'
     else:
         # 无认证，用浏览器 User-Agent 降低被拦概率
         oauth_url = url
@@ -98,9 +131,25 @@ def reddit_get(url, timeout=10):
             'Accept': 'application/json',
             'Accept-Language': 'en-US,en;q=0.9',
         }
+        mode = 'anonymous'
+
+    _set_last_request_meta(
+        mode=mode,
+        request_state='requesting',
+        status_code=None,
+        request_url=url,
+        final_url=oauth_url,
+    )
 
     try:
         response = requests.get(oauth_url, headers=headers, timeout=timeout)
+        _set_last_request_meta(
+            mode=mode,
+            request_state='response',
+            status_code=response.status_code,
+            request_url=url,
+            final_url=oauth_url,
+        )
 
         # 429 限流时等待后重试一次
         if response.status_code == 429:
@@ -109,9 +158,30 @@ def reddit_get(url, timeout=10):
             time.sleep(retry_after)
             _throttle()
             response = requests.get(oauth_url, headers=headers, timeout=timeout)
+            _set_last_request_meta(
+                mode=mode,
+                request_state='response_after_retry',
+                status_code=response.status_code,
+                request_url=url,
+                final_url=oauth_url,
+            )
+
+        if response.status_code == 403:
+            print(
+                f"[Reddit] 403 Forbidden | mode={mode} | "
+                f"token_state={get_last_reddit_request_meta().get('token_state')} | "
+                f"url={oauth_url[:120]}"
+            )
 
         return response
 
     except Exception as e:
+        _set_last_request_meta(
+            mode=mode,
+            request_state='request_exception',
+            status_code=None,
+            request_url=url,
+            final_url=oauth_url,
+        )
         print(f"[Reddit] 请求失败 {url}: {e}")
         return None

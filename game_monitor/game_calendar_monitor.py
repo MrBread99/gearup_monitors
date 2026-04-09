@@ -16,7 +16,7 @@ from utils.notifier import (
     send_popo_alert,
     send_system_heartbeat,
 )
-from utils.reddit_client import reddit_get
+from utils.reddit_client import get_last_reddit_request_meta, reddit_get
 
 # 通义千问 API 客户端
 QWEN_API_KEY = os.environ.get("QWEN_API_KEY", "")
@@ -564,7 +564,21 @@ def fetch_reddit_posts(subreddit, sort='new', limit=25):
     if response is None:
         return []
     if response.status_code != 200:
-        report_scrape_block('reddit_game_calendar', url, response.status_code)
+        request_meta = get_last_reddit_request_meta()
+        token_state = request_meta.get('token_state')
+        mode = request_meta.get('mode')
+        source_key = 'reddit_game_calendar'
+
+        if token_state == 'missing_credentials':
+            source_key = 'reddit_game_calendar_missing_credentials'
+        elif token_state in ('oauth_token_failed', 'oauth_token_exception'):
+            source_key = 'reddit_game_calendar_token_failure'
+        elif response.status_code == 403 and mode == 'oauth':
+            source_key = 'reddit_game_calendar_oauth_403'
+        elif response.status_code == 403 and mode == 'anonymous':
+            source_key = 'reddit_game_calendar_anonymous_403'
+
+        report_scrape_block(source_key, url, response.status_code)
         return []
     return response.json().get('data', {}).get('children', [])
 

@@ -127,9 +127,33 @@ _SCRAPE_ADVICE = {
     },
     'reddit_game_calendar': {
         'display_name': 'Reddit（新游/热游日历监控）',
-        'reason': 'Reddit 搜索接口返回非 200，本次无法获取部分新游/热游预警帖子',
-        'short_term': '本次已跳过对应 subreddit 的搜索结果；等待下次运行自动重试',
+        'reason': 'Reddit subreddit listing 接口返回非 200，本次无法获取部分新游/热游预警帖子',
+        'short_term': '本次已跳过对应 subreddit 的 listing 抓取；等待下次运行自动重试',
         'long_term': '如持续出现，可检查 Reddit API 凭证、限频情况，或为关键来源增加备用站点',
+    },
+    'reddit_game_calendar_missing_credentials': {
+        'display_name': 'Reddit（新游/热游日历监控，缺少凭证）',
+        'reason': 'GitHub Actions 未提供 REDDIT_CLIENT_ID 或 REDDIT_CLIENT_SECRET，当前只能匿名访问 Reddit，容易被 403 拒绝',
+        'short_term': '请立即检查 GitHub Secrets 中 REDDIT_CLIENT_ID 和 REDDIT_CLIENT_SECRET 是否已配置且名称正确',
+        'long_term': '保持 Reddit OAuth 凭证长期有效，并在关键 workflow 中统一复用共享客户端',
+    },
+    'reddit_game_calendar_token_failure': {
+        'display_name': 'Reddit（新游/热游日历监控，OAuth 取 token 失败）',
+        'reason': 'Reddit OAuth token 获取失败，可能是凭证失效、应用配置错误，或 Reddit token 接口临时异常',
+        'short_term': '优先查看 Actions 日志中的 Reddit OAuth2 认证结果，并核对 GitHub Secrets 中的 Reddit 凭证',
+        'long_term': '如凭证经常失效，建议重新创建 Reddit script 应用并更新仓库 Secrets',
+    },
+    'reddit_game_calendar_oauth_403': {
+        'display_name': 'Reddit（新游/热游日历监控，OAuth 请求被拒）',
+        'reason': '已成功切换到 oauth.reddit.com，但 listing 请求仍返回 403，说明不是匿名抓取问题，而是 Reddit 平台侧对当前请求/应用进行了拒绝',
+        'short_term': '优先查看 Actions 日志中的 mode=oauth 与 token_state，确认是否所有请求都稳定带上 Bearer token',
+        'long_term': '如持续出现，可检查 Reddit 应用权限、User-Agent 合规性，或为关键来源增加非 Reddit 备用源',
+    },
+    'reddit_game_calendar_anonymous_403': {
+        'display_name': 'Reddit（新游/热游日历监控，匿名访问被拒）',
+        'reason': '当前请求未走 OAuth，直接访问 Reddit listing 被 403 拒绝，通常意味着凭证未生效或 token 获取失败后退回到了匿名模式',
+        'short_term': '优先检查 Actions 日志中是否出现 “OAuth2 认证成功”；若没有，请先修复 Reddit Secrets',
+        'long_term': '避免依赖匿名访问 Reddit，在所有日历监控链路中统一强制使用 OAuth 模式',
     },
     'youtube_quota': {
         'display_name': 'YouTube Data API v3（配额耗尽）',
