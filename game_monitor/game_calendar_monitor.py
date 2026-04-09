@@ -8,7 +8,14 @@ from datetime import datetime, timezone, timedelta
 from openai import OpenAI
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.notifier import (
+    POPO_WEBHOOK_URL,
+    flush_scrape_block_alerts,
+    has_scrape_block_alerts,
+    report_scrape_block,
+    send_popo_alert,
+    send_system_heartbeat,
+)
 from utils.reddit_client import reddit_get
 
 # 通义千问 API 客户端
@@ -116,6 +123,10 @@ SNAPSHOT_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     'game_calendar_snapshot.json'
 )
+
+CALENDAR_SEEN_KEY_LIMIT = 1000
+CALENDAR_HEARTBEAT_STATE_KEY = 'game_calendar_heartbeat_date'
+PER_SOURCE_ALERT_LIMIT = 2
 
 
 def estimate_game_hype(app_data, rank=None, category_label=''):
@@ -490,6 +501,60 @@ def save_snapshot(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
+def build_calendar_issue_key(issue):
+    """Build a stable cross-run dedup key for calendar alerts."""
+    alert_type = issue.get('alert_type', '')
+    source_name = issue.get('source_name', '')
+    source_url = (issue.get('source_url') or '').strip()
+    issue_text = (issue.get('issue') or '').strip()
+    first_line = issue_text.splitlines()[0].strip() if issue_text else ''
+    first_line = re.sub(r'\s+', ' ', first_line)
+
+    if source_url.startswith('https://store.steampowered.com/app/'):
+        return f"{alert_type}|steam_app|{source_name}|{source_url}"
+
+    if (
+        'reddit.com' in source_url
+        or 'hoyolab.com/article/' in source_url
+        or '/news/app/' in source_url
+    ):
+        return f"{alert_type}|{source_url}"
+
+    return f"{alert_type}|{source_name}|{source_url}|{first_line}"
+
+
+def filter_new_calendar_issues(all_issues):
+    """Filter out issues that were already alerted in previous runs."""
+    snapshot = load_snapshot()
+    seen_keys = snapshot.get('seen_calendar_issue_keys', [])
+    seen_set = set(seen_keys)
+    new_seen_keys = list(seen_keys)
+    filtered = []
+
+    for issue in all_issues:
+        dedup_key = build_calendar_issue_key(issue)
+        if dedup_key in seen_set:
+            continue
+        seen_set.add(dedup_key)
+        new_seen_keys.append(dedup_key)
+        filtered.append(issue)
+
+    snapshot['seen_calendar_issue_keys'] = new_seen_keys[-CALENDAR_SEEN_KEY_LIMIT:]
+    save_snapshot(snapshot)
+    return filtered
+
+
+def should_send_calendar_heartbeat():
+    snapshot = load_snapshot()
+    today_bj = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d')
+    last_sent = snapshot.get(CALENDAR_HEARTBEAT_STATE_KEY)
+    if last_sent == today_bj:
+        return False
+    snapshot[CALENDAR_HEARTBEAT_STATE_KEY] = today_bj
+    save_snapshot(snapshot)
+    return True
+
+
 def check_steam_news_updates():
     """
     检查已追踪游戏的 Steam News，检测大版本更新和新赛季。
@@ -508,6 +573,7 @@ def check_steam_news_updates():
         try:
             response = requests.get(url, headers=HEADERS, timeout=10)
             if response.status_code != 200:
+                report_scrape_block('steam_news_api', url, response.status_code)
                 continue
 
             data = response.json()
@@ -590,6 +656,7 @@ def check_official_page_updates(game_name, page_url):
     try:
         response = requests.get(page_url, headers=HEADERS, timeout=15)
         if response.status_code != 200:
+            report_scrape_block('official_patch_page', page_url, response.status_code)
             print(f"[Calendar] {game_name} 官方页面返回 {response.status_code}")
             return None
 
@@ -653,6 +720,7 @@ def check_blizzard_updates(game_name, page_url):
     try:
         response = requests.get(page_url, headers=HEADERS, timeout=15)
         if response.status_code != 200:
+            report_scrape_block('official_patch_page', page_url, response.status_code)
             print(f"[Calendar] {game_name} Blizzard 页面返回 {response.status_code}")
             return None
 
@@ -723,6 +791,7 @@ def check_hoyolab_updates(game_name, gid):
     try:
         response = requests.get(api_url, headers=HEADERS, timeout=15)
         if response.status_code != 200:
+            report_scrape_block('hoyolab_api', api_url, response.status_code)
             print(f"[Calendar] {game_name} HoyoLab API 返回 {response.status_code}")
             return None
 
@@ -834,11 +903,13 @@ def check_non_steam_updates():
             if response is None:
                 continue
             if response.status_code != 200:
+                report_scrape_block('reddit_game_calendar', url, response.status_code)
                 continue
 
             data = response.json()
             posts = data.get('data', {}).get('children', [])
 
+            candidates = []
             for post in posts:
                 post_data = post.get('data', {})
                 title = post_data.get('title', '')
@@ -876,17 +947,22 @@ def check_non_steam_updates():
                     # 综合优先级
                     update_priority = estimate_update_priority(reddit_score=score, accel_need_text=accel_need)
 
-                    issues.append({
+                    candidates.append({
                         'game': game_name,
                         'region': 'Global',
                         'country': '',
                         'issue': issue_text,
                         'alert_type': 'game_update',
                         'update_priority': update_priority,
+                        'match_score': score,
                         'source_name': f'r/{subreddit}',
                         'source_url': f"https://www.reddit.com{post_data.get('permalink', '')}"
                     })
-                    break  # 每个游戏只报一条
+            candidates.sort(
+                key=lambda item: (item.get('update_priority', 0), item.get('match_score', 0)),
+                reverse=True,
+            )
+            issues.extend(candidates[:PER_SOURCE_ALERT_LIMIT])
 
         except Exception:
             pass
@@ -904,6 +980,7 @@ def check_hot_new_releases():
     try:
         response = requests.get(url, headers=HEADERS, timeout=15)
         if response.status_code != 200:
+            report_scrape_block('steam_featured', url, response.status_code)
             return issues
 
         data = response.json()
@@ -977,6 +1054,8 @@ def check_hot_new_releases():
                                     'source_url': f'https://store.steampowered.com/app/{app_id}'
                                 })
 
+                    else:
+                        report_scrape_block('steam_appdetails', detail_url, detail_resp.status_code)
                 except Exception:
                     pass
 
@@ -1033,10 +1112,12 @@ def check_epic_new_releases():
             if response is None:
                 continue
             if response.status_code != 200:
+                report_scrape_block('reddit_game_calendar', url, response.status_code)
                 continue
 
             posts = response.json().get('data', {}).get('children', [])
 
+            candidates = []
             for post in posts:
                 pd = post.get('data', {})
                 title = pd.get('title', '')
@@ -1049,16 +1130,18 @@ def check_epic_new_releases():
                     online_hints = ['MULTIPLAYER', 'ONLINE', 'CO-OP', 'PVP', 'MMO',
                                    'BATTLE ROYALE', 'FPS', 'SHOOTER', 'FREE']
                     if any(kw in title_upper for kw in online_hints) or 'FREE' in title_upper:
-                        issues.append({
+                        candidates.append({
                             'game': 'Epic Games Store',
                             'region': 'Global',
                             'country': '',
                             'issue': f"🆕 [{source['label']}] {title} (↑{score})",
                             'alert_type': 'new_game_release',
+                            'hype_score': score,
                             'source_name': f"r/{source['subreddit']}",
                             'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
                         })
-                        break  # 每个 source 最多报一条
+            candidates.sort(key=lambda item: item.get('hype_score', 0), reverse=True)
+            issues.extend(candidates[:PER_SOURCE_ALERT_LIMIT])
 
         except Exception:
             pass
@@ -1087,10 +1170,12 @@ def check_playstation_releases():
             if response is None:
                 continue
             if response.status_code != 200:
+                report_scrape_block('reddit_game_calendar', url, response.status_code)
                 continue
 
             posts = response.json().get('data', {}).get('children', [])
 
+            candidates = []
             for post in posts:
                 pd = post.get('data', {})
                 title = pd.get('title', '')
@@ -1106,16 +1191,18 @@ def check_playstation_releases():
                 is_hot = score > 200
 
                 if is_game_news and (is_online or is_hot) and (is_official or is_hot):
-                    issues.append({
+                    candidates.append({
                         'game': f'PlayStation ({config["label"]})',
                         'region': 'Global',
                         'country': '',
                         'issue': f"🎮 [PS 新游/更新] {title} (↑{score})",
                         'alert_type': 'new_game_release',
+                        'hype_score': score,
                         'source_name': f"r/{config['sub']}",
                         'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
                     })
-                    break
+            candidates.sort(key=lambda item: item.get('hype_score', 0), reverse=True)
+            issues.extend(candidates[:PER_SOURCE_ALERT_LIMIT])
 
         except Exception:
             pass
@@ -1145,10 +1232,12 @@ def check_xbox_gamepass_releases():
             if response is None:
                 continue
             if response.status_code != 200:
+                report_scrape_block('reddit_game_calendar', url, response.status_code)
                 continue
 
             posts = response.json().get('data', {}).get('children', [])
 
+            candidates = []
             for post in posts:
                 pd = post.get('data', {})
                 title = pd.get('title', '')
@@ -1162,16 +1251,18 @@ def check_xbox_gamepass_releases():
                 is_hot = score > 100
 
                 if (is_gamepass or is_hot) and (is_online or is_hot):
-                    issues.append({
+                    candidates.append({
                         'game': f'Xbox ({config["label"]})',
                         'region': 'Global',
                         'country': '',
                         'issue': f"🎮 [{config['label']}] {title} (↑{score})",
                         'alert_type': 'new_game_release',
+                        'hype_score': score,
                         'source_name': f"r/{config['sub']}",
                         'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
                     })
-                    break
+            candidates.sort(key=lambda item: item.get('hype_score', 0), reverse=True)
+            issues.extend(candidates[:PER_SOURCE_ALERT_LIMIT])
 
         except Exception:
             pass
@@ -1205,10 +1296,12 @@ def check_battlenet_updates():
             if response is None:
                 continue
             if response.status_code != 200:
+                report_scrape_block('reddit_game_calendar', url, response.status_code)
                 continue
 
             posts = response.json().get('data', {}).get('children', [])
 
+            candidates = []
             for post in posts:
                 pd = post.get('data', {})
                 title = pd.get('title', '')
@@ -1221,16 +1314,18 @@ def check_battlenet_updates():
                 is_hot = score > 200
 
                 if is_update and (is_official or is_hot):
-                    issues.append({
+                    candidates.append({
                         'game': game['name'],
                         'region': 'Global',
                         'country': '',
                         'issue': f"🎮 [Battle.net 更新] {title} (↑{score})",
                         'alert_type': 'game_update',
+                        'update_priority': score,
                         'source_name': f"r/{game['sub']}",
                         'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
                     })
-                    break
+            candidates.sort(key=lambda item: item.get('update_priority', 0), reverse=True)
+            issues.extend(candidates[:PER_SOURCE_ALERT_LIMIT])
 
         except Exception:
             pass
@@ -1250,6 +1345,7 @@ def check_steam_coming_soon():
     try:
         response = requests.get(url, headers=HEADERS, timeout=15)
         if response.status_code != 200:
+            report_scrape_block('steam_featured', url, response.status_code)
             return issues
 
         data = response.json()
@@ -1263,6 +1359,7 @@ def check_steam_coming_soon():
                 detail_url = f"https://store.steampowered.com/api/appdetails?appids={app_id}"
                 detail_resp = requests.get(detail_url, headers=HEADERS, timeout=10)
                 if detail_resp.status_code != 200:
+                    report_scrape_block('steam_appdetails', detail_url, detail_resp.status_code)
                     continue
 
                 detail_data = detail_resp.json()
@@ -1334,10 +1431,12 @@ def check_gamepass_upcoming():
         if response is None:
             return issues
         if response.status_code != 200:
+            report_scrape_block('reddit_game_calendar', url, response.status_code)
             return issues
 
         posts = response.json().get('data', {}).get('children', [])
 
+        candidates = []
         for post in posts:
             pd = post.get('data', {})
             title = pd.get('title', '')
@@ -1350,16 +1449,18 @@ def check_gamepass_upcoming():
             is_hot = score > 100
 
             if is_upcoming and is_hot:
-                issues.append({
+                candidates.append({
                     'game': 'Xbox Game Pass',
                     'region': 'Global',
                     'country': '',
                     'issue': f"📢 [Game Pass 即将上新] {title} (↑{score})",
                     'alert_type': 'new_game_release',
+                    'hype_score': score,
                     'source_name': 'r/XboxGamePass',
                     'source_url': f"https://www.reddit.com{pd.get('permalink', '')}"
                 })
-                break
+        candidates.sort(key=lambda item: item.get('hype_score', 0), reverse=True)
+        issues.extend(candidates[:PER_SOURCE_ALERT_LIMIT])
 
     except Exception:
         pass
@@ -1408,7 +1509,8 @@ def check_game_calendar():
     # 热游更新按综合优先级从高到低
     updates.sort(key=lambda x: x.get('update_priority', 0), reverse=True)
 
-    return updates + new_releases + others
+    ordered_issues = updates + new_releases + others
+    return filter_new_calendar_issues(ordered_issues)
 
 
 if __name__ == "__main__":
@@ -1427,8 +1529,16 @@ if __name__ == "__main__":
             if POPO_WEBHOOK_URL:
                 send_popo_alert(POPO_WEBHOOK_URL, results)
         else:
-            print("暂无游戏更新或热门新游。")
+            print("No new hot-game updates or high-value releases detected.")
+            if not has_scrape_block_alerts() and should_send_calendar_heartbeat():
+                send_system_heartbeat(
+                    POPO_WEBHOOK_URL,
+                    "Game Calendar Monitor",
+                    "本次已正常执行；未发现新的热游版本更新或高价值新游/预告。",
+                )
     except Exception as e:
-        print(f"[GameCalendarMonitor] 顶层异常: {e}")
+        print(f"[GameCalendarMonitor] Top-level exception: {e}")
         import traceback
         traceback.print_exc()
+    finally:
+        flush_scrape_block_alerts(POPO_WEBHOOK_URL)

@@ -95,6 +95,42 @@ _SCRAPE_ADVICE = {
         'short_term': '本次已跳过该游戏的 ITSD 故障聚合数据；等待下次运行自动重试',
         'long_term': '暂无官方 API；若频繁出现可考虑增加请求间隔或切换至备用故障聚合源',
     },
+    'steam_news_api': {
+        'display_name': 'Steam News API（热游更新监控）',
+        'reason': 'Steam News API 返回非 200，本次无法获取该游戏的官方新闻更新',
+        'short_term': '本次已跳过对应游戏的 Steam News 更新检测；等待下次运行自动重试',
+        'long_term': '如持续出现，可检查 Steam API 可用性并增加备用更新源',
+    },
+    'steam_featured': {
+        'display_name': 'Steam Featured Categories API（新游/Coming Soon）',
+        'reason': 'Steam Featured Categories API 返回非 200，本次无法获取热门新游或即将发售列表',
+        'short_term': '本次已跳过 Steam 热门新游或 Coming Soon 检测；等待下次运行自动重试',
+        'long_term': '如持续出现，可考虑增加 Steam 页面解析兜底或拉长重试间隔',
+    },
+    'steam_appdetails': {
+        'display_name': 'Steam AppDetails API（游戏详情）',
+        'reason': 'Steam AppDetails API 返回非 200，本次无法补充游戏联机标签和发布日期',
+        'short_term': '本次已跳过对应游戏的详情补充，不影响其他游戏继续扫描',
+        'long_term': '如持续出现，可增加重试或缓存最近一次成功拉取的详情数据',
+    },
+    'official_patch_page': {
+        'display_name': '官方 Patch Notes 页面',
+        'reason': '游戏官方更新页返回非 200，本次无法确认最新补丁/赛季公告',
+        'short_term': '本次已跳过对应官方页面检查；等待下次运行自动重试',
+        'long_term': '如持续出现，可检查页面路径是否改版，或替换为更稳定的官方 API / RSS',
+    },
+    'hoyolab_api': {
+        'display_name': 'HoyoLab 官方 API',
+        'reason': 'HoyoLab API 返回非 200，本次无法获取米哈游系游戏官方更新公告',
+        'short_term': '本次已跳过原神/崩铁/绝区零的 HoyoLab 更新检测；等待下次运行自动重试',
+        'long_term': '如持续出现，可检查 HoyoLab API 路径是否变更，并考虑增加官网公告页兜底',
+    },
+    'reddit_game_calendar': {
+        'display_name': 'Reddit（新游/热游日历监控）',
+        'reason': 'Reddit 搜索接口返回非 200，本次无法获取部分新游/热游预警帖子',
+        'short_term': '本次已跳过对应 subreddit 的搜索结果；等待下次运行自动重试',
+        'long_term': '如持续出现，可检查 Reddit API 凭证、限频情况，或为关键来源增加备用站点',
+    },
     'youtube_quota': {
         'display_name': 'YouTube Data API v3（配额耗尽）',
         'reason': 'YouTube API 返回 403 quotaExceeded，当日 10,000 单位免费配额已耗尽（search 操作每次消耗 100 单位）',
