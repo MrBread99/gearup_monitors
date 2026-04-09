@@ -41,14 +41,16 @@ def summarize_sentiment(brand_name, region_name, positive_posts, negative_posts,
             seen.add(key)
             unique_posts.append(p)
 
+    reference_posts = unique_posts[:15]
+
     if not qwen_client:
         # AI 不可用，只返回帖子数量和链接
-        links = [f"{p.get('title', '')[:40]} ({p.get('url', '')})" for p in unique_posts[:3] if p.get('url')]
+        links = [f"{p.get('title', '')[:40]} ({p.get('url', '')})" for p in reference_posts[:3] if p.get('url')]
         return f"共 {len(unique_posts)} 篇讨论。代表帖子: {'; '.join(links)}" if links else ""
 
     # 构建带编号和链接的帖子列表（最多 15 条给 AI）
     post_lines = []
-    for i, p in enumerate(unique_posts[:15], 1):
+    for i, p in enumerate(reference_posts, 1):
         title = p.get('title', '')[:120]
         url = p.get('url', '')
         source = p.get('source', '')
@@ -94,10 +96,18 @@ def summarize_sentiment(brand_name, region_name, positive_posts, negative_posts,
 
         # 来源链接写入报告文件，不放在报警里
         from utils.brand_report import add_report_section, get_report_url
-        add_report_section(region_name, brand_name, positive_posts, negative_posts, neutral_posts, ai_text)
+        add_report_section(
+            region_name,
+            brand_name,
+            positive_posts,
+            negative_posts,
+            neutral_posts,
+            ai_text,
+            reference_posts=reference_posts,
+        )
 
         # 报警里只附报告链接
-        ai_text += f'\n详细来源: {get_report_url()}'
+        ai_text += f'\n详细来源: {get_report_url(region_name, brand_name)}'
 
         return ai_text
 

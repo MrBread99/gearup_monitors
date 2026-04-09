@@ -15,6 +15,23 @@ REPORT_FILE = os.path.join(REPORT_DIR, 'brand_report_latest.md')
 GITHUB_REPORT_URL = 'https://github.com/MrBread99/gearup_monitors/blob/main/reports/brand_report_latest.md'
 
 
+def _make_section_anchor(region_name, brand_name):
+    """为报告 section 生成稳定的锚点 ID。"""
+    raw = f"{region_name}-{brand_name}".lower()
+    chars = []
+    last_dash = False
+    for ch in raw:
+        if ch.isalnum():
+            chars.append(ch)
+            last_dash = False
+        else:
+            if not last_dash:
+                chars.append('-')
+                last_dash = True
+    anchor = ''.join(chars).strip('-')
+    return anchor or 'brand-report-section'
+
+
 def init_report():
     """初始化报告文件（写入头部，清空旧内容）"""
     os.makedirs(REPORT_DIR, exist_ok=True)
@@ -27,7 +44,15 @@ def init_report():
         f.write(f'---\n\n')
 
 
-def add_report_section(region_name, brand_name, positive_posts, negative_posts, neutral_posts, ai_summary=''):
+def add_report_section(
+    region_name,
+    brand_name,
+    positive_posts,
+    negative_posts,
+    neutral_posts,
+    ai_summary='',
+    reference_posts=None,
+):
     """
     追加一个地区的舆情详情到报告文件（直接写磁盘，跨进程安全）。
     """
@@ -38,10 +63,25 @@ def add_report_section(region_name, brand_name, positive_posts, negative_posts, 
         init_report()
 
     lines = []
+    anchor = _make_section_anchor(region_name, brand_name)
+    lines.append(f'<a id="{anchor}"></a>\n')
     lines.append(f'## {region_name} - {brand_name}\n')
 
     if ai_summary:
         lines.append(f'### AI 分析\n```\n{ai_summary}\n```\n')
+
+    if reference_posts:
+        lines.append(f'### AI 引用来源（编号对应）\n')
+        for i, p in enumerate(reference_posts, 1):
+            title = p.get('title', '')[:120]
+            url = p.get('url', '')
+            source = p.get('source', '')
+            source_text = f'[{source}]' if source else ''
+            if url:
+                lines.append(f'- [{i}] {title} {source_text}({url})\n')
+            else:
+                lines.append(f'- [{i}] {title}\n')
+        lines.append('\n')
 
     for label, posts in [('正面评价', positive_posts), ('负面评价', negative_posts), ('中性讨论', neutral_posts)]:
         lines.append(f'### {label} ({len(posts)} 篇)\n')
@@ -64,5 +104,7 @@ def add_report_section(region_name, brand_name, positive_posts, negative_posts, 
         f.writelines(lines)
 
 
-def get_report_url():
+def get_report_url(region_name=None, brand_name=None):
+    if region_name and brand_name:
+        return f"{GITHUB_REPORT_URL}#{_make_section_anchor(region_name, brand_name)}"
     return GITHUB_REPORT_URL
