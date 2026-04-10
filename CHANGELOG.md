@@ -4,7 +4,37 @@
 
 ---
 
-## [v4.2.2] - Trustpilot 报警精简 + Playwright 403 重试 (Current)
+## [v4.3.0] - 全面稳定性加固 + 可观测性增强 (Current)
+
+### 🚀 新增功能
+
+- **系统心跳** (`notifier.py`): 新增 `send_system_heartbeat()` + `has_scrape_block_alerts()`。当 `brand_monitor/run_all.py` 和 `competitor_radar/run_all.py` 运行无异常且无结果时，发送一条低噪音心跳确认"我跑了，没事"，区分静默成功和静默失败
+- **日历报警跨运行去重** (`game_calendar_monitor.py`): 新增 `build_calendar_issue_key()` + `filter_new_calendar_issues()`，通过快照记录已报 key（最多 1000 条），同一更新不再每 2h 重复报
+- **每个数据源限 2 条最优结果** (`game_calendar_monitor.py`): `PER_SOURCE_ALERT_LIMIT = 2`，按优先级/热度取 top 2，减少刷屏
+- **品牌报告深链接** (`brand_report.py` + `sentiment_summarizer.py`): 报告每个章节生成锚点 ID，POPO 报警链接直达具体地区/品牌段落；AI 引用来源帖子以编号列表附在报告中
+- **Reddit 请求元数据追踪** (`reddit_client.py`): 新增 `_last_request_meta` 记录 mode（oauth/anonymous）、token_state、status_code，下游模块可精确区分"没配凭证"/"token 过期"/"匿名被封"等 403 子类型
+- **Reddit 403 分类报警** (`game_calendar_monitor.py` + `notifier.py`): 4 种专属 `_SCRAPE_ADVICE` 条目（`reddit_game_calendar_missing_credentials` / `_token_failure` / `_oauth_403` / `_anonymous_403`）
+- **所有 HTTP 端点加 `report_scrape_block()`** (`game_calendar_monitor.py`): Steam News/Featured/AppDetails、官方 Patch 页、HoyoLab API、Reddit 日历全部接入失败报警，新增 7 条 `_SCRAPE_ADVICE`
+- **工作流运行摘要**: 3 个 workflow YAML 新增 `Append run summary` 步骤（`if: always()`），写入 `$GITHUB_STEP_SUMMARY`
+- **`.gitignore`**: 新增 `__pycache__/`、`*.py[cod]`、`*_snapshot.json`，删除已提交的 `.pyc` 文件
+
+### 🟠 重要改动
+
+- **Playwright 403 重试升级** (`exitlag_pricing.py`): 原"新建 page + 重注入 stealth"方案升级为**销毁整个 browser context（含 cookie/localStorage/state）并重建**。新增 `_new_playwright_context()` / `_new_stealth_page()` / `_rotate_playwright_context()`；Chromium 启动参数增加 `--disable-blink-features=AutomationControlled`。cloudscraper / requests fallback 不再因 403 提前跳过，改为全链路尝试后统一判断
+- **定价 403 报警降噪** (`notifier.py`): `cloudflare_pricing` 新增 `min_notify_count: 2`，单次 403 仅日志不发 POPO 报警
+- **Reddit 从 search API 改为 listing API** (`game_calendar_monitor.py`): 所有 Reddit 日历相关调用从 `/search.json?q=...` 改为 `/new.json` 或 `/hot.json` + 客户端关键词过滤（`title + selftext`），减少 Reddit search API 限流风险
+- **detector404 限流加固** (`cis_osint.py`): 请求间隔从 1-3s 增到 **4-7s**；`check_detector404()` 新增 429 内联重试（等待 18-26s）；`check_detector404_batch()` 连续 2 次 429 后冷却 45-75s 并提前终止批次
+- **Steam News 403 自动静默** (`game_calendar_monitor.py`): 同一 AppID 连续 2 次 Steam News 403 后静默 7 天（`steam_news_403_fail_counts` + `steam_news_403_suppressed_until` 记录在快照中）
+- **flush 优先级调整** (`notifier.py`): `flush_scrape_block_alerts()` 中 404/5xx 判断现在**优先于** `has_custom_advice`，服务端 5xx 不再被错误显示为反爬建议
+
+### 📦 CI 改进
+
+- **`requirements-ci.txt`**: `game_monitor/` 和 `competitor_radar/` 各新增独立的 pinned 依赖文件，workflow 改用 `pip install -r requirements-ci.txt`
+- **workflow 步骤 ID**: `monitor.yml` 三个 Python 步骤加 step ID（`game_monitor` / `russia_event` / `game_calendar`），运行摘要记录各步骤成功/失败
+
+---
+
+## [v4.2.2] - Trustpilot 报警精简 + Playwright 403 重试
 
 ### 🟠 调整
 
