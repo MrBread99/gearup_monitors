@@ -103,6 +103,11 @@ HEADERS_WEB = {
     'Accept-Language': 'ru-RU,ru;q=0.9'
 }
 
+DETECTOR404_BATCH_DELAY_RANGE = (4.0, 7.0)
+DETECTOR404_429_RETRY_WAIT_RANGE = (18.0, 26.0)
+DETECTOR404_BATCH_COOLDOWN_RANGE = (45.0, 75.0)
+DETECTOR404_MAX_429_STREAK = 2
+
 
 def analyze_russian_text(text_list, threshold=2):
     """分析俄语文本列表，匹配故障关键词"""
@@ -163,7 +168,7 @@ def check_cis_vk(game_name):
     return None
 
 
-def check_detector404(game_name):
+def check_detector404(game_name, return_status=False):
     """
     检查 detector404.ru（俄罗斯版 Downdetector）上的故障报告。
     提取：投诉量级、受影响区域 TOP5、故障类型占比。
@@ -176,6 +181,15 @@ def check_detector404(game_name):
 
     try:
         response = requests.get(url, headers=HEADERS_WEB, timeout=15)
+        if response.status_code == 429:
+            retry_wait = random.uniform(*DETECTOR404_429_RETRY_WAIT_RANGE)
+            print(
+                f"[CIS] detector404 {game_name}: HTTP 429, "
+                f"cooling down {retry_wait:.1f}s before one retry"
+            )
+            time.sleep(retry_wait)
+            response = requests.get(url, headers=HEADERS_WEB, timeout=15)
+
         if response.status_code != 200:
             print(f"[CIS] detector404 {game_name}: HTTP {response.status_code}")
             try:
@@ -183,7 +197,7 @@ def check_detector404(game_name):
                 report_scrape_block('detector404', url=url, status_code=response.status_code)
             except Exception:
                 pass
-            return None
+            return (None, response.status_code) if return_status else None
 
         soup = BeautifulSoup(response.text, 'html.parser')
         text = soup.get_text()
@@ -273,7 +287,7 @@ def check_detector404(game_name):
             if fault_types:
                 issue_parts.append(f"故障类型: {', '.join(fault_types)}")
 
-            return {
+            result = {
                 'game': game_name,
                 'region': 'CIS / Russia',
                 'country': 'Russia',
@@ -281,11 +295,12 @@ def check_detector404(game_name):
                 'source_name': 'detector404.ru',
                 'source_url': url
             }
+            return (result, 200) if return_status else result
 
     except Exception as e:
         print(f"[CIS] detector404 检测 {game_name} 失败: {e}")
 
-    return None
+    return (None, None) if return_status else None
 
 
 def check_detector404_batch(game_names=None):
@@ -293,18 +308,33 @@ def check_detector404_batch(game_names=None):
     批量检测 detector404，只报大量/严重/大规模级别。
     game_names: 指定要检测的名称列表；为 None 时遍历 DETECTOR404_MAP 中所有条目
                （含不在 GAME_REGISTRY 中的俄区热门游戏）。
-    每次请求之间加入 1-3 秒随机延迟，避免批量请求触发封禁。
+    每次请求之间加入 4-7 秒随机延迟；若命中 429，会额外冷却后重试一次。
+    若连续多个请求仍然 429，则提前结束本轮批量检测，避免继续触发频控。
     返回 issues 列表。
     """
     issues = []
     names = game_names if game_names is not None else list(DETECTOR404_MAP.keys())
+    consecutive_429 = 0
 
     for i, name in enumerate(names):
-        # 随机延迟 1-3 秒，避免批量请求被 detector404.ru 封禁
+        # 放慢批量抓取节奏，减少固定 CI IP 被频控的概率
         if i > 0:
-            time.sleep(random.uniform(1.0, 3.0))
+            time.sleep(random.uniform(*DETECTOR404_BATCH_DELAY_RANGE))
 
-        result = check_detector404(name)
+        result, status_code = check_detector404(name, return_status=True)
+        if status_code == 429:
+            consecutive_429 += 1
+            if consecutive_429 >= DETECTOR404_MAX_429_STREAK:
+                cooldown = random.uniform(*DETECTOR404_BATCH_COOLDOWN_RANGE)
+                print(
+                    f"[CIS] detector404 consecutive 429 streak reached {consecutive_429}; "
+                    f"cooling down {cooldown:.1f}s and ending this batch early."
+                )
+                time.sleep(cooldown)
+                break
+        else:
+            consecutive_429 = 0
+
         if result:
             issues.append(result)
 
