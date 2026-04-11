@@ -1,6 +1,6 @@
-# GearUP Monitors - 监控脚本总览 (v4.3.0)
+# GearUP Monitors - 监控脚本总览 (v4.3.1)
 
-> **当前版本**: v4.3.0 | **最后更新**: 2026-04-10
+> **当前版本**: v4.3.1 | **最后更新**: 2026-04-11
 >
 > 本文档是供 AI Agent 快速上手的**唯一参考**，描述当前代码的真实状态。
 >
@@ -19,7 +19,7 @@ gearup_monitors/
 │   │                                #         tw_bsn / jp_search / kr_dc / kr_dc_type
 │   ├── monitor.py                   # 主入口：56 款游戏 × 8 渠道，逐游戏 try/except 防级联失败
 │   ├── steam_osint.py               # Steam 近期差评（9 语种关键词）
-│   ├── apac_osint.py                # 亚太社区（巴哈姆特/DC Inside）
+│   ├── apac_osint.py                # 亚太社区（巴哈姆特 / DC Inside Playwright+requests 双层降级）
 │   ├── cis_osint.py                 # 俄罗斯/CIS（VK + detector404.ru）
 │   │                                #   DETECTOR404_MAP: 46 游戏 + 9 平台 = 55 条
 │   │                                #   DETECTOR404_PLATFORMS: 平台名称集合（防重复检测用）
@@ -43,12 +43,12 @@ gearup_monitors/
 │
 ├── brand_monitor/
 │   ├── run_all.py                   # ★ 聚合入口（9 地区舆情），合并为一条消息；无结果时发心跳
-│   ├── trustpilot_monitor.py        # Trustpilot 评分（GearUP + 5 竞品，仅报评分变动和差评占比上升）
+│   ├── trustpilot_monitor.py        # Trustpilot 评分（Playwright+requests 双层降级；仅报评分变动和差评占比上升）
 │   ├── gearup_reddit.py             # Reddit 全站舆情
 │   ├── gearup_youtube.py            # YouTube 多语言舆情（每天 1 次）
 │   ├── taiwan_monitor.py            # 巴哈姆特 / PTT
 │   ├── japan_monitor.py             # 5ch / Google JP
-│   ├── korea_monitor.py             # Naver Search API / DC Inside
+│   ├── korea_monitor.py             # Naver Search API / DC Inside（Playwright+requests 双层降级）
 │   ├── russia_monitor.py            # VK / Google 俄语搜索（Otzovik 已废弃，CAPTCHA）
 │   ├── mideast_monitor.py           # Reddit MENA / Google AR
 │   └── southeast_asia_monitor.py    # Tinhte / Reddit SEA / Google 多语
@@ -62,6 +62,9 @@ gearup_monitors/
 │   ├── reddit_client.py             # Reddit 共享客户端（OAuth2 可选 + 2s 限流 + 429 重试）
 │   │                                #   _last_request_meta: 请求元数据追踪（mode/token_state/status_code）
 │   ├── google_client.py             # Google 搜索共享客户端（5-8s 随机延迟 + 多语言含 ru）
+│   ├── playwright_client.py         # ★ 共享 Playwright 无头浏览器（懒初始化/context 轮换/stealth）
+│   │                                #   pw_fetch(url) → (html, status); pw_close() 清理
+│   │                                #   Trustpilot / DC Inside(游戏+品牌) / exitlag_pricing 共用
 │   ├── alert_dedup.py               # 🔴 报警合并（游戏名+地区）+ 跨运行去重
 │   ├── brand_report.py              # 品牌报告生成（锚点深链接 + AI 引用来源列表）
 │   └── sentiment_summarizer.py      # AI 情感分析聚合（传引用帖子到报告）
@@ -183,12 +186,12 @@ gearup_monitors/
 
 | 渠道 | 模块 | 覆盖地区 | 语言 | 备注 |
 |------|------|---------|------|------|
-| Trustpilot | `trustpilot_monitor.py` | 全球 | 英文 | GearUP + 5 竞品；仅报**评分变动**和 **1 星差评占比上升**，不报评论数增长 |
+| Trustpilot | `trustpilot_monitor.py` | 全球 | 英文 | GearUP + 5 竞品；Playwright 绕 Cloudflare；仅报**评分变动**和 **1 星差评占比上升** |
 | Reddit | `gearup_reddit.py` | 全球 | 英文 | |
 | YouTube | `gearup_youtube.py` | 全球 | 8 语 | 每天 1 次（配额限制） |
 | 巴哈姆特 / PTT | `taiwan_monitor.py` | 台湾 | 繁中 | |
 | 5ch / Google JP | `japan_monitor.py` | 日本 | 日语 | |
-| Naver Search API / DC Inside | `korea_monitor.py` | 韩国 | 韩语 | 需配置 `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` |
+| Naver Search API / DC Inside | `korea_monitor.py` | 韩国 | 韩语 | DC Inside 用 Playwright 绕 Cloudflare；需配置 `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` |
 | VK / Google 俄语搜索 | `russia_monitor.py` | 俄罗斯/CIS | 俄语 | Otzovik 已废弃（全站 CAPTCHA），改用 Google RU 间接索引 |
 | Reddit MENA / Google AR | `mideast_monitor.py` | 中东 | 阿拉伯语 | |
 | Tinhte / Reddit SEA / Google 多语 | `southeast_asia_monitor.py` | 东南亚 | 越/菲/印尼/泰 | |
@@ -258,7 +261,7 @@ gearup_monitors/
 
 | 维度 | 数量 |
 |------|------|
-| Python 脚本 | **28 个**（含 2 个 `requirements-ci.txt`） |
+| Python 脚本 | **29 个**（含 `playwright_client.py` + 2 个 `requirements-ci.txt`） |
 | 监控游戏 | **56 款** |
 | 游戏故障渠道 | **8 个** |
 | 平台/通讯工具 | **14 个** |

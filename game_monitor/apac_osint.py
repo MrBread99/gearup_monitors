@@ -93,9 +93,8 @@ def check_taiwan_bahamut(game_name, bsn_id):
 # ==========================================
 def check_korea_dcinside(game_name, gallery_id, gallery_type='major'):
     """
-    爬取韩国 DC Inside 指定游戏版块的最新帖子
-    :param gallery_id: 画廊ID (例如：Valorant 是 valorant)
-    :param gallery_type: 'major' (正规画廊) 或 'minor' (마이너画廊)
+    爬取韩国 DC Inside 指定游戏版块的最新帖子。
+    优先使用 Playwright 渲染（绕过 Cloudflare），失败时 fallback 到 requests。
     """
     if not gallery_id:
         return None
@@ -103,18 +102,38 @@ def check_korea_dcinside(game_name, gallery_id, gallery_type='major'):
         url = f"https://gall.dcinside.com/mgallery/board/lists/?id={gallery_id}"
     else:
         url = f"https://gall.dcinside.com/board/lists/?id={gallery_id}"
+
+    html_text = None
+
+    # === Tier 1: Playwright（绕过 Cloudflare JS challenge） ===
     try:
-        response = requests.get(url, headers=HEADERS, timeout=10)
-        if response.status_code != 200:
-            print(f"[KR] DC Inside {game_name}: HTTP {response.status_code}")
-            try:
-                from utils.notifier import report_scrape_block
-                report_scrape_block('dcinside_game', url=url, status_code=response.status_code)
-            except Exception:
-                pass
+        from utils.playwright_client import pw_fetch
+        html_text, status = pw_fetch(url)
+        if html_text is None and status != 0:
+            print(f"[KR] Playwright DC Inside {game_name}: HTTP {status}")
+    except Exception as e:
+        print(f"[KR] Playwright 不可用: {e}")
+
+    # === Tier 2: requests fallback ===
+    if html_text is None:
+        try:
+            response = requests.get(url, headers=HEADERS, timeout=10)
+            if response.status_code != 200:
+                print(f"[KR] DC Inside {game_name}: HTTP {response.status_code}")
+                try:
+                    from utils.notifier import report_scrape_block
+                    report_scrape_block('dcinside_game', url=url, status_code=response.status_code)
+                except Exception:
+                    pass
+                return None
+            html_text = response.text
+        except Exception as e:
+            print(f"[KR] requests DC Inside {game_name} 失败: {e}")
             return None
 
-        soup = BeautifulSoup(response.text, 'html.parser')
+    # === 解析 HTML ===
+    try:
+        soup = BeautifulSoup(html_text, 'html.parser')
         
         # 提取帖子标题
         titles = [a.text for a in soup.select('tr.us-post .gall_tit a')]
@@ -130,7 +149,7 @@ def check_korea_dcinside(game_name, gallery_id, gallery_type='major'):
                 "source_url": url
             }
     except Exception as e:
-        print(f"[KR] Failed to scrape DC Inside for {game_name}: {e}")
+        print(f"[KR] Failed to parse DC Inside for {game_name}: {e}")
     return None
 
 if __name__ == "__main__":

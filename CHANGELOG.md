@@ -4,7 +4,29 @@
 
 ---
 
-## [v4.3.0] - 全面稳定性加固 + 可观测性增强 (Current)
+## [v4.3.1] - Trustpilot + DC Inside 接入 Playwright 反爬 (Current)
+
+### 🚀 新增
+
+- **`utils/playwright_client.py`**: 新建共享 Playwright 无头浏览器模块，提供 `pw_fetch(url)` / `pw_close()` 接口。懒初始化单例 Chromium + stealth 隐身补丁 + 403 自动 context 轮换（销毁 cookie/storage 重建），供全项目各模块复用
+
+### 🟠 反爬升级
+
+- **`trustpilot_monitor.py`**: `fetch_trustpilot_data()` 改为 **Playwright 首选 → requests fallback** 两层降级。Trustpilot 使用 Cloudflare + JS 渲染，原 `requests.get()` 被拦时完全无数据
+- **`apac_osint.py`**: `check_korea_dcinside()` 改为 **Playwright 首选 → requests fallback**。DC Inside 使用 Cloudflare 保护，原 `requests.get()` 频繁被拦
+- **`korea_monitor.py`**: `search_dcinside_search()` 改为 **Playwright 首选 → requests fallback**。同上
+- **`monitor.py`**: `__main__` 的 finally 块新增 `pw_close()` 调用
+- **`brand_monitor/run_all.py`**: main 函数末尾新增 `pw_close()` 调用
+
+### 📦 CI
+
+- **`game_monitor/requirements-ci.txt`**: 新增 `playwright==1.48.0` + `playwright-stealth==1.0.6`
+- **`monitor.yml`**: 新增 `playwright install chromium` 步骤
+- **`brand_monitor.yml`**: 新增 `playwright playwright-stealth` 依赖 + `playwright install chromium` 步骤
+
+---
+
+## [v4.3.0] - 全面稳定性加固 + 可观测性增强
 
 ### 🚀 新增功能
 

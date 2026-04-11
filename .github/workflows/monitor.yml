@@ -20,6 +20,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r game_monitor/requirements-ci.txt
 
+      - name: Install Playwright browsers
+        run: playwright install chromium
+
       # ===== 快照持久化 =====
       - name: Restore snapshot cache
         uses: actions/cache@v3

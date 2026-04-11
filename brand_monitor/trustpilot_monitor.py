@@ -40,21 +40,40 @@ HEADERS = {
 def fetch_trustpilot_data(slug):
     """
     抓取 Trustpilot 品牌页面，提取评分和评论数。
+    优先使用 Playwright 渲染（绕过 Cloudflare + JS），失败时 fallback 到 requests。
     """
     url = f"https://www.trustpilot.com/review/{slug}"
+    html_text = None
 
+    # === Tier 1: Playwright（绕过 Cloudflare JS challenge） ===
     try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
-        if response.status_code != 200:
-            print(f"[Trustpilot] {slug}: HTTP {response.status_code}")
-            try:
-                from utils.notifier import report_scrape_block
-                report_scrape_block('trustpilot', url=url, status_code=response.status_code)
-            except Exception:
-                pass
+        from utils.playwright_client import pw_fetch
+        html_text, status = pw_fetch(url)
+        if html_text is None and status != 0:
+            print(f"[Trustpilot] Playwright {slug}: HTTP {status}")
+    except Exception as e:
+        print(f"[Trustpilot] Playwright 不可用: {e}")
+
+    # === Tier 2: requests fallback ===
+    if html_text is None:
+        try:
+            response = requests.get(url, headers=HEADERS, timeout=15)
+            if response.status_code != 200:
+                print(f"[Trustpilot] requests {slug}: HTTP {response.status_code}")
+                try:
+                    from utils.notifier import report_scrape_block
+                    report_scrape_block('trustpilot', url=url, status_code=response.status_code)
+                except Exception:
+                    pass
+                return None
+            html_text = response.text
+        except Exception as e:
+            print(f"[Trustpilot] requests {slug} 失败: {e}")
             return None
 
-        soup = BeautifulSoup(response.text, 'html.parser')
+    # === 解析 HTML ===
+    try:
+        soup = BeautifulSoup(html_text, 'html.parser')
         text = soup.get_text()
 
         # 提取评分 (格式如 "4.8" 或 "3.3")

@@ -392,3 +392,10 @@ if __name__ == "__main__":
         print(f"[Monitor] main() 顶层异常: {e}")
         import traceback
         traceback.print_exc()
+    finally:
+        # 关闭共享 Playwright 浏览器（DC Inside 使用）
+        try:
+            from utils.playwright_client import pw_close
+            pw_close()
+        except Exception:
+            pass

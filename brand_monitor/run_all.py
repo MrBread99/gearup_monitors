@@ -130,6 +130,13 @@ def main():
     # 数据源异常汇总（如有）
     flush_scrape_block_alerts(POPO_WEBHOOK_URL)
 
+    # 关闭共享 Playwright 浏览器（Trustpilot + DC Inside 使用）
+    try:
+        from utils.playwright_client import pw_close
+        pw_close()
+    except Exception:
+        pass
+
 
 if __name__ == "__main__":
     main()

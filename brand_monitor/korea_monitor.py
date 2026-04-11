@@ -113,22 +113,43 @@ def search_naver_blog(query):
 
 
 def search_dcinside_search(query):
-    """搜索 DC Inside 全站"""
+    """
+    搜索 DC Inside 全站。
+    优先使用 Playwright 渲染（绕过 Cloudflare），失败时 fallback 到 requests。
+    """
     encoded = urllib.parse.quote(query)
     url = f"https://search.dcinside.com/combine/q/{encoded}"
+    html_text = None
 
+    # === Tier 1: Playwright（绕过 Cloudflare JS challenge） ===
     try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
-        if response.status_code != 200:
-            print(f"[KR] DC Inside 品牌搜索 HTTP {response.status_code}: {query}")
-            try:
-                from utils.notifier import report_scrape_block
-                report_scrape_block('dcinside_brand', url=url, status_code=response.status_code)
-            except Exception:
-                pass
+        from utils.playwright_client import pw_fetch
+        html_text, status = pw_fetch(url)
+        if html_text is None and status != 0:
+            print(f"[KR] Playwright DC Inside 品牌搜索 HTTP {status}: {query}")
+    except Exception as e:
+        print(f"[KR] Playwright 不可用: {e}")
+
+    # === Tier 2: requests fallback ===
+    if html_text is None:
+        try:
+            response = requests.get(url, headers=HEADERS, timeout=15)
+            if response.status_code != 200:
+                print(f"[KR] DC Inside 品牌搜索 HTTP {response.status_code}: {query}")
+                try:
+                    from utils.notifier import report_scrape_block
+                    report_scrape_block('dcinside_brand', url=url, status_code=response.status_code)
+                except Exception:
+                    pass
+                return []
+            html_text = response.text
+        except Exception as e:
+            print(f"[KR] requests DC Inside '{query}' 失败: {e}")
             return []
 
-        soup = BeautifulSoup(response.text, 'html.parser')
+    # === 解析 HTML ===
+    try:
+        soup = BeautifulSoup(html_text, 'html.parser')
         results = []
 
         for item in soup.select('.result_tit a, .tit_txt'):
@@ -143,7 +164,7 @@ def search_dcinside_search(query):
 
         return results[:15]
     except Exception as e:
-        print(f"[KR] 搜索 DC Inside '{query}' 失败: {e}")
+        print(f"[KR] 解析 DC Inside '{query}' 失败: {e}")
         return []
 
 

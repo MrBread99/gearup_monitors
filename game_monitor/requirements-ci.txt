@@ -4,3 +4,5 @@ feedparser==6.0.12
 openai==2.29.0
 discord.py==2.7.1
 cloudscraper==1.2.71
+playwright==1.48.0
+playwright-stealth==1.0.6
