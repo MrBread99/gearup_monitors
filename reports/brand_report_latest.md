@@ -1,6 +1,6 @@
 # 品牌舆情监控详细报告
 
-> 生成时间: 2026-04-11 09:10 (UTC+8)
+> 生成时间: 2026-04-12 09:19 (UTC+8)
 > 本报告每 24 小时更新一次
 
 ---
@@ -9,28 +9,28 @@
 ## Global (YouTube) - GearUP Booster
 ### AI 分析
 ```
-正面评价: 多条短视频强调GearUP Booster可解决高延迟、卡顿问题，突出“0延迟”“无卡顿”“稳定网络”等效果，多与Brawl Stars、PUBGM、Free Fire等热门手游绑定宣传 [7][11][12][13][14]  
-负面评价: 有日语短视频明确表示“试用结果太差”，带嘲讽语气，属体验失败的负面反馈 [6]  
-中性讨论: 多数视频标题或内容未实际提及GearUP Booster功能或体验，仅标题含关键词（如点击诱饵、游戏更新预告、控制器设置等），无实质评价 [1][2][3][4][5][8][9][10][15]  
-涉及竞品: Lagofast, UU加速器, 迅游, 雷神, ExitLag, NoPing, Hone.gg, wtfast, Mudfish  
-商业洞察: 应重点监测日语区用户真实体验反馈，并针对Brawl Stars、Free Fire等高声量手游强化本地化成功案例传播以对冲负面印象。
+正面评价: 用户将GearUP Booster作为低延迟、零延迟游戏体验的推荐工具，尤其在Brawl Stars等游戏中强调效果显著，部分视频带合作标签体现官方背书 [9][13][14][15]  
+负面评价: 日语短视频明确表示试用GearUP Booster结果“过于糟糕”，带有强烈失望情绪；另有视频标题暗示其APK版本为“Hack/Mod”，隐含安全或合规性质疑 [8][11]  
+中性讨论: 多数视频标题或内容未实际提及GearUP Booster，仅标题含关键词属误匹配或纯蹭热度（如Valorant设置、AION2更新、Apex Shorts、PUBGM秘闻等），无实质评价 [1][2][3][4][6][7][10][12]  
+涉及竞品: Lago Fast, 无  
+商业洞察: 需加强日语区用户教育与口碑管理，快速响应负面短视频传播，并对非相关流量（如标题党、误标帖）建立自动过滤机制以提升舆情分析精度。
 ```
 ### AI 引用来源（编号对应）
 - [1] I Tested The &quot;BEST&quot; Controller Settings On Youtube... (Clickbait?) (https://www.youtube.com/watch?v=-4zwdwEMosY)
 - [2] The BEST VALORANT Settings for FPS Boost in 2026!⚡ (No Lag) (https://www.youtube.com/watch?v=5sYBfjKRt9M)
 - [3] AION 2 S3 Patch Note Review : New Dungeons, PVP Gear, Abyss Zone and Global Changes | 08.04.2026 (https://www.youtube.com/watch?v=0Ovdagu474k)
 - [4] AION 2 Season 3 Update Preview: New Bosses | New Dungeons | A lots of Changes Incoming | 07.04.2026 (https://www.youtube.com/watch?v=Dw8UaopRCjc)
-- [5] 【Apex Legends】練雷一世，用在一時！#shorts (https://www.youtube.com/watch?v=UBBq5Jum71k)
-- [6] ポルスが紹介してたギアアップブースターを試した結果が酷すぎるw #shorts #フォートナイト #fortnite #フォトナ #ポルス (https://www.youtube.com/watch?v=NlgZwr8Oy7E)
-- [7] Guy&#39;s This trend + GEAR UP Booster 🐐🥇 #brawlstars (https://www.youtube.com/watch?v=zDslyKgzAyY)
-- [8] ANCIENT SECRET: ARISE is back in PUBGM! (https://www.youtube.com/watch?v=YZDWYyYfwn0)
-- [9] GEARUP Booster Hack/Mod Apk (https://www.youtube.com/watch?v=LyPxmnNSkRk)
-- [10] Gearup HYPEREV игровой бустер для чтабильного интернета #edjka_ben #gearupbooster (https://www.youtube.com/watch?v=llPCQVzZAHE)
-- [11] Stop Lag! Boost Your Game Ping with GEARUP Now! #shorts (https://www.youtube.com/watch?v=_lXlAvTygEY)
-- [12] Collab with Gear Up #brawlstars #edit #supercell #fyp #gearupbooster (https://www.youtube.com/watch?v=Q09iUcRjLmU)
-- [13] 0 Delay #brawlstars #hype #gearupbooster #ahorts #0delay  (https://www.youtube.com/watch?v=UOH1KYt8mNI)
-- [14] #HighPing #GearUPBooster #FreeFireSinhala #GamingTips #PingFix #MobileGaming #Srilanka #TechTips (https://www.youtube.com/watch?v=qdxFQEyedDk)
-- [15] Gearup Booster VS Lagofast | WHICH ONE IS BETTER? 2026! (https://www.youtube.com/watch?v=F3K473x0oJQ)
+- [5] Lago Fast vs Gearup Booster - The Results Shocked Me (https://www.youtube.com/watch?v=koc23QONflk)
+- [6] افضل حل لمشكله البنق والاق في الالعاب  #callofduty #اكسبلور#valorant #fortnite #فورتنايت #مارفل #كود (https://www.youtube.com/watch?v=hbwgnkTVl28)
+- [7] 【Apex Legends】練雷一世，用在一時！#shorts (https://www.youtube.com/watch?v=UBBq5Jum71k)
+- [8] ポルスが紹介してたギアアップブースターを試した結果が酷すぎるw #shorts #フォートナイト #fortnite #フォトナ #ポルス (https://www.youtube.com/watch?v=NlgZwr8Oy7E)
+- [9] Guy&#39;s This trend + GEAR UP Booster 🐐🥇 #brawlstars (https://www.youtube.com/watch?v=zDslyKgzAyY)
+- [10] ANCIENT SECRET: ARISE is back in PUBGM! (https://www.youtube.com/watch?v=YZDWYyYfwn0)
+- [11] GEARUP Booster Hack/Mod Apk (https://www.youtube.com/watch?v=LyPxmnNSkRk)
+- [12] Gearup HYPEREV игровой бустер для чтабильного интернета #edjka_ben #gearupbooster (https://www.youtube.com/watch?v=llPCQVzZAHE)
+- [13] Stop Lag! Boost Your Game Ping with GEARUP Now! #shorts (https://www.youtube.com/watch?v=_lXlAvTygEY)
+- [14] Collab with Gear Up #brawlstars #edit #supercell #fyp #gearupbooster (https://www.youtube.com/watch?v=Q09iUcRjLmU)
+- [15] 0 Delay #brawlstars #hype #gearupbooster #ahorts #0delay  (https://www.youtube.com/watch?v=UOH1KYt8mNI)
 
 ### 正面评价 (0 篇)
 - 暂无
@@ -41,12 +41,12 @@
 - AION 2 S3 Patch Note Review : New Dungeons, PVP Gear, Abyss Zone and Global Changes | 08.04.2026 - [](https://www.youtube.com/watch?v=0Ovdagu474k)
 - AION 2 Season 3 Update Preview: New Bosses | New Dungeons | A lots of Changes Incoming | 07.04.2026 - [](https://www.youtube.com/watch?v=Dw8UaopRCjc)
 
-### 中性讨论 (14 篇)
+### 中性讨论 (15 篇)
+- Lago Fast vs Gearup Booster - The Results Shocked Me - [](https://www.youtube.com/watch?v=koc23QONflk)
+- افضل حل لمشكله البنق والاق في الالعاب  #callofduty #اكسبلور#valorant #fortnite #فورتنايت #مارفل #كود - [](https://www.youtube.com/watch?v=hbwgnkTVl28)
 - 【Apex Legends】練雷一世，用在一時！#shorts - [](https://www.youtube.com/watch?v=UBBq5Jum71k)
 - ポルスが紹介してたギアアップブースターを試した結果が酷すぎるw #shorts #フォートナイト #fortnite #フォトナ #ポルス - [](https://www.youtube.com/watch?v=NlgZwr8Oy7E)
 - Guy&#39;s This trend + GEAR UP Booster 🐐🥇 #brawlstars - [](https://www.youtube.com/watch?v=zDslyKgzAyY)
-- ANCIENT SECRET: ARISE is back in PUBGM! - [](https://www.youtube.com/watch?v=YZDWYyYfwn0)
-- GEARUP Booster Hack/Mod Apk - [](https://www.youtube.com/watch?v=LyPxmnNSkRk)
 
 ---
 
@@ -58,7 +58,7 @@
 负面评价: 用户集中投诉退款困难，出现“기어업부스터환불받았다 갰ㅐ기들”（已成功退款但情绪激烈）和“이거 환불못하냐?”（质疑无法退款）等表述，反映售后体验差[1][2]。  
 中性讨论: 多篇帖子将GearUP作为工具型选项提及，属中性功能咨询或场景化提问，如询问“이번에GearUP이라는거 사용하라는 업뎃 떴던데 뭐임?”“얘네 쓸만함?”“gearup프리미엄 유료 쓰는데 이거 맞냐”[9][11][8]；另有技术向讨论涉及OpenWRT路由器集成可能性[12]。  
 涉及竞品: 无  
-商业洞察: 应优先优化韩国区退款流程与客服响应，并在Twitch Drops高频使用场景强化官方教程与信任背书，转化中性提问为正向口碑。
+商业洞察: 应优先优化韩国地区退款流程与客服响应，并在Twitch Drops相关社区强化“自动领取+低延迟”双卖点传播，对冲退款负面声量。
 ```
 ### AI 引用来源（编号对应）
 - [1] 기어업부스터환불받았다 갰ㅐ기들 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=eft&no=2748014)
