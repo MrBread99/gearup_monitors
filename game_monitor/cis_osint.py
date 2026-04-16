@@ -175,7 +175,7 @@ def check_detector404(game_name, return_status=False):
     """
     slug = DETECTOR404_MAP.get(game_name)
     if not slug:
-        return None
+        return (None, None) if return_status else None
 
     url = f"https://detector404.ru/{slug}"
 
@@ -223,7 +223,7 @@ def check_detector404(game_name, return_status=False):
 
         # 只报大量/严重/大规模，过滤掉中等及以下
         if complaint_level and complaint_level.lower() in ('нет', 'мало', 'минимально', 'умеренно'):
-            return None
+            return (None, 200) if return_status else None
 
         # 提取受影响区域 TOP，并翻译俄语地名
         REGION_TRANSLATE = {
