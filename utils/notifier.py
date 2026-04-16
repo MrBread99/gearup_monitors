@@ -18,6 +18,125 @@ POPO_WEBHOOK_URL = os.environ.get("POPO_WEBHOOK_URL")
 # 格式: { source_key: {'display_name': str, 'count': int, 'urls': [str], 'codes': set()} }
 _scrape_block_registry: dict = {}
 
+# ==========================================
+# 内部崩溃感知系统
+# ==========================================
+# 监控脚本内部的 try/except 捕获到异常时调用 report_monitor_crash() 登记，
+# 在脚本末尾统一调用 flush_monitor_crash_alerts() 发送。
+# 解决"脚本内部崩溃但静默吞掉、无人感知"的问题。
+# ==========================================
+
+# 每次运行的崩溃事件累积池
+# 格式: [{'step': str, 'error': str, 'traceback': str}]
+_crash_registry: list = []
+
+
+def report_monitor_crash(step_name: str, error: Exception):
+    """
+    登记一次监控步骤内部崩溃。
+    在 try/except 的 except 块中调用，脚本末尾由 flush_monitor_crash_alerts() 统一发送。
+
+    :param step_name: 崩溃的步骤名称，如 "detector404 批量检测"、"Trustpilot 舆情"
+    :param error: 捕获到的异常对象
+    """
+    import traceback as tb
+    tb_str = tb.format_exc()
+    # 只保留最后 5 行 traceback，避免消息过长
+    tb_lines = tb_str.strip().split('\n')
+    short_tb = '\n'.join(tb_lines[-5:]) if len(tb_lines) > 5 else tb_str.strip()
+
+    _crash_registry.append({
+        'step': step_name,
+        'error': str(error),
+        'traceback': short_tb,
+    })
+    print(f"[内部崩溃] {step_name}: {error}")
+
+
+def flush_monitor_crash_alerts(webhook_url=None):
+    """
+    将本次运行中所有登记的内部崩溃事件格式化后发送 POPO，然后清空 registry。
+    若没有任何崩溃事件，静默退出。
+
+    建议在每个入口脚本的 main() 末尾或 finally 块中调用。
+    """
+    if not _crash_registry:
+        return
+
+    effective_url = webhook_url or POPO_WEBHOOK_URL
+    current_time = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
+
+    lines = [
+        f"【监控系统警告 — 内部崩溃】\n"
+        f"时间: {current_time} (UTC+8)\n"
+        f"本次运行共 {len(_crash_registry)} 个步骤发生异常:\n"
+    ]
+
+    for i, crash in enumerate(_crash_registry, 1):
+        block = (
+            f"[{i}] {crash['step']}\n"
+            f"    异常: {crash['error']}\n"
+            f"    堆栈:\n"
+        )
+        for tb_line in crash['traceback'].split('\n'):
+            block += f"      {tb_line}\n"
+        block += f"{'─' * 35}\n"
+        lines.append(block)
+
+    lines.append(
+        "以上步骤在本次运行中被 try/except 捕获后跳过，未影响其他步骤，但该步骤的监控数据本次缺失。\n"
+        "请尽快排查修复，避免监控盲区持续扩大。"
+    )
+    content = '\n'.join(lines)
+
+    print(f"\n[内部崩溃汇总] 本次运行共 {len(_crash_registry)} 个步骤崩溃，正在发送 POPO 警告...")
+
+    if not effective_url:
+        print("未配置 POPO_WEBHOOK_URL，崩溃警告内容如下：\n")
+        print(content)
+        _crash_registry.clear()
+        return
+
+    import time as _time
+    headers = {'Content-Type': 'application/json'}
+
+    # 分片发送（复用现有逻辑）
+    MAX_LEN = 4000
+    if len(content) <= MAX_LEN:
+        chunks = [content]
+    else:
+        chunks = []
+        current = ""
+        for line in content.split('\n'):
+            if len(current) + len(line) + 1 > MAX_LEN:
+                chunks.append(current)
+                current = line + "\n"
+            else:
+                current += line + "\n"
+        if current:
+            chunks.append(current)
+
+    for ci, chunk in enumerate(chunks):
+        if len(chunks) > 1:
+            chunk = f"({ci+1}/{len(chunks)})\n{chunk}"
+        payload = {"message": chunk}
+        for attempt in range(3):
+            try:
+                resp = requests.post(effective_url, headers=headers,
+                                     data=json.dumps(payload), timeout=10)
+                resp.raise_for_status()
+                print(f"[内部崩溃] POPO 崩溃警告发送成功。")
+                break
+            except Exception as e:
+                if attempt < 2:
+                    wait = 2 ** (attempt + 1)
+                    print(f"[内部崩溃] 发送失败 (第 {attempt+1} 次)，{wait} 秒后重试: {e}")
+                    _time.sleep(wait)
+                else:
+                    print(f"[内部崩溃] 发送最终失败: {e}")
+
+    _crash_registry.clear()
+
 # 各数据源的静态应对建议
 _SCRAPE_ADVICE = {
     'google_captcha': {

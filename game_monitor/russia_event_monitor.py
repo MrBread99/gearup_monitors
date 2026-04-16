@@ -353,3 +353,9 @@ if __name__ == "__main__":
         print(f"[RussiaEventMonitor] 顶层异常: {e}")
         import traceback
         traceback.print_exc()
+        try:
+            from utils.notifier import report_monitor_crash, flush_monitor_crash_alerts
+            report_monitor_crash("russia_event_monitor.py 顶层", e)
+            flush_monitor_crash_alerts(POPO_WEBHOOK_URL)
+        except Exception:
+            pass

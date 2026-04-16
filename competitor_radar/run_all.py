@@ -14,6 +14,8 @@ from utils.notifier import (
     flush_scrape_block_alerts,
     has_scrape_block_alerts,
     send_system_heartbeat,
+    report_monitor_crash,
+    flush_monitor_crash_alerts,
     POPO_WEBHOOK_URL,
 )
 from openai import OpenAI
@@ -145,10 +147,18 @@ def main():
     all_issues = []
 
     # 1. Discord 情报
-    all_issues.extend(collect_discord_issues())
+    try:
+        all_issues.extend(collect_discord_issues())
+    except Exception as e:
+        print(f"[Discord] 执行失败: {e}")
+        report_monitor_crash("竞品情报: Discord", e)
 
     # 2. 竞品定价
-    all_issues.extend(collect_pricing_issues())
+    try:
+        all_issues.extend(collect_pricing_issues())
+    except Exception as e:
+        print(f"[Pricing] 执行失败: {e}")
+        report_monitor_crash("竞品情报: 定价监控", e)
 
     # 汇总发送 — 所有情报合并为一条消息
     if all_issues:
@@ -164,6 +174,8 @@ def main():
 
     # 数据源异常汇总（如有）
     flush_scrape_block_alerts(POPO_WEBHOOK_URL)
+    # 内部崩溃汇总（如有）
+    flush_monitor_crash_alerts(POPO_WEBHOOK_URL)
 
 
 if __name__ == "__main__":

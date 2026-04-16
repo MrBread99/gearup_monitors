@@ -14,6 +14,7 @@ import cis_osint # 引入独联体/俄语区 OSINT 模块
 import steam_osint # 引入 Steam 差评监控模块
 from game_registry import get_apac_configs, get_game_config, get_all_game_names  # 统一游戏注册表
 from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBHOOK_URL
+from utils.notifier import report_monitor_crash, flush_monitor_crash_alerts
 from utils.reddit_client import reddit_get
 
 # 通义千问 API 客户端（用于总结玩家反馈内容）
@@ -361,6 +362,7 @@ def main():
             all_issues.extend(check_all_channels_for_game(game_name, subreddit, game_name))
         except Exception as e:
             print(f"[Monitor] {game_name} 检测失败，跳过: {e}")
+            report_monitor_crash(f"游戏检测: {game_name}", e)
     
     # detector404.ru 批量检测 — 仅游戏（平台由 platform_status_monitor 负责，避免重复报警）
     try:
@@ -368,6 +370,7 @@ def main():
         all_issues.extend(cis_osint.check_detector404_batch(cis_osint.get_detector404_game_only_names()))
     except Exception as e:
         print(f"[Monitor] detector404.ru 批量检测失败: {e}")
+        report_monitor_crash("detector404 批量检测", e)
     
     # 平台与通讯工具状态检测（合并到同一条消息）
     try:
@@ -376,6 +379,7 @@ def main():
         all_issues.extend(platform_status_monitor.check_all_platforms())
     except Exception as e:
         print(f"[Monitor] 平台状态检测失败: {e}")
+        report_monitor_crash("平台状态检测", e)
     
     # 处理报警：🔴 加速器无效合并去重，🟢🟡 正常输出
     all_issues = process_alerts(all_issues)
@@ -384,12 +388,16 @@ def main():
     send_popo_alert(POPO_WEBHOOK_URL, all_issues)
     # 发送反爬拦截警告（如有）
     flush_scrape_block_alerts(POPO_WEBHOOK_URL)
+    # 发送内部崩溃警告（如有）
+    flush_monitor_crash_alerts(POPO_WEBHOOK_URL)
 
 if __name__ == "__main__":
     try:
         main()
     except Exception as e:
         print(f"[Monitor] main() 顶层异常: {e}")
+        report_monitor_crash("monitor.py 顶层", e)
+        flush_monitor_crash_alerts(POPO_WEBHOOK_URL)
         import traceback
         traceback.print_exc()
     finally:

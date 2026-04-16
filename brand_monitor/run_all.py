@@ -11,6 +11,8 @@ from utils.notifier import (
     flush_scrape_block_alerts,
     has_scrape_block_alerts,
     send_system_heartbeat,
+    report_monitor_crash,
+    flush_monitor_crash_alerts,
     POPO_WEBHOOK_URL,
 )
 from utils.brand_report import init_report
@@ -40,6 +42,7 @@ def main():
         all_issues.extend(results)
     except Exception as e:
         print(f"[Reddit] 执行失败: {e}")
+        report_monitor_crash("品牌舆情: Reddit", e)
 
     # --- 2. YouTube 舆情 ---
     try:
@@ -49,6 +52,7 @@ def main():
         all_issues.extend(results)
     except Exception as e:
         print(f"[YouTube] 执行失败: {e}")
+        report_monitor_crash("品牌舆情: YouTube", e)
 
     # --- 3. Trustpilot 评分 ---
     try:
@@ -58,6 +62,7 @@ def main():
         all_issues.extend(results)
     except Exception as e:
         print(f"[Trustpilot] 执行失败: {e}")
+        report_monitor_crash("品牌舆情: Trustpilot", e)
 
     # --- 4. 台湾舆情 ---
     try:
@@ -67,6 +72,7 @@ def main():
         all_issues.extend(results)
     except Exception as e:
         print(f"[台湾] 执行失败: {e}")
+        report_monitor_crash("品牌舆情: 台湾", e)
 
     # --- 5. 韩国舆情 ---
     try:
@@ -76,6 +82,7 @@ def main():
         all_issues.extend(results)
     except Exception as e:
         print(f"[韩国] 执行失败: {e}")
+        report_monitor_crash("品牌舆情: 韩国", e)
 
     # --- 6. 俄罗斯舆情 ---
     try:
@@ -85,6 +92,7 @@ def main():
         all_issues.extend(results)
     except Exception as e:
         print(f"[俄罗斯] 执行失败: {e}")
+        report_monitor_crash("品牌舆情: 俄罗斯", e)
 
     # --- 7. 中东舆情 ---
     try:
@@ -94,6 +102,7 @@ def main():
         all_issues.extend(results)
     except Exception as e:
         print(f"[中东] 执行失败: {e}")
+        report_monitor_crash("品牌舆情: 中东", e)
 
     # --- 8. 东南亚舆情 ---
     try:
@@ -103,6 +112,7 @@ def main():
         all_issues.extend(results)
     except Exception as e:
         print(f"[东南亚] 执行失败: {e}")
+        report_monitor_crash("品牌舆情: 东南亚", e)
 
     # --- 9. 日本舆情 ---
     try:
@@ -112,6 +122,7 @@ def main():
         all_issues.extend(results)
     except Exception as e:
         print(f"[日本] 执行失败: {e}")
+        report_monitor_crash("品牌舆情: 日本", e)
 
     print(f"\n汇总: 共 {len(all_issues)} 条品牌舆情。")
 
@@ -129,6 +140,8 @@ def main():
 
     # 数据源异常汇总（如有）
     flush_scrape_block_alerts(POPO_WEBHOOK_URL)
+    # 内部崩溃汇总（如有）
+    flush_monitor_crash_alerts(POPO_WEBHOOK_URL)
 
     # 关闭共享 Playwright 浏览器（Trustpilot + DC Inside 使用）
     try:

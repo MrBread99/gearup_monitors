@@ -1588,5 +1588,11 @@ if __name__ == "__main__":
         print(f"[GameCalendarMonitor] Top-level exception: {e}")
         import traceback
         traceback.print_exc()
+        try:
+            from utils.notifier import report_monitor_crash, flush_monitor_crash_alerts
+            report_monitor_crash("game_calendar_monitor.py 顶层", e)
+            flush_monitor_crash_alerts(POPO_WEBHOOK_URL)
+        except Exception:
+            pass
     finally:
         flush_scrape_block_alerts(POPO_WEBHOOK_URL)
