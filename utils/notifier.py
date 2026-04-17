@@ -486,7 +486,7 @@ def flush_scrape_block_alerts(webhook_url: str = None):
     effective_url = webhook_url or POPO_WEBHOOK_URL
     current_time = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
 
-    lines = [f"【监控系统警告 — 数据源异常】\n时间: {current_time} (UTC+8)\n"]
+    lines = [f"【数据源异常】{current_time} (UTC+8)\n"]
 
     for source_key, entry in _scrape_block_registry.items():
         advice = _SCRAPE_ADVICE.get(source_key, {})
@@ -535,34 +535,27 @@ def flush_scrape_block_alerts(webhook_url: str = None):
             continue
 
         codes = ', '.join(str(c) for c in sorted(entry['codes'])) if entry['codes'] else '未知'
-        # 最多显示 2 个 URL，超出时显示省略
+        # URL 只显示域名部分，精简展示
         url_list = entry['urls']
         if url_list:
-            url_display = url_list[0][:100]
-            if len(url_list) > 1:
-                url_display += f'  （等共 {len(url_list)} 个 URL）'
+            from urllib.parse import urlparse
+            domain = urlparse(url_list[0]).netloc or url_list[0][:40]
+            url_display = f"{domain} 等{len(url_list)}个URL" if len(url_list) > 1 else domain
         else:
-            url_display = '（无记录）'
+            url_display = ''
 
+        url_part = f" | {url_display}" if url_display else ""
         block = (
-            f"数据源: {display_name}\n"
-            f"本次触发次数: {count} 次（已合并）\n"
-            f"HTTP 状态码: {codes}\n"
-            f"触发 URL 示例: {url_display}\n"
-            f"\n"
-            f"原因判断: {reason}\n"
-            f"\n"
-            f"应对建议:\n"
-            f"  1. {short_term}\n"
-            f"  2. {long_term}\n"
-            f"{'─' * 35}\n"
+            f"[{display_name}] {codes} ×{count}{url_part}\n"
+            f"  原因: {reason}\n"
+            f"  建议: {long_term}\n"
+            f"{'─' * 20}\n"
         )
         lines.append(block)
 
     if len(lines) == 1:
         return
 
-    lines.append("如频繁出现此警告，请及时处理以免监控盲区扩大。")
     content = '\n'.join(lines)
 
     print(f"\n[数据源异常汇总] 本次运行共检测到 {len(_scrape_block_registry)} 个数据源异常，正在发送 POPO 警告...")
