@@ -1,6 +1,6 @@
 # 品牌舆情监控详细报告
 
-> 生成时间: 2026-04-16 09:21 (UTC+8)
+> 生成时间: 2026-04-17 09:19 (UTC+8)
 > 本报告每 24 小时更新一次
 
 ---
@@ -9,42 +9,45 @@
 ## Global (YouTube) - GearUP Booster
 ### AI 分析
 ```
-正面评价: 用户展示 GearUP Booster 实际效果，如降低延迟、提升游戏体验（如 Brawl Stars 前后对比、Apex Legends 队伍配合），或明确推荐其安全有效 [9][10][12][13]  
+正面评价: 用户实测GearUP Booster显著降低PUBG Mobile延迟和卡顿，称效果“惊人”，并强调“彻底解决”问题 [8]；另有视频明确宣称用GearUP Booster安全有效降低ping，传递信任感 [14]；还有 Shorts 内容展示使用前后对比，暗示体验提升 [13]。  
 负面评价: 暂无  
-中性讨论: 教程类、操作指南、优惠码分享及多标签混发内容，未体现主观评价，仅客观提及品牌或作为工具要素出现 [1][2][4][6][7][8][11]  
+中性讨论: 多篇为纯教程类内容，仅介绍GearUP Booster基础用法或设置，无主观评价，如2026年完整使用指南、CS2/FPS优化通用设置等 [1][4][6][7][12]；部分视频标题含GearUP Booster但实际内容聚焦游戏高光、组队玩法或无关技术点，属标签式提及 [2][3][9][10][11]。  
 涉及竞品: ExitLag, LagoFast  
-商业洞察: 应重点强化与 ExitLag、LagoFast 的实测对比内容，突出 GearUP 在安全性、易用性或特定游戏（如 Brawl Stars、PUBG Mobile）中的优势。
+商业洞察: 应强化与ExitLag、LagoFast的客观对比实验（如延迟/稳定性/兼容性数据），在教程类视频中自然植入差异化优势，以转化中性流量。
 ```
 ### AI 引用来源（编号对应）
-- [1] 5x30 CÙNG THÀNH MAN! #FCOnline #NgoiSaoSanCoFCO #Thànhman (https://www.youtube.com/watch?v=6-Noz3T9LT8)
-- [2] How To Use GearUp Booster 2026! (https://www.youtube.com/watch?v=rJaUHKpowi4)
-- [3] Which Lag Reducer Actually Works? GearUp vs ExitLag (https://www.youtube.com/watch?v=z11q0VNkouI)
-- [4] How To Use GearUp Booster (Full Guide 2026) (https://www.youtube.com/watch?v=xZFckLyjVVg)
-- [5] 【Apex Legends】一(隊)打兩(隊)#shorts (https://www.youtube.com/watch?v=m1zLDZqnTUg)
-- [6] #gearupbooster #7x7 #brawlstars (https://www.youtube.com/watch?v=Z10MlQThehQ)
-- [7] gearup booster Coupon Code | gearup booster Working Discount Code (https://www.youtube.com/watch?v=Ih2hLsgGsnE)
-- [8] Roblox NO TEXTURES Secret Settings – Huge FPS Boost &amp; Zero Lag (2026) (https://www.youtube.com/watch?v=ZJlFn45e7v4)
-- [9] Before vs After | Never Go Away #brawlstars #gearupbooster #shorts (https://www.youtube.com/watch?v=hHuVLZZoaOk)
-- [10] Lower Your Ping with Gear Up Booster! Safe &amp; Effective (https://www.youtube.com/watch?v=zeHzybrqqK8)
-- [11] Lago Fast vs Gearup Booster - The Results Shocked Me (https://www.youtube.com/watch?v=koc23QONflk)
-- [12] افضل تطبيق لتحسين البنج كود جير اب GEARUPSHERUF #ببجي #pubgmobile (https://www.youtube.com/watch?v=MIYdkyScbCc)
-- [13] 【Artale】台服帳號無痛暢遊國際服|GearUp加速器|從1開始的旅程【王晨時刻】 (https://www.youtube.com/watch?v=7eiPa_eMP34)
+- [1] CS2 FPS Boost Guide 2026 – Best Settings for Max FPS (https://www.youtube.com/watch?v=nmrUKzCH6j8)
+- [2] META LỐP BÓNG ĐÃ TRỞ LẠI? #FCOnline #NgoiSaoSanCoFCO #Thànhman #CungKhoeHighlightFCO (https://www.youtube.com/watch?v=DjHIMrWhaeM)
+- [3] 5x30 CÙNG THÀNH MAN! #FCOnline #NgoiSaoSanCoFCO #Thànhman (https://www.youtube.com/watch?v=6-Noz3T9LT8)
+- [4] How To Use GearUp Booster 2026! (https://www.youtube.com/watch?v=rJaUHKpowi4)
+- [5] Which Lag Reducer Actually Works? GearUp vs ExitLag (https://www.youtube.com/watch?v=z11q0VNkouI)
+- [6] How To Use GearUp Booster (Full Guide 2026) (https://www.youtube.com/watch?v=xZFckLyjVVg)
+- [7] INSANE Valorant FPS BOOST Guide 😱 | +300 FPS Increase on ANY PC (No GPU Upgrade) (https://www.youtube.com/watch?v=T6Yd-EXABy0)
+- [8] حل مشكلة اللاغ والبنج في ببجي موبايل نهائياً 🚀 جربت تطبيق GearUP والنتيجة خرافية! 🔥 (https://www.youtube.com/watch?v=JeONipYdbhI)
+- [9] 【Apex Legends】一(隊)打兩(隊)#shorts (https://www.youtube.com/watch?v=m1zLDZqnTUg)
+- [10] #gearupbooster #7x7 #brawlstars #boombeach (https://www.youtube.com/watch?v=Z10MlQThehQ)
+- [11] gearup booster Coupon Code | gearup booster Working Discount Code (https://www.youtube.com/watch?v=Ih2hLsgGsnE)
+- [12] Roblox NO TEXTURES Secret Settings – Huge FPS Boost &amp; Zero Lag (2026) (https://www.youtube.com/watch?v=ZJlFn45e7v4)
+- [13] Before vs After | Never Go Away #brawlstars #gearupbooster #shorts (https://www.youtube.com/watch?v=hHuVLZZoaOk)
+- [14] Lower Your Ping with Gear Up Booster! Safe &amp; Effective (https://www.youtube.com/watch?v=zeHzybrqqK8)
+- [15] Lago Fast vs Gearup Booster - The Results Shocked Me (https://www.youtube.com/watch?v=koc23QONflk)
 
 ### 正面评价 (0 篇)
 - 暂无
 
-### 负面评价 (4 篇)
+### 负面评价 (6 篇)
+- CS2 FPS Boost Guide 2026 – Best Settings for Max FPS - [](https://www.youtube.com/watch?v=nmrUKzCH6j8)
+- META LỐP BÓNG ĐÃ TRỞ LẠI? #FCOnline #NgoiSaoSanCoFCO #Thànhman #CungKhoeHighlightFCO - [](https://www.youtube.com/watch?v=DjHIMrWhaeM)
 - 5x30 CÙNG THÀNH MAN! #FCOnline #NgoiSaoSanCoFCO #Thànhman - [](https://www.youtube.com/watch?v=6-Noz3T9LT8)
 - How To Use GearUp Booster 2026! - [](https://www.youtube.com/watch?v=rJaUHKpowi4)
 - Which Lag Reducer Actually Works? GearUp vs ExitLag - [](https://www.youtube.com/watch?v=z11q0VNkouI)
-- How To Use GearUp Booster (Full Guide 2026) - [](https://www.youtube.com/watch?v=xZFckLyjVVg)
 
-### 中性讨论 (9 篇)
+### 中性讨论 (10 篇)
+- INSANE Valorant FPS BOOST Guide 😱 | +300 FPS Increase on ANY PC (No GPU Upgrade) - [](https://www.youtube.com/watch?v=T6Yd-EXABy0)
+- حل مشكلة اللاغ والبنج في ببجي موبايل نهائياً 🚀 جربت تطبيق GearUP والنتيجة خرافية! 🔥 - [](https://www.youtube.com/watch?v=JeONipYdbhI)
 - 【Apex Legends】一(隊)打兩(隊)#shorts - [](https://www.youtube.com/watch?v=m1zLDZqnTUg)
-- #gearupbooster #7x7 #brawlstars - [](https://www.youtube.com/watch?v=Z10MlQThehQ)
+- #gearupbooster #7x7 #brawlstars #boombeach - [](https://www.youtube.com/watch?v=Z10MlQThehQ)
 - gearup booster Coupon Code | gearup booster Working Discount Code - [](https://www.youtube.com/watch?v=Ih2hLsgGsnE)
-- Roblox NO TEXTURES Secret Settings – Huge FPS Boost &amp; Zero Lag (2026) - [](https://www.youtube.com/watch?v=ZJlFn45e7v4)
-- Before vs After | Never Go Away #brawlstars #gearupbooster #shorts - [](https://www.youtube.com/watch?v=hHuVLZZoaOk)
 
 ---
 
@@ -52,11 +55,11 @@
 ## South Korea - GearUP Booster
 ### AI 分析
 ```
-正面评价: 用户推荐GearUP Booster用于Twitch Drops领取和解决游戏延迟问题，认为其有效且必要 [8][15]。  
-负面评价: 用户投诉退款困难，质疑服务价值，称其“跟垃圾一样” [1][2]。  
-中性讨论: 多篇帖子提及GearUP Booster作为新出现的工具或待验证选项，语气中立，含询问、对比或技术集成探讨（如OpenWRT路由器部署） [9][10][12][13][14]。  
+正面评价: 用户认可GearUP Booster在Twitch Drops获取和高延迟场景下的实用性，明确推荐使用[8][15][14]。  
+负面评价: 多篇帖子集中投诉退款困难及产品价值质疑，反映售后体验差和付费疑虑[1][2][9]。  
+中性讨论: 大量帖子为游戏服务器连接、VPN替代方案或基础功能咨询，仅提及GearUP名称但无态度倾向[3][4][5][6][7][10][11][12][13]。  
 涉及竞品: 无  
-商业洞察: 需强化韩国本地退款流程透明度，并在Drops场景中联合Twitch做效果背书以转化中性用户。
+商业洞察: 应优先优化韩国区退款流程并强化Twitch Drops等高频场景的官方教程，以转化中性咨询为正面口碑。
 ```
 ### AI 引用来源（编号对应）
 - [1] 기어업부스터환불받았다 갰ㅐ기들 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=eft&no=2748014)
@@ -85,7 +88,7 @@
 - GMS VPN 추천, 하는법 정리 (GMS VPN없이 가능할까?) - [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=gmsreboot&no=705)
 - 트위치 드롭스 받을 때 쓰는 프로그램 추천함 - [DC Inside](https://gall.dcinside.com/board/view/?id=worldoftanks&no=4053200)
 
-### 中性讨论 (78 篇)
+### 中性讨论 (79 篇)
 - 갑자기 절전모드가 안 되는데 이유 아는 게이 있음?? - [DC Inside](https://gall.dcinside.com/board/view/?id=pridepc_new4&no=6560094)
 - 드롭스는GearUP써라 - [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=marvelsnap&no=636779)
 - gearup프리미엄 유료 쓰는데 이거 맞냐 - [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=dota&no=92130)
