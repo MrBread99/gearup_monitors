@@ -124,7 +124,7 @@ def search_dcinside_search(query):
     # === Tier 1: Playwright（绕过 Cloudflare JS challenge） ===
     try:
         from utils.playwright_client import pw_fetch
-        html_text, status = pw_fetch(url)
+        html_text, status = pw_fetch(url, wait_selector='.result_tit, .tit_txt')
         if html_text is None and status != 0:
             print(f"[KR] Playwright DC Inside 品牌搜索 HTTP {status}: {query}")
     except Exception as e:

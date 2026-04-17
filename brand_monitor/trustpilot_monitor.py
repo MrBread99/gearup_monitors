@@ -46,9 +46,14 @@ def fetch_trustpilot_data(slug):
     html_text = None
 
     # === Tier 1: Playwright（绕过 Cloudflare JS challenge） ===
+    # wait_selector: Trustpilot 页面加载完成后才有 [data-business-unit-json] 属性，
+    # Cloudflare challenge 页面没有，可用来判断 challenge 是否已通过。
     try:
         from utils.playwright_client import pw_fetch
-        html_text, status = pw_fetch(url)
+        html_text, status = pw_fetch(
+            url,
+            wait_selector='[data-business-unit-json], .star-rating, script[type="application/ld+json"]',
+        )
         if html_text is None and status != 0:
             print(f"[Trustpilot] Playwright {slug}: HTTP {status}")
     except Exception as e:

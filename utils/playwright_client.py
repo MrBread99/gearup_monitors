@@ -125,12 +125,14 @@ def _ensure():
         return None
 
 
-def pw_fetch(url, wait_until='networkidle', timeout=30000):
+def pw_fetch(url, wait_until='networkidle', timeout=30000, wait_selector=None):
     """
     用 Playwright 访问 URL 并返回渲染后的 HTML。
 
     - 首次 403 时自动轮换 context（销毁 cookie/storage）重试一次
     - 每次请求前 2-4s 随机延迟
+    - wait_selector: 可选 CSS 选择器，导航完成后额外等待该元素出现
+      （用于 Cloudflare challenge 页面 — challenge 通过后真正内容才包含此元素）
 
     返回: (html_text, status_code)
         成功: (str, 200)
@@ -140,13 +142,34 @@ def pw_fetch(url, wait_until='networkidle', timeout=30000):
     if page is None:
         return None, 0
 
-    try:
-        time.sleep(random.uniform(2.0, 4.0))
-        response = page.goto(url, wait_until=wait_until, timeout=timeout)
+    def _navigate_and_wait(p, target_url):
+        """导航并等待内容，返回 (html | None, status)。"""
+        response = p.goto(target_url, wait_until=wait_until, timeout=timeout)
         status = response.status if response else 0
 
+        # Cloudflare challenge 通常返回 403 或 200（challenge 页面本身）
+        # 如果指定了 wait_selector，无论 status 如何都尝试等待真正内容出现
+        if wait_selector:
+            try:
+                p.wait_for_selector(wait_selector, timeout=15000)
+                # selector 出现 = Cloudflare challenge 已通过，取真正内容
+                return p.content(), 200
+            except Exception:
+                # selector 未出现 — challenge 未通过或页面结构变化
+                if status == 200:
+                    # 初始响应 200 但等不到内容 = challenge 页面
+                    return None, 403
+                return None, status
+
         if status == 200:
-            return page.content(), 200
+            return p.content(), 200
+        return None, status
+
+    try:
+        time.sleep(random.uniform(2.0, 4.0))
+        html, status = _navigate_and_wait(page, url)
+        if html is not None:
+            return html, status
 
         # 403: context 可能被标记，轮换后重试一次
         if status == 403 and _pw_browser is not None:
@@ -156,10 +179,9 @@ def pw_fetch(url, wait_until='networkidle', timeout=30000):
                 if retry_page is None:
                     return None, 403
                 time.sleep(random.uniform(3.0, 6.0))
-                resp2 = retry_page.goto(url, wait_until=wait_until, timeout=timeout)
-                status2 = resp2.status if resp2 else 0
-                if status2 == 200:
-                    return retry_page.content(), 200
+                html2, status2 = _navigate_and_wait(retry_page, url)
+                if html2 is not None:
+                    return html2, status2
                 return None, status2
             except Exception as e:
                 print(f"[Playwright] 重试失败: {e}")

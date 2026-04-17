@@ -186,9 +186,9 @@ _SCRAPE_ADVICE = {
     },
     'trustpilot': {
         'display_name': 'Trustpilot（品牌评分监控）',
-        'reason': 'Trustpilot 启用了 Cloudflare 保护 + JS 渲染，requests 被拦截，返回非 200',
-        'short_term': '本次无 Trustpilot 评分数据，快照未更新',
-        'long_term': '申请 Trustpilot Business API（官方接口，数据最准确，无反爬风险）',
+        'reason': 'Playwright + stealth 等待 Cloudflare challenge 解除后仍未获取到页面内容，requests fallback 同样被拦截',
+        'short_term': '本次无 Trustpilot 评分数据，快照未更新；少量运行失败属正常波动',
+        'long_term': '若持续失败，考虑升级 Chromium 版本、调整 wait_selector，或申请 Trustpilot Business API',
     },
     'naver_api_401': {
         'display_name': 'Naver Search Open API（认证失败）',

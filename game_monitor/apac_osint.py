@@ -108,7 +108,7 @@ def check_korea_dcinside(game_name, gallery_id, gallery_type='major'):
     # === Tier 1: Playwright（绕过 Cloudflare JS challenge） ===
     try:
         from utils.playwright_client import pw_fetch
-        html_text, status = pw_fetch(url)
+        html_text, status = pw_fetch(url, wait_selector='tr.us-post, .gall_tit')
         if html_text is None and status != 0:
             print(f"[KR] Playwright DC Inside {game_name}: HTTP {status}")
     except Exception as e:
