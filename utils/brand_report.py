@@ -55,6 +55,7 @@ def add_report_section(
 ):
     """
     追加一个地区的舆情详情到报告文件（直接写磁盘，跨进程安全）。
+    报告只展示 AI 分析结果和引用来源，不展示关键词预分类结果（避免和 AI 分类矛盾）。
     """
     os.makedirs(REPORT_DIR, exist_ok=True)
 
@@ -62,10 +63,13 @@ def add_report_section(
     if not os.path.exists(REPORT_FILE):
         init_report()
 
+    total = len(positive_posts) + len(negative_posts) + len(neutral_posts)
+
     lines = []
     anchor = _make_section_anchor(region_name, brand_name)
     lines.append(f'<a id="{anchor}"></a>\n')
     lines.append(f'## {region_name} - {brand_name}\n')
+    lines.append(f'> 共 {total} 篇讨论\n\n')
 
     if ai_summary:
         lines.append(f'### AI 分析\n```\n{ai_summary}\n```\n')
@@ -81,21 +85,6 @@ def add_report_section(
                 lines.append(f'- [{i}] {title} {source_text}({url})\n')
             else:
                 lines.append(f'- [{i}] {title}\n')
-        lines.append('\n')
-
-    for label, posts in [('正面评价', positive_posts), ('负面评价', negative_posts), ('中性讨论', neutral_posts)]:
-        lines.append(f'### {label} ({len(posts)} 篇)\n')
-        if posts:
-            for p in posts[:5]:
-                title = p.get('title', '')[:100]
-                url = p.get('url', '')
-                source = p.get('source', '')
-                if url:
-                    lines.append(f'- {title} - [{source}]({url})\n')
-                else:
-                    lines.append(f'- {title}\n')
-        else:
-            lines.append('- 暂无\n')
         lines.append('\n')
 
     lines.append('---\n\n')
