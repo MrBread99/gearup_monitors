@@ -7,7 +7,7 @@ from datetime import datetime, timezone, timedelta
 from openai import OpenAI
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBHOOK_URL
 from utils.reddit_client import reddit_get
 
 # ==========================================
@@ -295,10 +295,10 @@ def check_reddit_russia_events():
         except Exception:
             ai_analysis = "AI 分析不可用"
     else:
-        ai_analysis = ""
+        ai_analysis = "AI 未配置，无法评估风险等级"
 
-    # 只在 AI 判断为中或高风险时报警
-    if ai_analysis and '无' not in ai_analysis and '低' not in ai_analysis:
+    # AI 判断为中或高风险时报警；AI 不可用时仍然报警（带原始帖子信息）
+    if unique and (not ai_analysis or '无' not in ai_analysis) and '低' not in ai_analysis:
         top_post = unique[0]
         issue_text = f"📡 [俄罗斯网络管控动态] 检测到 {len(unique)} 条相关新闻"
         issue_text += f"\n    最热新闻: {top_post['title'][:60]} (↑{top_post['score']})"
@@ -359,3 +359,5 @@ if __name__ == "__main__":
             flush_monitor_crash_alerts(POPO_WEBHOOK_URL)
         except Exception:
             pass
+    finally:
+        flush_scrape_block_alerts(POPO_WEBHOOK_URL)

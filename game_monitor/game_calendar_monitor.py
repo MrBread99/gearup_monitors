@@ -127,8 +127,8 @@ SNAPSHOT_FILE = os.path.join(
 CALENDAR_SEEN_KEY_LIMIT = 1000
 CALENDAR_HEARTBEAT_STATE_KEY = 'game_calendar_heartbeat_date'
 PER_SOURCE_ALERT_LIMIT = 2
-STEAM_NEWS_403_FAIL_THRESHOLD = 2
-STEAM_NEWS_403_BACKOFF_DAYS = 7
+STEAM_NEWS_403_FAIL_THRESHOLD = 5   # 连续 5 次 403 才静默（原 2 次太激进）
+STEAM_NEWS_403_BACKOFF_DAYS = 3     # 静默 3 天（原 7 天太久）
 
 
 def estimate_game_hype(app_data, rank=None, category_label=''):
@@ -955,7 +955,7 @@ def check_non_steam_updates():
             result = check_official_page_updates(game_name, official_url)
             if result:
                 issues.append(result)
-            continue  # 无论是否命中，Riot 系不走 Reddit
+                continue  # 官方源命中，跳过 Reddit
 
         # --- 优先级 2：Blizzard 官网（Month DD, YYYY 日期）---
         blizzard_url = config.get('blizzard_url')
@@ -963,7 +963,7 @@ def check_non_steam_updates():
             result = check_blizzard_updates(game_name, blizzard_url)
             if result:
                 issues.append(result)
-            continue  # 无论是否命中，Blizzard 系不走 Reddit
+                continue  # 官方源命中，跳过 Reddit
 
         # --- 优先级 3：HoyoLab API（原神/崩铁/绝区零）---
         hoyolab_gid = config.get('hoyolab_gid')
@@ -971,7 +971,7 @@ def check_non_steam_updates():
             result = check_hoyolab_updates(game_name, hoyolab_gid)
             if result:
                 issues.append(result)
-            continue  # 无论是否命中，米哈游系不走 Reddit
+                continue  # 官方源命中，跳过 Reddit
 
         # --- 优先级 4：Reddit 兜底（Fortnite/CoD/鸣潮/Roblox/Aion 2）---
         subreddit = config.get('subreddit', '')
