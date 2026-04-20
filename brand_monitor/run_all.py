@@ -55,14 +55,17 @@ def main():
         report_monitor_crash("品牌舆情: YouTube", e)
 
     # --- 3. Trustpilot 评分 ---
-    try:
-        from brand_monitor.trustpilot_monitor import check_trustpilot
-        results = check_trustpilot()
-        print(f"[Trustpilot] {len(results)} 条舆情")
-        all_issues.extend(results)
-    except Exception as e:
-        print(f"[Trustpilot] 执行失败: {e}")
-        report_monitor_crash("品牌舆情: Trustpilot", e)
+    # ⚠️ 暂时禁用：Trustpilot 全站 Cloudflare 封锁 GitHub Actions IP，
+    #    Playwright + stealth 也无法通过。等有 Trustpilot Business API key 再恢复。
+    # try:
+    #     from brand_monitor.trustpilot_monitor import check_trustpilot
+    #     results = check_trustpilot()
+    #     print(f"[Trustpilot] {len(results)} 条舆情")
+    #     all_issues.extend(results)
+    # except Exception as e:
+    #     print(f"[Trustpilot] 执行失败: {e}")
+    #     report_monitor_crash("品牌舆情: Trustpilot", e)
+    print("[Trustpilot] 已暂时禁用（Cloudflare 封锁 GitHub Actions IP）")
 
     # --- 4. 台湾舆情 ---
     try:
