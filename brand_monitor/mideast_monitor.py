@@ -59,37 +59,35 @@ AR_POSITIVE = [
 
 
 def search_reddit_mideast_subs(keyword, hours_window=24):
-    """搜索中东相关 subreddit 中的加速器讨论"""
+    """搜索中东相关 subreddit 中的加速器讨论（multireddit 合并，一次调用覆盖所有子版块）"""
     posts = []
     encoded = requests.utils.quote(keyword)
+    multi = '+'.join(MIDEAST_SUBREDDITS)
 
-    for sub in MIDEAST_SUBREDDITS:
-        url = (
-            f"https://www.reddit.com/r/{sub}/search.json"
-            f"?q={encoded}&restrict_sr=on&sort=new&t=month&limit=25"
-        )
-        try:
-            response = reddit_get(url)
-            if response is None:
-                continue
-            if response.status_code == 200:
-                data = response.json()
-                children = data.get('data', {}).get('children', [])
-                for child in children:
-                    post = child.get('data', {})
-                    posts.append({
-                        'title': post.get('title', ''),
-                        'text': post.get('selftext', ''),
-                        'subreddit': post.get('subreddit', ''),
-                        'score': post.get('ups', 0),
-                        'comments': post.get('num_comments', 0),
-                        'url': f"https://www.reddit.com{post.get('permalink', '')}",
-                        'source': f'r/{sub}'
-                    })
-            elif response.status_code == 429:
-                break  # 被限流则停止
-        except Exception as e:
-            print(f"[MidEast] r/{sub} 搜索 '{keyword}' 失败: {e}")
+    url = (
+        f"https://www.reddit.com/r/{multi}/search.json"
+        f"?q={encoded}&restrict_sr=on&sort=new&t=month&limit=25"
+    )
+    try:
+        response = reddit_get(url)
+        if response is None:
+            return posts
+        if response.status_code == 200:
+            data = response.json()
+            children = data.get('data', {}).get('children', [])
+            for child in children:
+                post = child.get('data', {})
+                posts.append({
+                    'title': post.get('title', ''),
+                    'text': post.get('selftext', ''),
+                    'subreddit': post.get('subreddit', ''),
+                    'score': post.get('ups', 0),
+                    'comments': post.get('num_comments', 0),
+                    'url': f"https://www.reddit.com{post.get('permalink', '')}",
+                    'source': f"r/{post.get('subreddit', '')}"
+                })
+    except Exception as e:
+        print(f"[MidEast] Reddit multireddit 搜索 '{keyword}' 失败: {e}")
 
     return posts
 

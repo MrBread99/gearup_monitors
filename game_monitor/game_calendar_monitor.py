@@ -570,7 +570,9 @@ def fetch_reddit_posts(subreddit, sort='new', limit=25):
         source_key = 'reddit_game_calendar'
 
         if token_state == 'missing_credentials':
-            source_key = 'reddit_game_calendar_missing_credentials'
+            # Reddit API 凭证未配置，已知限制，不发报警（避免噪音）
+            print(f"[Calendar] Reddit 匿名 403 (无凭证): {url[:80]}")
+            return []
         elif token_state in ('oauth_token_failed', 'oauth_token_exception'):
             source_key = 'reddit_game_calendar_token_failure'
         elif response.status_code == 403 and mode == 'oauth':

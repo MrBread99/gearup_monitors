@@ -22,7 +22,11 @@ REDDIT_CLIENT_SECRET = os.environ.get('REDDIT_CLIENT_SECRET', '')
 _access_token = None
 _token_expires = 0
 _last_request_time = 0
-_REQUEST_INTERVAL = 2.0  # 未认证模式下 2 秒间隔，确保不触发 60 请求/分钟限制
+_REQUEST_INTERVAL = 4.0  # 匿名模式 4 秒间隔，GitHub Actions 共享 IP 需要更保守
+_REQUEST_INTERVAL_OAUTH = 1.0  # OAuth 模式 1 秒间隔（600 req/min 限额）
+_consecutive_403 = 0
+_circuit_open = False  # 熔断器：连续 403 过多时停止所有 Reddit 调用
+_CIRCUIT_BREAKER_THRESHOLD = 3  # 连续 3 次 403 触发熔断
 _last_request_meta = {
     'mode': 'anonymous',
     'token_state': 'unknown',
@@ -95,12 +99,14 @@ def _get_oauth_token():
 
 
 def _throttle():
-    """全局限流：确保每次请求间隔至少 1 秒"""
+    """全局限流：根据认证模式调整间隔"""
     global _last_request_time
+    token = _access_token  # 快速检查当前是否有 token
+    interval = _REQUEST_INTERVAL_OAUTH if token else _REQUEST_INTERVAL
     now = time.time()
     elapsed = now - _last_request_time
-    if elapsed < _REQUEST_INTERVAL:
-        time.sleep(_REQUEST_INTERVAL - elapsed)
+    if elapsed < interval:
+        time.sleep(interval - elapsed)
     _last_request_time = time.time()
 
 
@@ -108,9 +114,16 @@ def reddit_get(url, timeout=10):
     """
     统一的 Reddit GET 请求方法。
     - 自动使用 OAuth2（如已配置）
-    - 自动限流（1 秒间隔）
+    - 自动限流（匿名 4s / OAuth 1s 间隔）
     - 自动重试 429（1 次）
+    - 熔断器：连续 3 次 403 后停止本轮所有 Reddit 调用
     """
+    global _consecutive_403, _circuit_open
+
+    # 熔断器检查
+    if _circuit_open:
+        return None
+
     _throttle()
 
     token = _get_oauth_token()
@@ -167,11 +180,17 @@ def reddit_get(url, timeout=10):
             )
 
         if response.status_code == 403:
+            _consecutive_403 += 1
             print(
-                f"[Reddit] 403 Forbidden | mode={mode} | "
+                f"[Reddit] 403 Forbidden ({_consecutive_403}/{_CIRCUIT_BREAKER_THRESHOLD}) | mode={mode} | "
                 f"token_state={get_last_reddit_request_meta().get('token_state')} | "
                 f"url={oauth_url[:120]}"
             )
+            if _consecutive_403 >= _CIRCUIT_BREAKER_THRESHOLD:
+                _circuit_open = True
+                print(f"[Reddit] 熔断器触发：连续 {_consecutive_403} 次 403，本轮停止所有 Reddit 调用")
+        else:
+            _consecutive_403 = 0  # 非 403 重置计数
 
         return response
 

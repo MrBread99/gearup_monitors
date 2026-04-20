@@ -66,37 +66,35 @@ HEADERS = {
 
 
 def search_reddit_sea(keyword):
-    """搜索东南亚相关 subreddit"""
+    """搜索东南亚相关 subreddit（multireddit 合并，一次调用覆盖所有子版块）"""
     posts = []
     encoded = requests.utils.quote(keyword)
+    multi = '+'.join(SEA_SUBREDDITS)
 
-    for sub in SEA_SUBREDDITS:
-        url = (
-            f"https://www.reddit.com/r/{sub}/search.json"
-            f"?q={encoded}&restrict_sr=on&sort=new&t=month&limit=25"
-        )
-        try:
-            response = reddit_get(url)
-            if response is None:
-                continue
-            if response.status_code == 200:
-                data = response.json()
-                children = data.get('data', {}).get('children', [])
-                for child in children:
-                    post = child.get('data', {})
-                    posts.append({
-                        'title': post.get('title', ''),
-                        'text': post.get('selftext', ''),
-                        'subreddit': post.get('subreddit', ''),
-                        'score': post.get('ups', 0),
-                        'comments': post.get('num_comments', 0),
-                        'url': f"https://www.reddit.com{post.get('permalink', '')}",
-                        'source': f'r/{sub}'
-                    })
-            elif response.status_code == 429:
-                break
-        except Exception as e:
-            print(f"[SEA] r/{sub} 搜索 '{keyword}' 失败: {e}")
+    url = (
+        f"https://www.reddit.com/r/{multi}/search.json"
+        f"?q={encoded}&restrict_sr=on&sort=new&t=month&limit=25"
+    )
+    try:
+        response = reddit_get(url)
+        if response is None:
+            return posts
+        if response.status_code == 200:
+            data = response.json()
+            children = data.get('data', {}).get('children', [])
+            for child in children:
+                post = child.get('data', {})
+                posts.append({
+                    'title': post.get('title', ''),
+                    'text': post.get('selftext', ''),
+                    'subreddit': post.get('subreddit', ''),
+                    'score': post.get('ups', 0),
+                    'comments': post.get('num_comments', 0),
+                    'url': f"https://www.reddit.com{post.get('permalink', '')}",
+                    'source': f"r/{post.get('subreddit', '')}"
+                })
+    except Exception as e:
+        print(f"[SEA] Reddit multireddit 搜索 '{keyword}' 失败: {e}")
 
     return posts
 
