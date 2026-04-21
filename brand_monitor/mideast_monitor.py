@@ -66,7 +66,7 @@ def search_reddit_mideast_subs(keyword, hours_window=24):
 
     url = (
         f"https://www.reddit.com/r/{multi}/search.json"
-        f"?q={encoded}&restrict_sr=on&sort=new&t=month&limit=25"
+        f"?q={encoded}&restrict_sr=on&sort=new&t=week&limit=25"
     )
     try:
         response = reddit_get(url)
@@ -98,7 +98,7 @@ def search_reddit_arabic(query, hours_window=24):
     encoded = requests.utils.quote(query)
     url = (
         f"https://www.reddit.com/search.json"
-        f"?q={encoded}&sort=new&t=month&limit=50"
+        f"?q={encoded}&sort=new&t=week&limit=50"
     )
 
     try:

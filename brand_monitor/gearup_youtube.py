@@ -82,10 +82,10 @@ HEADERS = {
 }
 
 
-def search_youtube_videos(query, max_results=25, hours_window=168):
+def search_youtube_videos(query, max_results=25, hours_window=72):
     """
     通过 YouTube Data API v3 搜索视频。
-    默认时间窗口 168 小时（7 天），因为 YouTube 视频发布频率远低于论坛帖子。
+    默认时间窗口 72 小时（3 天），覆盖每日运行间隔 + 1 天缓冲。
 
     API 配额消耗: search=100, videos=1 per call
     """
@@ -216,10 +216,10 @@ def analyze_video_sentiment(videos):
     return negative, positive, neutral
 
 
-def check_gearup_youtube(hours_window=168):
+def check_gearup_youtube(hours_window=72):
     """
     主检测函数：搜索 YouTube，汇总 GearUP Booster 相关视频舆情。
-    默认 7 天窗口。已拆分到独立的每日 workflow，无需时段限制。
+    默认 3 天窗口（每日运行 + 1 天缓冲）。
     """
     if not YOUTUBE_API_KEY:
         print("[YouTube] YOUTUBE_API_KEY 未配置，跳过 YouTube 监控。")

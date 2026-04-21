@@ -65,13 +65,13 @@ def _throttle():
 
 
 def _search_google(query, lang_code=None, site=None, max_results=10):
-    """Google 搜索"""
+    """Google 搜索（默认限制一周内结果）"""
     search_query = f"site:{site} {query}" if site else query
     encoded = urllib.parse.quote(search_query)
-    url = f"https://www.google.com/search?q={encoded}&num={max_results}"
+    url = f"https://www.google.com/search?q={encoded}&num={max_results}&tbs=qdr:w"
 
     if lang_code:
-        url += f"&lr=lang_{lang_code}&tbs=qdr:m"
+        url += f"&lr=lang_{lang_code}"
 
     headers = GOOGLE_HEADERS.copy()
     if lang_code and lang_code in LANG_ACCEPT_MAP:

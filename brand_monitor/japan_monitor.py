@@ -72,7 +72,7 @@ def search_reddit_japan(keyword):
 
     url = (
         f"https://www.reddit.com/r/{multi}/search.json"
-        f"?q={encoded}&restrict_sr=on&sort=new&t=month&limit=25"
+        f"?q={encoded}&restrict_sr=on&sort=new&t=week&limit=25"
     )
     try:
         response = reddit_get(url)
