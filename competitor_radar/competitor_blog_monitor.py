@@ -21,6 +21,7 @@ import sys
 import re
 import time
 import random
+import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
 from bs4 import BeautifulSoup
 
@@ -147,6 +148,79 @@ def _summarize_blog_post(competitor: str, title: str, content: str) -> str:
 # ExitLag 博客抓取（WordPress）
 # ==========================================
 
+# RSS XML 命名空间
+_RSS_NS = {
+    "content": "http://purl.org/rss/1.0/modules/content/",
+    "dc": "http://purl.org/dc/elements/1.1/",
+}
+
+
+def _fetch_exitlag_via_rss() -> list | None:
+    """
+    通过 WordPress RSS Feed 获取最新博客文章。
+    RSS Feed 是为自动化消费设计的标准协议，Cloudflare WAF 默认对 /feed/ 路径放行，
+    因此不受 GitHub Actions IP 封锁影响。返回最近 10 篇文章含全文。
+    """
+    feed_url = "https://www.exitlag.com/blog/feed/"
+    rss_headers = {
+        "User-Agent": HEADERS["User-Agent"],
+        "Accept": "application/rss+xml, application/xml, text/xml, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+    try:
+        time.sleep(random.uniform(1.0, 2.0))
+        resp = req_lib.get(feed_url, headers=rss_headers, timeout=20)
+        if resp.status_code != 200:
+            print(f"[ExitLag] RSS Feed HTTP {resp.status_code}")
+            if resp.status_code in (403, 429):
+                report_scrape_block("exitlag_blog_rss", url=feed_url, status_code=resp.status_code)
+            return None
+
+        root = ET.fromstring(resp.content)
+        channel = root.find("channel")
+        if channel is None:
+            print("[ExitLag] RSS Feed 格式异常: 缺少 <channel>")
+            return None
+
+        results = []
+        for item in channel.findall("item"):
+            link = item.findtext("link", "").strip()
+            slug = link.rstrip("/").split("/")[-1] if link else ""
+            if not slug:
+                continue
+
+            title = item.findtext("title", "").strip()
+
+            # content:encoded 包含全文 HTML
+            content_html = item.findtext("content:encoded", "", _RSS_NS)
+            content = BeautifulSoup(content_html, "html.parser").get_text(" ", strip=True) if content_html else ""
+
+            # description 包含摘要 HTML
+            desc_html = item.findtext("description", "")
+            excerpt = BeautifulSoup(desc_html, "html.parser").get_text(strip=True) if desc_html else ""
+
+            pub_date = item.findtext("pubDate", "").strip()
+
+            results.append({
+                "slug": slug,
+                "title": title,
+                "url": link,
+                "date": pub_date,
+                "excerpt": excerpt,
+                "content": content or excerpt,
+            })
+
+        print(f"[ExitLag] RSS Feed 获取到 {len(results)} 篇文章。")
+        return results if results else None
+
+    except ET.ParseError as e:
+        print(f"[ExitLag] RSS Feed XML 解析失败: {e}")
+        return None
+    except Exception as e:
+        print(f"[ExitLag] RSS Feed 请求异常: {e}")
+        return None
+
+
 def _fetch_exitlag_via_wp_api() -> list | None:
     """
     通过 WordPress REST API 获取最新博客文章（最可靠，含全文）。
@@ -271,18 +345,28 @@ def _fetch_exitlag_via_requests() -> list | None:
 
 def fetch_exitlag_posts() -> list:
     """
-    三层降级获取 ExitLag 博客文章。
-    WordPress REST API → Playwright + stealth → requests
+    四层降级获取 ExitLag 博客文章。
+    RSS Feed → WordPress REST API → Playwright + stealth → requests
+    RSS Feed 不经过 Cloudflare JS challenge，是最可靠的数据源。
     """
+    # Tier 0: RSS Feed（Cloudflare 通常不拦截，含全文内容）
+    posts = _fetch_exitlag_via_rss()
+    if posts is not None:
+        return posts
+
+    # Tier 1: WordPress REST API（结构化 JSON）
+    print("[ExitLag] RSS 不可用，尝试 WP REST API...")
     posts = _fetch_exitlag_via_wp_api()
     if posts is not None:
         return posts
 
+    # Tier 2: Playwright + stealth
     print("[ExitLag] WP API 不可用，尝试 Playwright...")
     posts = _fetch_exitlag_via_playwright()
     if posts is not None:
         return posts
 
+    # Tier 3: requests HTML
     print("[ExitLag] Playwright 不可用，尝试 requests...")
     posts = _fetch_exitlag_via_requests()
     if posts is not None:

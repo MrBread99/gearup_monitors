@@ -284,7 +284,13 @@ _SCRAPE_ADVICE = {
         'display_name': 'ExitLag 博客 WordPress REST API',
         'reason': 'ExitLag 博客的 WordPress REST API 返回非 200，可能为 Cloudflare 拦截或 API 被禁用',
         'short_term': '已自动降级到 Playwright + stealth 或 requests 抓取 HTML 页面',
-        'long_term': '若 API 持续不可用，确认 ExitLag 是否关闭了 WP REST API；Playwright 和 requests 作为长期备选',
+        'long_term': '若 API 持续不可用，确认 ExitLag 是否关闭了 WP REST API；RSS Feed / Playwright / requests 作为长期备选',
+    },
+    'exitlag_blog_rss': {
+        'display_name': 'ExitLag 博客 RSS Feed',
+        'reason': 'ExitLag 博客 RSS Feed (/blog/feed/) 返回非 200，Cloudflare 可能也拦截了 Feed 端点',
+        'short_term': '已自动降级到 WP REST API / Playwright / requests；下次运行可自动恢复',
+        'long_term': '若 RSS 持续不可用，依赖 WP REST API 和 Playwright 作为备选；RSS 通常不被 Cloudflare 拦截，持续 403 需排查',
     },
     'exitlag_blog': {
         'display_name': 'ExitLag 博客页面（竞品博客监控）',
