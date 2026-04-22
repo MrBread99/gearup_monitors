@@ -504,11 +504,30 @@ COMPETITORS = {
     "LagoFast": fetch_lagofast_posts,
 }
 
+# 每次运行后记录各竞品当前最新博客（无论是否有新文章），供心跳消息引用
+_latest_blog_status: dict = {}
+
+
+def get_blog_status_summary() -> str:
+    """
+    返回各竞品当前最新博客的状态摘要（标题 + 日期 + 链接）。
+    用于心跳消息，让接收者确认监控正在运转且数据源可达。
+    若未成功抓取到任何博客，返回空字符串。
+    """
+    if not _latest_blog_status:
+        return ""
+    lines = []
+    for name, info in _latest_blog_status.items():
+        lines.append(f"  [{name}] {info['title']}")
+        lines.append(f"    时间: {info['date']}  |  {info['url']}")
+    return "\n".join(lines)
+
 
 def check_competitor_blogs() -> list:
     """
     检查所有竞品博客，返回新文章的 issue 列表。
     首次运行仅保存基线快照，不生成报警。
+    无论是否有新文章，都会更新 _latest_blog_status 供心跳引用。
 
     返回值兼容 send_popo_alert() 的 issues_list 格式。
     """
@@ -524,6 +543,13 @@ def check_competitor_blogs() -> list:
         if not posts:
             print(f"[{name}] 未获取到任何文章。")
             continue
+
+        # 无论是否有新文章，记录当前最新博客状态
+        _latest_blog_status[name] = {
+            "title": posts[0]["title"],
+            "date": posts[0].get("date", "未知"),
+            "url": posts[0]["url"],
+        }
 
         # 首次运行：保存基线，不报警
         if key not in snapshot:

@@ -141,6 +141,15 @@ def collect_blog_issues():
     return results
 
 
+def _get_blog_status():
+    """获取博客监控状态摘要（用于心跳消息）。"""
+    try:
+        from competitor_radar.competitor_blog_monitor import get_blog_status_summary
+        return get_blog_status_summary()
+    except Exception:
+        return ""
+
+
 # ==================== 主入口 ====================
 
 def main():
@@ -183,10 +192,14 @@ def main():
     else:
         print("过去 24 小时内无竞品情报变动，静默退出。")
         if not has_scrape_block_alerts():
+            blog_status = _get_blog_status()
+            summary = "过去 24 小时无新增竞品情报，且未检测到数据源异常。"
+            if blog_status:
+                summary += f"\n\n当前各竞品最新博客:\n{blog_status}"
             send_system_heartbeat(
                 POPO_WEBHOOK_URL,
                 "竞品情报聚合",
-                "过去 24 小时无新增竞品情报，且未检测到数据源异常。"
+                summary,
             )
 
     # 数据源异常汇总（如有）
