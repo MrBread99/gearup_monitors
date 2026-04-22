@@ -1,52 +1,43 @@
 # 品牌舆情监控详细报告
 
-> 生成时间: 2026-04-21 09:19 (UTC+8)
+> 生成时间: 2026-04-22 09:17 (UTC+8)
 > 本报告每 24 小时更新一次
 
 ---
 
 <a id="global-youtube-gearup-booster"></a>
 ## Global (YouTube) - GearUP Booster
-> 共 19 篇讨论
+> 共 6 篇讨论
 
 ### AI 分析
 ```
-正面评价: 宣传GearUP Booster能有效降低Ping、修复假伤害、提升FPS，强调免费试用和移动端适配，体现用户对其功能认可 [2][3][5][14][15]  
-负面评价: 暂无  
-中性讨论: 多数视频标题未明确提及GearUP Booster实际使用体验，仅作为工具出现在泛游戏设置/攻略类内容中，或完全无关（如FC Online、Apex Shorts、Blox Fruits等） [1][4][6][7][8][9][10][11][12]  
-涉及竞品: UU Game Booster  
-商业洞察: 应加强在Roblox、Valorant、PUBG等高关联视频中的精准露出，并针对“免费试用”“手机端教程”等高需求点制作标准化引导素材。
+正面评价: 教程类视频指导用户获取GearUP Booster免费试用，隐含对产品易用性和官方支持的认可 [1]。  
+负面评价: 标题含“Crack”并承诺“0 Ping”，涉嫌传播非官方破解方法，可能损害品牌合规形象与用户信任 [2]。  
+中性讨论: 其余4条视频内容均未提及GearUP Booster，主题分别为Delta Force新地图更新、Apex Legends搞笑短片、越南语频道复出声明、Roblox游戏更新，与品牌无关 [3][4][5][6]。  
+涉及竞品: 无  
+商业洞察: 应加强YouTube关键词监控，主动响应含“crack”“free activation”等高风险标题的视频，避免灰色教程稀释品牌价值。
 ```
 ### AI 引用来源（编号对应）
-- [1] chimbu ????? #valorant #kiamichau  #vtubervietnam (https://www.youtube.com/watch?v=8swcA2RkI2A)
-- [2] Fix your Ping ms and fake damage with Gear Up Booster#fyp#pubg #pubgmobile#pubglover #pub#viral#bgmi (https://www.youtube.com/watch?v=4WcXyN8_d_8)
-- [3] How To Get A Free Trial On GearUP Booster (UPDATED METHOD) (https://www.youtube.com/watch?v=DHOZ04DodyM)
-- [4] The BEST Roblox Settings to BOOST FPS &amp; FIX LAG in Rivals! (2026 Guide) (https://www.youtube.com/watch?v=14K1pxNtl2c)
-- [5] How To Use GearUp Booster In Roblox Mobile (Full Guide 2026) (https://www.youtube.com/watch?v=W7q3-3-szyk)
-- [6] GIẬN NHAU RỒI LẠI THÀNH HÒA #FCOnline #NgoiSaoSanCoFCO #Thànhman (https://www.youtube.com/watch?v=lrZn_l5CZLE)
-- [7] CS2 FPS Boost Guide 2026 – Best Settings for Max FPS (https://www.youtube.com/watch?v=nmrUKzCH6j8)
-- [8] META LỐP BÓNG ĐÃ TRỞ LẠI? #FCOnline #NgoiSaoSanCoFCO #Thànhman #CungKhoeHighlightFCO (https://www.youtube.com/watch?v=DjHIMrWhaeM)
-- [9] 5x30 CÙNG THÀNH MAN! #FCOnline #NgoiSaoSanCoFCO #Thànhman (https://www.youtube.com/watch?v=6-Noz3T9LT8)
-- [10] 【Apex Legends】莫名其妙的打起來，也莫名其妙的贏了 #shorts (https://www.youtube.com/watch?v=edziUfhi5uk)
-- [11] Sailor piece sea 2 update. #sailorpiece  #roblox (https://www.youtube.com/watch?v=6hEWdv8_gQM)
-- [12] Guess the blox fruits fighting style.  #bloxfruits #roblox (https://www.youtube.com/watch?v=I9V1MgLyLeI)
-- [13] Gearup Booster Vs UU Game Booster (https://www.youtube.com/watch?v=WOM8Cyfnbm8)
-- [14] کود Gear Up Booster جديد وحصري2026 🔥🚀 #pubg #pubgmobile   #_shorts (https://www.youtube.com/watch?v=tqG7S_6jHE8)
-- [15] INSANE Valorant FPS BOOST Guide 😱 | +300 FPS Increase on ANY PC (No GPU Upgrade) (https://www.youtube.com/watch?v=T6Yd-EXABy0)
+- [1] How To Get A Free Trial On GearUP Booster (UPDATED METHOD) (https://www.youtube.com/watch?v=DHOZ04DodyM)
+- [2] Gear Up Crack - The Ultimate Settings To Get 0 Ping in 2026! (https://www.youtube.com/watch?v=DbHEiu4IBMs)
+- [3] 🔥 استعراض خريطة Akh Canal الجديدة + تحديثات Zero Dam و السيزون باس في Delta Force! (https://www.youtube.com/watch?v=fi4ti3oDFGI)
+- [4] 【Apex Legends】莫名其妙的打起來，也莫名其妙的贏了 #shorts (https://www.youtube.com/watch?v=edziUfhi5uk)
+- [5] Tôi đã quay trở lại sau 1 thời gian bị khóa mõm (https://www.youtube.com/watch?v=gqY0tYJcHfY)
+- [6] Sailor piece sea 2 update. #sailorpiece  #roblox (https://www.youtube.com/watch?v=6hEWdv8_gQM)
 
 ---
 
 <a id="south-korea-gearup-booster"></a>
 ## South Korea - GearUP Booster
-> 共 85 篇讨论
+> 共 86 篇讨论
 
 ### AI 分析
 ```
-正面评价: 用户明确推荐GearUP Booster用于Twitch Drops领取，认为其有效可靠 [9]。  
-负面评价: 用户投诉GearUP Booster退款困难，表达强烈不满；另有用户质疑其收费合理性，怀疑是否为官方正版服务 [1][2][10]。  
-中性讨论: 多篇帖子提及GearUP Booster作为新出现的工具（如游戏更新提示、Drops替代方案、技术集成咨询），但未表达明确态度，属信息性提问或中立提及 [11][13][14][15]；另有数篇为纯VPN/加速器推荐帖，仅标题含“GearUP”但内容未展开，或完全未提及其功能 [3][4][5][6][7][12]。  
+正面评价: 用户明确推荐使用 GearUP Booster 获取 Twitch Drops，认为其有效可靠 [9]。  
+负面评价: 用户投诉 GearUP Booster 退款困难，质疑服务合理性 [1][2]。  
+中性讨论: 多篇帖子提及 GearUP Booster 偶然出现于游戏加速/VPN 推荐场景（如 Overwatch、BF6、GMS、WoT 等），但未评价优劣，仅作为可选工具列出或提问确认 [3][4][5][6][7][10][11][12][13][14][15]。  
 涉及竞品: 无  
-商业洞察: 需重点优化韩国区退款流程与官方渠道透明度，并在Drops等高频使用场景强化用户教育与信任建设。
+商业洞察: 应强化韩国本地退款流程透明度，并在 Twitch Drops 等高关联场景主动提供教程与客服支持，转化中性提及为正面口碑。
 ```
 ### AI 引用来源（编号对应）
 - [1] 기어업부스터환불받았다 갰ㅐ기들 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=eft&no=2748014)
