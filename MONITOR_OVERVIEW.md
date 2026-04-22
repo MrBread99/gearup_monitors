@@ -1,6 +1,6 @@
-# GearUP Monitors - 监控脚本总览 (v4.3.1)
+# GearUP Monitors - 监控脚本总览 (v4.4.0)
 
-> **当前版本**: v4.3.1 | **最后更新**: 2026-04-11
+> **当前版本**: v4.4.0 | **最后更新**: 2026-04-22
 >
 > 本文档是供 AI Agent 快速上手的**唯一参考**，描述当前代码的真实状态。
 >
@@ -30,8 +30,8 @@ gearup_monitors/
 │   ├── game_calendar_monitor.py     # 新游上线 + 热游更新（官方 API + Reddit listing 兜底 + AI 摘要）
 │   │                                #   跨运行去重（snapshot key，最多 1000 条）
 │   │                                #   每个数据源限 2 条最优结果（PER_SOURCE_ALERT_LIMIT）
-│   │                                #   Steam News 连续 2 次 403 后静默 7 天
-│   └── russia_event_monitor.py      # 俄罗斯大型活动日历 + 网络管控预警
+│   │                                #   Steam News 连续 5 次 403 后静默 3 天
+│   └── russia_event_monitor.py      # 俄罗斯大型活动日历 + 网络管控预警（AI 不可用时仍报警）
 │
 ├── competitor_radar/
 │   ├── run_all.py                   # ★ 聚合入口（Discord 24h + 定价），合并为一条消息；无结果时发心跳
@@ -43,7 +43,7 @@ gearup_monitors/
 │
 ├── brand_monitor/
 │   ├── run_all.py                   # ★ 聚合入口（9 地区舆情），合并为一条消息；无结果时发心跳
-│   ├── trustpilot_monitor.py        # Trustpilot 评分（Playwright+requests 双层降级；仅报评分变动和差评占比上升）
+│   ├── trustpilot_monitor.py        # ⚠️ 暂时禁用（Cloudflare 封锁 GitHub Actions IP，等 Business API key）
 │   ├── gearup_reddit.py             # Reddit 全站舆情
 │   ├── gearup_youtube.py            # YouTube 多语言舆情（每天 1 次）
 │   ├── taiwan_monitor.py            # 巴哈姆特 / PTT
@@ -59,7 +59,9 @@ gearup_monitors/
 │   │                                #   专属 _SCRAPE_ADVICE 优先于泛化状态码逻辑（但 404/5xx 优先于自定义建议）
 │   │                                #   cloudflare_pricing 403 需 ≥2 次才发 POPO（min_notify_count: 2）
 │   │                                #   send_system_heartbeat(): 心跳通知
-│   ├── reddit_client.py             # Reddit 共享客户端（OAuth2 可选 + 2s 限流 + 429 重试）
+│   │                                #   report_monitor_crash() / flush_monitor_crash_alerts(): 内部崩溃感知
+│   ├── reddit_client.py             # Reddit 共享客户端（OAuth2 可选 + 匿名 4s 限流 + 429 重试）
+│   │                                #   熔断器: 连续 3 次 403 后停止本轮所有 Reddit 调用
 │   │                                #   _last_request_meta: 请求元数据追踪（mode/token_state/status_code）
 │   ├── google_client.py             # Google 搜索共享客户端（5-8s 随机延迟 + 多语言含 ru）
 │   ├── playwright_client.py         # ★ 共享 Playwright 无头浏览器（懒初始化/context 轮换/stealth）
@@ -230,8 +232,8 @@ gearup_monitors/
 |--------|------|------|
 | `POPO_WEBHOOK_URL` | ✅ | 所有报警发送目标（网易 POPO 机器人） |
 | `QWEN_API_KEY` | ✅ | Qwen AI 摘要（玩家反馈/更新内容/加速需求/新游介绍/竞品公告翻译/俄罗斯风险评估） |
-| `REDDIT_CLIENT_ID` | ✅ | Reddit OAuth2（未配置时自动降级为匿名，60 req/min） |
-| `REDDIT_CLIENT_SECRET` | ✅ | Reddit OAuth2 |
+| `REDDIT_CLIENT_ID` | 推荐 | Reddit OAuth2（未配置时降级为匿名，4s 间隔 + 熔断器保护） |
+| `REDDIT_CLIENT_SECRET` | 推荐 | Reddit OAuth2（当前无法申请，匿名模式运行中） |
 | `YOUTUBE_API_KEY` | ✅ | YouTube Data API v3（YouTube 舆情，未配置时跳过） |
 | `DISCORD_BOT_TOKEN` | ✅ | 竞品 Discord 公告监听 |
 | `TARGET_CHANNEL_ID` | ✅ | 竞品 Discord 目标频道 ID |
@@ -249,11 +251,15 @@ gearup_monitors/
 5. **快照持久化** — 本地运行快照文件不提交（已加入 `.gitignore`）；GitHub Actions 通过 `actions/cache` 持久化，`restore-keys` 保证跨 run 读到历史数据
 6. **报警时间** — 所有报警时间统一 UTC+8，在 `notifier.py` 内处理，下游模块不需要转换时区
 7. **级联失败防护** — `monitor.py` 中每款游戏的检测已被 `try/except` 包裹；新增检测模块时应遵循相同模式
-8. **Trustpilot 报警范围** — 仅报评分变动和 1 星差评占比上升，不报评论数增长（已确认不需要）
+8. **Trustpilot 暂时禁用** — Cloudflare 封锁 GitHub Actions IP，Playwright + stealth 也无法通过。`run_all.py` 中调用已注释，等 Trustpilot Business API key 再恢复
 9. **日历报警去重** — `game_calendar_monitor.py` 通过 snapshot key 跨运行去重，同一更新只报一次；快照丢失（cache miss）时会重新报
 10. **detector404 限流** — 批量请求间隔 4-7s，连续 2 次 429 后冷却并提前终止批次；部分游戏可能在某次运行中未被检查
-11. **Steam News 403 静默** — 同一 AppID 连续 2 次 Steam News 403 后静默 7 天，期间该游戏的 Steam News 不检查
-12. **Reddit listing API** — 日历监控的 Reddit 调用已从 search API 改为 listing API（`/new.json`、`/hot.json`）+ 客户端关键词过滤，更抗限流但依赖 top N 帖子包含相关内容
+11. **Steam News 403 静默** — 同一 AppID 连续 **5** 次 Steam News 403 后静默 **3** 天
+12. **Reddit listing API** — 日历监控的 Reddit 调用已从 search API 改为 listing API（`/new.json`、`/hot.json`）+ 客户端关键词过滤
+13. **Reddit 匿名模式** — 无法申请 OAuth 凭证（Reddit 政策限制），当前以匿名模式运行（4s 间隔 + 熔断器）；`missing_credentials` 不再发报警
+14. **品牌舆情搜索窗口** — Reddit `t=week`、YouTube 3 天、Google `tbs=qdr:w`，所有搜索限一周内，避免每日重复报警
+15. **内部崩溃感知** — 所有 try/except 捕获的异常通过 `report_monitor_crash()` 登记，脚本末尾由 `flush_monitor_crash_alerts()` 统一发 POPO。新增模块时应遵循此模式
+16. **品牌报告格式** — `brand_report.py` 只展示 AI 分析 + 引用来源，不展示关键词预分类结果（避免和 AI 分类矛盾）
 
 ---
 
@@ -266,11 +272,11 @@ gearup_monitors/
 | 游戏故障渠道 | **8 个** |
 | 平台/通讯工具 | **14 个** |
 | detector404 监控条目 | **55 条**（46 游戏 + 9 平台） |
-| 品牌舆情渠道 | **9 个** |
+| 品牌舆情渠道 | **8 个**（Trustpilot 暂时禁用） |
 | 竞品定价地区 | **19 个** |
 | 覆盖地区 | **8 个**（欧美/台湾/日本/韩国/俄罗斯-CIS/中东/东南亚/拉美部分） |
 | 覆盖语言 | **9 种** |
 | AI 接入点 | **6 个**（玩家反馈总结/更新摘要/加速需求/新游介绍/俄罗斯风险评估/竞品公告翻译） |
 | 快照文件 | **6 个**（跨运行持久化） |
 | 运行频率 | 故障监控每 **2 小时**；品牌舆情/竞品情报每天 **1 次** |
-| 报警标题 | **6 种**（商机雷达/新游上线/热游更新/平台状态/品牌舆情/竞品情报）+ 心跳 |
+| 报警标题 | **6 种**（商机雷达/新游上线/热游更新/平台状态/品牌舆情/竞品情报）+ 心跳 + 内部崩溃 |

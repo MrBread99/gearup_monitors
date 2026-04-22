@@ -4,7 +4,39 @@
 
 ---
 
-## [v4.3.1] - Trustpilot + DC Inside 接入 Playwright 反爬 (Current)
+## [v4.4.0] - 静默故障全面修复 + Reddit 匿名加固 + 品牌舆情去重 (Current)
+
+### 🔴 Critical 修复
+
+- **cis_osint.py**: `check_detector404()` 的 `return_status=True` 模式下，投诉量正常（中等及以下）和无 slug 两处早期 return 忘了返回元组 → `check_detector404_batch()` 解包 `None` 崩溃 → **detector404 监控从另一位 agent 的 v4.3.0 起完全瘫痪**
+- **game_calendar_monitor.py**: 官方源（Riot/Blizzard/HoyoLab）检测失败后有 `continue` 跳过 Reddit fallback → 7 款游戏（LoL/Valorant/OW2/WoW/原神/崩铁/绝区零）官方 API 异常时**无备用数据源**。改为只在官方源命中时才 `continue`
+- **russia_event_monitor.py**: AI 不可用时 `ai_analysis = ""`（falsy），导致 Reddit 搜到的俄罗斯网络管控事件**被静默丢弃**。改为 AI 不可用时仍发报警，标注"AI 未配置"
+
+### 🚀 新增功能
+
+- **内部崩溃感知系统** (`notifier.py`): 新增 `report_monitor_crash()` + `flush_monitor_crash_alerts()`。所有 try/except 捕获到的异常自动发 POPO【监控系统警告 — 内部崩溃】，包含步骤名 + 异常信息 + 堆栈。覆盖 5 个入口脚本（monitor.py / game_calendar / russia_event / brand run_all / competitor run_all）
+- **Playwright `wait_selector` 参数** (`playwright_client.py`): `pw_fetch()` 新增 `wait_selector` 可选参数，导航完成后额外等待指定 CSS 元素出现（Cloudflare challenge 通过后才有），用于 Trustpilot / DC Inside
+
+### 🟠 重要改动
+
+- **Reddit 匿名模式加固** (`reddit_client.py`):
+  - 请求间隔 2s → **4s**（匿名），OAuth 模式 **1s**
+  - **熔断器**: 连续 3 次 403 → 停止本轮所有 Reddit 调用
+- **品牌舆情 Reddit multireddit 合并搜索**: 逐 subreddit 循环改为 `r/sub1+sub2+sub3/search.json` 一次调用。mideast 60→6 / SEA 30→3 / japan 24→6，**品牌舆情 Reddit 调用量 -83%**
+- **品牌舆情搜索窗口收窄**（消除每日重复报警）:
+  - Reddit: `t=month` → `t=week`
+  - YouTube: 7 天 → 3 天
+  - Google: 默认 `tbs=qdr:w`（一周），无论是否传 `lang_code`
+- **数据源异常报警精简 ~70%** (`notifier.py`): 标题/数据源/状态码/URL 合并为一行，删除 `short_term` 建议，URL 只显示域名
+- **Steam News 403 阈值放宽**: 连续 2→**5** 次 403 才静默，静默期 7→**3** 天
+- **品牌报告移除关键词预分类段落** (`brand_report.py`): 只保留 AI 分析 + 引用来源，消除关键词分类与 AI 分类的矛盾
+- **Trustpilot 监控暂时禁用**: Cloudflare 封锁 GitHub Actions IP 段，Playwright + stealth 也无法通过，等 Trustpilot Business API key 再恢复
+- **Reddit missing_credentials 报警禁止**: 已知无法获取凭证，不再发报警噪音
+- **russia_event_monitor.py**: 加入 `flush_scrape_block_alerts()` 到 finally 块
+
+---
+
+## [v4.3.1] - Trustpilot + DC Inside 接入 Playwright 反爬
 
 ### 🚀 新增
 
