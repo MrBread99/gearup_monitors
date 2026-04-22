@@ -1,6 +1,6 @@
-# GearUP Monitors - 监控脚本总览 (v4.4.0)
+# GearUP Monitors - 监控脚本总览 (v4.5.0)
 
-> **当前版本**: v4.4.0 | **最后更新**: 2026-04-22
+> **当前版本**: v4.5.0 | **最后更新**: 2026-04-22
 >
 > 本文档是供 AI Agent 快速上手的**唯一参考**，描述当前代码的真实状态。
 >
@@ -34,12 +34,16 @@ gearup_monitors/
 │   └── russia_event_monitor.py      # 俄罗斯大型活动日历 + 网络管控预警（AI 不可用时仍报警）
 │
 ├── competitor_radar/
-│   ├── run_all.py                   # ★ 聚合入口（Discord 24h + 定价），合并为一条消息；无结果时发心跳
+│   ├── run_all.py                   # ★ 聚合入口（Discord 24h + 定价 + 博客），合并为一条消息；无结果时发心跳
 │   ├── discord_listener.py          # 竞品 Discord 公告 + Qwen AI 翻译提炼
-│   └── exitlag_pricing.py           # 多竞品定价追踪（Playwright + stealth 三层降级）
-│                                    #   降级顺序：Playwright headless Chromium > cloudscraper 单例 > requests
-│                                    #   403 时销毁整个 browser context（含 cookie/storage）并重建
-│                                    #   Chromium 启动参数含 --disable-blink-features=AutomationControlled
+│   ├── exitlag_pricing.py           # 多竞品定价追踪（Playwright + stealth 三层降级）
+│   │                                #   降级顺序：Playwright headless Chromium > cloudscraper 单例 > requests
+│   │                                #   403 时销毁整个 browser context（含 cookie/storage）并重建
+│   │                                #   Chromium 启动参数含 --disable-blink-features=AutomationControlled
+│   └── competitor_blog_monitor.py   # 竞品博客动态监控 + Qwen AI 中文摘要
+│                                    #   ExitLag: WP REST API → Playwright + stealth → requests
+│                                    #   LagoFast: requests + __NEXT_DATA__ JSON → Playwright
+│                                    #   快照去重（slug），首次运行保存基线不报警
 │
 ├── brand_monitor/
 │   ├── run_all.py                   # ★ 聚合入口（9 地区舆情），合并为一条消息；无结果时发心跳
@@ -174,13 +178,20 @@ gearup_monitors/
 
 | 模块 | 功能 | 覆盖 |
 |------|------|------|
-| `run_all.py` | 聚合 Discord + 定价，**合并一条消息**发出；无结果时发心跳 | 每天北京时间 09:00 |
+| `run_all.py` | 聚合 Discord + 定价 + 博客，**合并一条消息**发出；无结果时发心跳 | 每天北京时间 09:00 |
 | `discord_listener.py` | Discord 公告监听 + Qwen AI 翻译提炼 | 竞品 Discord 频道 |
 | `exitlag_pricing.py` | 多竞品定价变动追踪，Playwright + stealth 绕 Cloudflare | ExitLag 9 地区 + LagoFast 10 地区 = 19 个 |
+| `competitor_blog_monitor.py` | 竞品博客新文章监控 + Qwen AI 中文摘要 | ExitLag 博客 + LagoFast 博客 |
 
 **定价抓取降级链**: Playwright headless Chromium (playwright-stealth) → cloudscraper 单例会话复用 → requests。Playwright 403 时销毁整个 browser context（含 cookie/storage）并重建重试；所有层级均尝试后统一判断是否报警（单次 403 仅日志，≥2 次才发 POPO）。
 
 多竞品架构：`COMPETITORS` 字典配置，新增竞品只需加一条配置。
+
+**博客监控抓取策略**:
+- ExitLag（WordPress）: WP REST API 优先（结构化 JSON + 全文内容）→ Playwright + stealth → requests HTML 解析
+- LagoFast（Next.js）: requests + `__NEXT_DATA__` JSON 解析 → DOM 解析 fallback → Playwright
+- 快照去重：以文章 slug 为 key，跨运行持久化；首次运行保存基线，不生成报警
+- 新文章摘要过短时自动抓取全文页面，提供充分上下文给 AI
 
 ---
 
@@ -211,7 +222,7 @@ gearup_monitors/
 | `utils/google_client.py` | 5-8s 随机延迟 + 多语言 Accept-Language（含 ru） | CAPTCHA 三重检测 |
 | `utils/alert_dedup.py` | 🔴 报警合并（保留游戏名+地区）+ 跨运行去重 | 仅作用于 🔴 类型 |
 | `game_monitor/game_registry.py` | 56 款游戏统一配置 | 唯一修改游戏配置的文件 |
-| GitHub Actions cache | 6 个快照文件持久化（日历/平台事件/无效报警去重/俄罗斯活动/定价/评分） | 去重跨运行生效的前提 |
+| GitHub Actions cache | **7** 个快照文件持久化（日历/平台事件/无效报警去重/俄罗斯活动/定价/评分/博客） | 去重跨运行生效的前提 |
 | `requirements-ci.txt` | `game_monitor/` 和 `competitor_radar/` 各有独立的 pinned 依赖文件 | workflow 使用 `pip install -r` |
 
 ---
@@ -223,6 +234,7 @@ gearup_monitors/
 | `monitor.yml` | 每 2 小时 | monitor.py + russia_event_monitor.py + game_calendar_monitor.py | `continue-on-error: true` + step ID + 运行摘要 |
 | `brand_monitor.yml` | 每天北京 08:00 | `brand_monitor/run_all.py`，自动 push 舆情报告到 `reports/` | `permissions: contents: write` + 运行摘要 |
 | `competitor_radar.yml` | 每天北京 09:00 | `competitor_radar/run_all.py` | `playwright install chromium` + `requirements-ci.txt` + 运行摘要 |
+|                        |                 | Discord + 定价 + 博客监控 | 博客快照文件加入 cache |
 
 ---
 
@@ -267,7 +279,7 @@ gearup_monitors/
 
 | 维度 | 数量 |
 |------|------|
-| Python 脚本 | **29 个**（含 `playwright_client.py` + 2 个 `requirements-ci.txt`） |
+| Python 脚本 | **30 个**（含 `playwright_client.py` + 2 个 `requirements-ci.txt`） |
 | 监控游戏 | **56 款** |
 | 游戏故障渠道 | **8 个** |
 | 平台/通讯工具 | **14 个** |
@@ -276,7 +288,14 @@ gearup_monitors/
 | 竞品定价地区 | **19 个** |
 | 覆盖地区 | **8 个**（欧美/台湾/日本/韩国/俄罗斯-CIS/中东/东南亚/拉美部分） |
 | 覆盖语言 | **9 种** |
-| AI 接入点 | **6 个**（玩家反馈总结/更新摘要/加速需求/新游介绍/俄罗斯风险评估/竞品公告翻译） |
-| 快照文件 | **6 个**（跨运行持久化） |
+| AI 接入点 | **7 个**（玩家反馈总结/更新摘要/加速需求/新游介绍/俄罗斯风险评估/竞品公告翻译/竞品博客摘要） |
+| 快照文件 | **7 个**（跨运行持久化） |
 | 运行频率 | 故障监控每 **2 小时**；品牌舆情/竞品情报每天 **1 次** |
 | 报警标题 | **6 种**（商机雷达/新游上线/热游更新/平台状态/品牌舆情/竞品情报）+ 心跳 + 内部崩溃 |
+
+---
+
+## 十二、已知架构约束补充
+
+17. **竞品博客监控反爬策略** — ExitLag 博客（WordPress + Cloudflare）优先使用 WP REST API（不触发 Cloudflare），失败时降级 Playwright + stealth，最后 requests 兜底。LagoFast 博客（Next.js SSR）优先通过 requests 抓取 `__NEXT_DATA__` JSON（服务端渲染的结构化数据），失败时尝试 DOM 解析和 Playwright
+18. **博客快照首次运行** — `competitor_blog_monitor.py` 首次运行（快照中无对应竞品 key）仅保存当前文章列表为基线，不生成报警，避免首次部署时产生大量历史文章的误报

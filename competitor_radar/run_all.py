@@ -131,6 +131,16 @@ def collect_pricing_issues():
     return results
 
 
+# ==================== 竞品博客 ====================
+
+def collect_blog_issues():
+    """调用 competitor_blog_monitor 模块，返回新博客文章 issue。"""
+    from competitor_radar.competitor_blog_monitor import check_competitor_blogs
+    results = check_competitor_blogs()
+    print(f"[Blog] 检测到 {len(results)} 篇新博客文章。")
+    return results
+
+
 # ==================== 主入口 ====================
 
 def main():
@@ -159,6 +169,13 @@ def main():
     except Exception as e:
         print(f"[Pricing] 执行失败: {e}")
         report_monitor_crash("竞品情报: 定价监控", e)
+
+    # 3. 竞品博客
+    try:
+        all_issues.extend(collect_blog_issues())
+    except Exception as e:
+        print(f"[Blog] 执行失败: {e}")
+        report_monitor_crash("竞品情报: 博客监控", e)
 
     # 汇总发送 — 所有情报合并为一条消息
     if all_issues:

@@ -280,6 +280,24 @@ _SCRAPE_ADVICE = {
         'short_term': '本次已跳过剩余搜索词；配额将在 UTC 00:00 自动重置，下次运行恢复正常',
         'long_term': '当前 10 个搜索词 × 100 = 1,000 单位/次，每天跑 10 次会耗尽；可在 Google Cloud Console 申请提升配额，或减少搜索词数量',
     },
+    'exitlag_blog_api': {
+        'display_name': 'ExitLag 博客 WordPress REST API',
+        'reason': 'ExitLag 博客的 WordPress REST API 返回非 200，可能为 Cloudflare 拦截或 API 被禁用',
+        'short_term': '已自动降级到 Playwright + stealth 或 requests 抓取 HTML 页面',
+        'long_term': '若 API 持续不可用，确认 ExitLag 是否关闭了 WP REST API；Playwright 和 requests 作为长期备选',
+    },
+    'exitlag_blog': {
+        'display_name': 'ExitLag 博客页面（竞品博客监控）',
+        'reason': 'Playwright + stealth 和 requests 均被 Cloudflare 拦截，无法获取 ExitLag 博客列表',
+        'short_term': '本次已跳过 ExitLag 博客检测；通常属于 Cloudflare 临时加强，下次运行可自动恢复',
+        'long_term': '若持续大面积 403，优先升级 Chromium / playwright-stealth 版本；仍无改善时考虑代理 IP',
+    },
+    'lagofast_blog': {
+        'display_name': 'LagoFast 博客页面（竞品博客监控）',
+        'reason': 'LagoFast 博客页面返回非 200，无法获取 __NEXT_DATA__ 或 HTML DOM 中的文章列表',
+        'short_term': '本次已跳过 LagoFast 博客检测；等待下次运行自动重试',
+        'long_term': '若持续出现，检查 LagoFast 前端是否改版导致 __NEXT_DATA__ 结构变化，或增加 Playwright 反爬能力',
+    },
 }
 
 def send_popo_alert(webhook_url, issues_list):

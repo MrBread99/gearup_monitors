@@ -38,6 +38,7 @@ jobs:
         with:
           path: |
             competitor_radar/exitlag_pricing_snapshot.json
+            competitor_radar/blog_monitor_snapshot.json
           key: competitor-snapshots-${{ github.run_id }}
           restore-keys: |
             competitor-snapshots-

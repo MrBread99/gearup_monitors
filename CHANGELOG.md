@@ -4,6 +4,24 @@
 
 ---
 
+## [v4.5.0] - 竞品博客动态监控
+
+### 🚀 新增功能
+
+- **竞品博客动态监控** (`competitor_radar/competitor_blog_monitor.py`): 新增 ExitLag + LagoFast 官方博客监控，发现新文章时通过 Qwen AI 生成中文摘要（文章概要 + 商业情报分析 + 应对建议）并发送 POPO 报警
+  - **ExitLag 抓取策略**（WordPress + Cloudflare）: WP REST API 优先（结构化 JSON + 全文，不触发 Cloudflare）→ Playwright + stealth → requests HTML 解析，三层降级
+  - **LagoFast 抓取策略**（Next.js SSR）: requests + `__NEXT_DATA__` JSON 解析（服务端渲染数据）→ DOM 解析 fallback → Playwright，双层降级
+  - **快照去重**: 以文章 slug 为 key，跨运行持久化（GitHub Actions cache）；首次运行仅保存基线，不产生历史文章误报
+  - **自动全文抓取**: 列表页摘要不足 200 字时自动抓取文章正文页，为 AI 提供充分上下文
+  - **新增 3 条 `_SCRAPE_ADVICE`**: `exitlag_blog_api` / `exitlag_blog` / `lagofast_blog`
+
+### 🟠 重要改动
+
+- **`competitor_radar/run_all.py`**: 聚合入口新增博客监控步骤（Discord + 定价 + 博客），合并为一条消息发出
+- **`competitor_radar.yml`**: 快照缓存路径新增 `blog_monitor_snapshot.json`
+
+---
+
 ## [v4.4.0] - 静默故障全面修复 + Reddit 匿名加固 + 品牌舆情去重 (Current)
 
 ### 🔴 Critical 修复
