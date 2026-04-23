@@ -59,6 +59,10 @@ API_HEADERS = {
 # 快照最多保留条数（防无限膨胀）
 MAX_SNAPSHOT_ENTRIES = 200
 
+# 快照版本号 — 升级此值会清空旧快照，触发所有竞品的"首次运行"流程。
+# v2: 首次运行改为保存基线 + 报最近 2 篇（v1 是静默保存基线不报警）
+SNAPSHOT_VERSION = 2
+
 
 # ==========================================
 # 快照管理
@@ -68,13 +72,19 @@ def load_snapshot() -> dict:
     if os.path.exists(SNAPSHOT_FILE):
         try:
             with open(SNAPSHOT_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+            # 版本不匹配 → 清空重建（让所有竞品重走首次运行流程）
+            if data.get("_version") != SNAPSHOT_VERSION:
+                print(f"[Blog] 快照版本过期 (当前 v{SNAPSHOT_VERSION})，清空重建。")
+                return {"_version": SNAPSHOT_VERSION}
+            return data
         except Exception:
             pass
-    return {}
+    return {"_version": SNAPSHOT_VERSION}
 
 
 def save_snapshot(data: dict):
+    data["_version"] = SNAPSHOT_VERSION
     for key in data:
         if isinstance(data[key], list) and len(data[key]) > MAX_SNAPSHOT_ENTRIES:
             data[key] = data[key][-MAX_SNAPSHOT_ENTRIES:]
@@ -610,13 +620,16 @@ def get_blog_status_summary() -> str:
 def check_competitor_blogs() -> list:
     """
     检查所有竞品博客，返回新文章的 issue 列表。
-    首次运行仅保存基线快照，不生成报警。
+    首次运行保存基线快照，同时把最近 2 篇作为报警发出（确认监控生效）。
     无论是否有新文章，都会更新 _latest_blog_status 供心跳引用。
 
     返回值兼容 send_popo_alert() 的 issues_list 格式。
     """
     snapshot = load_snapshot()
     all_issues = []
+
+    # 首次运行时，每个竞品最多报几篇最近文章（避免全量刷屏）
+    FIRST_RUN_ALERT_LIMIT = 2
 
     for name, fetch_fn in COMPETITORS.items():
         key = name.lower()
@@ -635,18 +648,21 @@ def check_competitor_blogs() -> list:
             "url": posts[0]["url"],
         }
 
-        # 首次运行：保存基线，不报警
-        if key not in snapshot:
+        is_first_run = key not in snapshot
+
+        if is_first_run:
+            # 首次运行：保存全部为基线，并把最近几篇作为报警发出
             snapshot[key] = [p["slug"] for p in posts if p["slug"]]
-            print(f"[{name}] 首次运行，已保存 {len(snapshot[key])} 篇文章为基线，不生成报警。")
-            continue
+            new_posts = posts[:FIRST_RUN_ALERT_LIMIT]
+            print(f"[{name}] 首次运行，已保存 {len(snapshot[key])} 篇文章为基线，"
+                  f"最近 {len(new_posts)} 篇作为报警发出。")
+        else:
+            seen_slugs = set(snapshot[key])
+            new_posts = [p for p in posts if p["slug"] and p["slug"] not in seen_slugs]
 
-        seen_slugs = set(snapshot[key])
-        new_posts = [p for p in posts if p["slug"] and p["slug"] not in seen_slugs]
-
-        if not new_posts:
-            print(f"[{name}] 无新文章。")
-            continue
+            if not new_posts:
+                print(f"[{name}] 无新文章。")
+                continue
 
         print(f"[{name}] 发现 {len(new_posts)} 篇新文章，正在生成 AI 摘要...")
 
@@ -678,11 +694,12 @@ def check_competitor_blogs() -> list:
                 "source_url": post["url"],
             })
 
-            # 记入快照
-            seen_slugs.add(post["slug"])
-
-        # 更新快照
-        snapshot[key] = list(seen_slugs)
+        # 更新快照（首次运行已在前面保存；非首次运行需追加新 slug）
+        if not is_first_run:
+            seen_slugs = set(snapshot.get(key, []))
+            for post in new_posts:
+                seen_slugs.add(post["slug"])
+            snapshot[key] = list(seen_slugs)
 
     save_snapshot(snapshot)
     print(f"\n[Blog] 共检测到 {len(all_issues)} 篇新博客文章。")
