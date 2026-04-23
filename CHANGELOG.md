@@ -9,11 +9,17 @@
 ### 🚀 新增功能
 
 - **竞品博客动态监控** (`competitor_radar/competitor_blog_monitor.py`): 新增 ExitLag + LagoFast 官方博客监控，发现新文章时通过 Qwen AI 生成中文摘要（文章概要 + 商业情报分析 + 应对建议）并发送 POPO 报警
-  - **ExitLag 抓取策略**（WordPress + Cloudflare）: WP REST API 优先（结构化 JSON + 全文，不触发 Cloudflare）→ Playwright + stealth → requests HTML 解析，三层降级
+  - **ExitLag 抓取策略**（WordPress + Cloudflare，四层降级）: RSS Feed 优先（Cloudflare 不拦截 `/feed/` 端点，返回全文）→ WP REST API → Playwright + stealth → requests HTML 解析
   - **LagoFast 抓取策略**（Next.js SSR）: requests + `__NEXT_DATA__` JSON 解析（服务端渲染数据）→ DOM 解析 fallback → Playwright，双层降级
-  - **快照去重**: 以文章 slug 为 key，跨运行持久化（GitHub Actions cache）；首次运行仅保存基线，不产生历史文章误报
+  - **快照去重**: 以文章 slug 为 key，跨运行持久化（GitHub Actions cache）；首次运行保存基线并报最近 2 篇文章
   - **自动全文抓取**: 列表页摘要不足 200 字时自动抓取文章正文页，为 AI 提供充分上下文
-  - **新增 3 条 `_SCRAPE_ADVICE`**: `exitlag_blog_api` / `exitlag_blog` / `lagofast_blog`
+  - **新增 4 条 `_SCRAPE_ADVICE`**: `exitlag_blog_rss` / `exitlag_blog_api` / `exitlag_blog` / `lagofast_blog`
+- **心跳附带博客状态** (`competitor_radar/run_all.py`): 无新情报时的系统心跳消息自动附带各竞品当前最新博客标题、日期和链接，即使无新文章也能确认监控正常运转且数据源可达
+
+### 🔴 修复
+
+- **ExitLag Cloudflare 封锁** (`competitor_blog_monitor.py`): GitHub Actions IP 被 ExitLag 全站 Cloudflare 拦截（WP REST API / Playwright / requests 均 403）。新增 WordPress RSS Feed (`/blog/feed/`) 作为最高优先级数据源，RSS 是标准协议，Cloudflare WAF 默认放行
+- **首次运行静默问题** (`competitor_blog_monitor.py`): 原设计首次运行仅保存基线不报警，导致部署后永远看不到第一批文章。改为首次运行保存基线 + 报最近 2 篇文章，附带快照版本号（`SNAPSHOT_VERSION`），版本升级时自动清空旧快照重建
 
 ### 🟠 重要改动
 
