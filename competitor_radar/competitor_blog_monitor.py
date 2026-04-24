@@ -398,36 +398,18 @@ def _fetch_exitlag_via_requests() -> list | None:
 
 def fetch_exitlag_posts() -> list:
     """
-    五层降级获取 ExitLag 博客文章。
-    Google Search → RSS Feed → WordPress REST API → Playwright → requests
-    ExitLag Cloudflare 封锁数据中心 IP，Google Search 是唯一稳定渠道。
+    获取 ExitLag 博客文章。
+    ExitLag Cloudflare 封锁所有数据中心 IP（RSS/API/Playwright/requests 全 403），
+    因此仅使用 Google Search 间接获取（通过搜索引擎索引，不碰 ExitLag 域名）。
     """
-    # Tier 0: Google Search（间接获取，不碰 ExitLag 域名）
     posts = _fetch_exitlag_via_google()
     if posts is not None:
         return posts
 
-    # Tier 1: RSS Feed（Cloudflare 偶尔放行）
-    print("[ExitLag] Google 不可用，尝试 RSS Feed...")
+    # Google/DDG 搜索也失败时，尝试 RSS 作为唯一直连备选
+    # （不再尝试 WP API / Playwright / requests，避免浪费 5+ 分钟在必定 403 的重试上）
+    print("[ExitLag] Google/DDG 不可用，最后尝试 RSS Feed...")
     posts = _fetch_exitlag_via_rss()
-    if posts is not None:
-        return posts
-
-    # Tier 2: WordPress REST API
-    print("[ExitLag] RSS 不可用，尝试 WP REST API...")
-    posts = _fetch_exitlag_via_wp_api()
-    if posts is not None:
-        return posts
-
-    # Tier 3: Playwright + stealth
-    print("[ExitLag] WP API 不可用，尝试 Playwright...")
-    posts = _fetch_exitlag_via_playwright()
-    if posts is not None:
-        return posts
-
-    # Tier 4: requests HTML
-    print("[ExitLag] Playwright 不可用，尝试 requests...")
-    posts = _fetch_exitlag_via_requests()
     if posts is not None:
         return posts
 
