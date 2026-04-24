@@ -20,11 +20,12 @@
 
 - **ExitLag Cloudflare 封锁** (`competitor_blog_monitor.py`): GitHub Actions IP 被 ExitLag 全站 Cloudflare 拦截（WP REST API / Playwright / requests 均 403）。新增 WordPress RSS Feed (`/blog/feed/`) 作为最高优先级数据源，RSS 是标准协议，Cloudflare WAF 默认放行
 - **首次运行静默问题** (`competitor_blog_monitor.py`): 原设计首次运行仅保存基线不报警，导致部署后永远看不到第一批文章。改为首次运行保存基线 + 报最近 2 篇文章，附带快照版本号（`SNAPSHOT_VERSION`），版本升级时自动清空旧快照重建
+- **Qwen API 无超时导致 workflow 卡死 6h** (`competitor_blog_monitor.py` + `run_all.py`): OpenAI SDK 默认超时 600s/请求，DashScope 无响应时可卡数十分钟。所有 Qwen 客户端统一添加 `timeout=120.0`（2 分钟硬限）；workflow job 新增 `timeout-minutes: 20` 兜底
 
 ### 🟠 重要改动
 
 - **`competitor_radar/run_all.py`**: 聚合入口新增博客监控步骤（Discord + 定价 + 博客），合并为一条消息发出
-- **`competitor_radar.yml`**: 快照缓存路径新增 `blog_monitor_snapshot.json`
+- **`competitor_radar.yml`**: 快照缓存路径新增 `blog_monitor_snapshot.json`；job 新增 `timeout-minutes: 20`
 
 ---
 

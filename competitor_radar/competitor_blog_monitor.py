@@ -110,6 +110,7 @@ def _get_qwen_client():
         _qwen_client = OpenAI(
             api_key=QWEN_API_KEY,
             base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            timeout=120.0,  # 单次 API 调用最多 2 分钟，防止无响应卡死
         )
         return _qwen_client
     except Exception as e:

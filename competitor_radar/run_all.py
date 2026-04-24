@@ -28,7 +28,8 @@ QWEN_API_KEY = os.environ.get("QWEN_API_KEY", "")
 
 qwen_client = OpenAI(
     api_key=QWEN_API_KEY,
-    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+    timeout=120.0,  # 单次 API 调用最多 2 分钟，防止无响应卡死
 ) if QWEN_API_KEY else None
 
 
