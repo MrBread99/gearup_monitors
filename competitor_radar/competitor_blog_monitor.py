@@ -166,6 +166,48 @@ _RSS_NS = {
 }
 
 
+def _fetch_exitlag_via_google() -> list | None:
+    """
+    通过 Google/DuckDuckGo 搜索 site:exitlag.com/blog 间接发现博客文章。
+    完全不碰 ExitLag 域名，绕过 Cloudflare 对数据中心 IP 的全路径封锁。
+    缺点：仅获取标题和 URL，无文章正文（AI 分析基于标题推断）。
+    """
+    try:
+        from utils.google_client import google_search
+    except ImportError:
+        print("[ExitLag] google_client 不可用，跳过搜索引擎方式。")
+        return None
+
+    results = google_search(query="", site="exitlag.com/blog", max_results=10)
+    if not results:
+        print("[ExitLag] Google/DDG 搜索无结果。")
+        return None
+
+    posts = []
+    seen_slugs = set()
+    for r in results:
+        url = r.get("url", "")
+        title = r.get("title", "")
+        slug = url.rstrip("/").split("/")[-1] if url else ""
+        if not slug or slug in seen_slugs:
+            continue
+        # 过滤非文章页（分类/标签/索引页）
+        if any(x in url for x in ["/category/", "/tag/", "/all-posts", "/page/"]):
+            continue
+        seen_slugs.add(slug)
+        posts.append({
+            "slug": slug,
+            "title": title,
+            "url": url,
+            "date": "(via Google index)",
+            "excerpt": "",
+            "content": f"文章标题: {title}",
+        })
+
+    print(f"[ExitLag] Google/DDG 搜索获取到 {len(posts)} 篇文章。")
+    return posts if posts else None
+
+
 def _fetch_exitlag_via_rss() -> list | None:
     """
     通过 WordPress RSS Feed 获取最新博客文章。
@@ -356,28 +398,34 @@ def _fetch_exitlag_via_requests() -> list | None:
 
 def fetch_exitlag_posts() -> list:
     """
-    四层降级获取 ExitLag 博客文章。
-    RSS Feed → WordPress REST API → Playwright + stealth → requests
-    RSS Feed 不经过 Cloudflare JS challenge，是最可靠的数据源。
+    五层降级获取 ExitLag 博客文章。
+    Google Search → RSS Feed → WordPress REST API → Playwright → requests
+    ExitLag Cloudflare 封锁数据中心 IP，Google Search 是唯一稳定渠道。
     """
-    # Tier 0: RSS Feed（Cloudflare 通常不拦截，含全文内容）
+    # Tier 0: Google Search（间接获取，不碰 ExitLag 域名）
+    posts = _fetch_exitlag_via_google()
+    if posts is not None:
+        return posts
+
+    # Tier 1: RSS Feed（Cloudflare 偶尔放行）
+    print("[ExitLag] Google 不可用，尝试 RSS Feed...")
     posts = _fetch_exitlag_via_rss()
     if posts is not None:
         return posts
 
-    # Tier 1: WordPress REST API（结构化 JSON）
+    # Tier 2: WordPress REST API
     print("[ExitLag] RSS 不可用，尝试 WP REST API...")
     posts = _fetch_exitlag_via_wp_api()
     if posts is not None:
         return posts
 
-    # Tier 2: Playwright + stealth
+    # Tier 3: Playwright + stealth
     print("[ExitLag] WP API 不可用，尝试 Playwright...")
     posts = _fetch_exitlag_via_playwright()
     if posts is not None:
         return posts
 
-    # Tier 3: requests HTML
+    # Tier 4: requests HTML
     print("[ExitLag] Playwright 不可用，尝试 requests...")
     posts = _fetch_exitlag_via_requests()
     if posts is not None:
