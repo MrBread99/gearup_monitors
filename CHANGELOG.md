@@ -4,11 +4,15 @@
 
 ---
 
-## [v4.5.0] - 竞品博客动态监控
+## [v4.5.0] - 竞品博客动态监控 + 平台状态 Reddit→ITSD 迁移
 
 ### 🚀 新增功能
 
-- **竞品博客动态监控** (`competitor_radar/competitor_blog_monitor.py`): 新增 ExitLag + LagoFast 官方博客监控，发现新文章时通过 Qwen AI 生成中文摘要（文章概要 + 商业情报分析 + 应对建议）并发送 POPO 报警
+- **竞品博客动态监控** (`competitor_radar/competitor_blog_monitor.py`): 新增 LagoFast 官方博客监控，发现新文章时通过 Qwen AI 生成中文摘要（文章概要 + 商业情报分析 + 应对建议）并发送 POPO 报警
+- **IsTheServiceDown 平台故障检测** (`utils/istheservicedown_client.py` + `platform_status_monitor.py`): 新增 IsTheServiceDown 数据源，替代 Reddit 搜索作为平台状态的社区信号来源。通过解析 `<noscript>` 报告表格（24h 报告量 + 基线阈值）检测故障，覆盖 9 个平台：Battle.net / Xbox Live / PSN / EA / Ubisoft / Garena / Telegram / WhatsApp / LINE
+- **心跳附带博客状态** (`competitor_radar/run_all.py`): 无新情报时的系统心跳消息自动附带各竞品当前最新博客标题、日期和链接
+- **Steam News API Key 接入** (`game_calendar_monitor.py` + `monitor.yml`): Steam News API 请求附带 `STEAM_API_KEY`，解决无 Key 被限流/封锁的问题；User-Agent 从 `OSINT-Monitor/2.1` 改为标准 Chrome UA
+- **Reddit 无凭证静默跳过** (`utils/reddit_client.py`): 没有 Reddit OAuth 凭证时 `reddit_get()` 直接返回 None，不发请求、不触发熔断、不产生噪音
   - **ExitLag 抓取策略**（WordPress + Cloudflare，四层降级）: RSS Feed 优先（Cloudflare 不拦截 `/feed/` 端点，返回全文）→ WP REST API → Playwright + stealth → requests HTML 解析
   - **LagoFast 抓取策略**（Next.js SSR）: requests + `__NEXT_DATA__` JSON 解析（服务端渲染数据）→ DOM 解析 fallback → Playwright，双层降级
   - **快照去重**: 以文章 slug 为 key，跨运行持久化（GitHub Actions cache）；首次运行保存基线并报最近 2 篇文章
