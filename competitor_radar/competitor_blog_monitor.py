@@ -639,7 +639,9 @@ def _fetch_article_content(url: str) -> str:
 # ==========================================
 
 COMPETITORS = {
-    "ExitLag": fetch_exitlag_posts,
+    # ExitLag: Cloudflare 封锁所有数据中心 IP（含搜索引擎 fallback），暂停博客监控。
+    # 仍由定价模块 + Discord 监控覆盖。如需恢复，取消下行注释并接入住宅代理。
+    # "ExitLag": fetch_exitlag_posts,
     "LagoFast": fetch_lagofast_posts,
 }
 
