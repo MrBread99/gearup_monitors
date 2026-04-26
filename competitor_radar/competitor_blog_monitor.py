@@ -60,8 +60,8 @@ API_HEADERS = {
 MAX_SNAPSHOT_ENTRIES = 200
 
 # 快照版本号 — 升级此值会清空旧快照，触发所有竞品的"首次运行"流程。
-# v2: 首次运行改为保存基线 + 报最近 2 篇（v1 是静默保存基线不报警）
-SNAPSHOT_VERSION = 2
+# v3: 修复 __NEXT_DATA__ 3592 篇全量爆炸 + 限制解析/报警数量
+SNAPSHOT_VERSION = 3
 
 
 # ==========================================
@@ -178,7 +178,7 @@ def _fetch_exitlag_via_google() -> list | None:
         print("[ExitLag] google_client 不可用，跳过搜索引擎方式。")
         return None
 
-    results = google_search(query="", site="exitlag.com/blog", max_results=10)
+    results = google_search(query="blog", site="exitlag.com/blog", max_results=10)
     if not results:
         print("[ExitLag] Google/DDG 搜索无结果。")
         return None
@@ -422,7 +422,11 @@ def fetch_exitlag_posts() -> list:
 # ==========================================
 
 def _parse_lagofast_nextdata(html: str) -> list | None:
-    """从 LagoFast 页面 HTML 中提取 __NEXT_DATA__ JSON 并解析文章列表。"""
+    """
+    从 LagoFast 页面 HTML 中提取 __NEXT_DATA__ JSON 并解析文章列表。
+    注意：__NEXT_DATA__ 包含全站所有文章（3000+），这里只取每个分类的前几篇，
+    总数限制在 50 篇以内，足够检测新文章同时避免快照/报警爆炸。
+    """
     match = re.search(
         r'<script\s+id="__NEXT_DATA__"\s+type="application/json">(.*?)</script>',
         html,
@@ -445,16 +449,26 @@ def _parse_lagofast_nextdata(html: str) -> list | None:
         .get("articles", [])
     )
 
+    # __NEXT_DATA__ 包含全站 3000+ 篇文章，只取每个分类前 15 篇（总上限 50）
+    MAX_PER_CATEGORY = 15
+    MAX_TOTAL = 50
+
     results = []
     seen_slugs = set()
 
     for category in articles_data:
         blogs = category.get("blogs", [])
+        count_in_cat = 0
         for blog in blogs:
+            if len(results) >= MAX_TOTAL:
+                break
+            if count_in_cat >= MAX_PER_CATEGORY:
+                break
             slug = blog.get("article_identifies", "")
             if not slug or slug in seen_slugs:
                 continue
             seen_slugs.add(slug)
+            count_in_cat += 1
 
             results.append({
                 "slug": slug,
@@ -661,6 +675,8 @@ def check_competitor_blogs() -> list:
 
     # 首次运行时，每个竞品最多报几篇最近文章（避免全量刷屏）
     FIRST_RUN_ALERT_LIMIT = 2
+    # 非首次运行时，单次最多报几篇新文章（防止快照异常导致洪水式 AI 调用）
+    MAX_NEW_POSTS_PER_RUN = 5
 
     for name, fetch_fn in COMPETITORS.items():
         key = name.lower()
@@ -694,6 +710,11 @@ def check_competitor_blogs() -> list:
             if not new_posts:
                 print(f"[{name}] 无新文章。")
                 continue
+
+            # 硬上限：单次最多报 N 篇，防止快照异常导致洪水式 AI 调用
+            if len(new_posts) > MAX_NEW_POSTS_PER_RUN:
+                print(f"[{name}] 发现 {len(new_posts)} 篇新文章，超过单次上限 {MAX_NEW_POSTS_PER_RUN}，只报最近的。")
+                new_posts = new_posts[:MAX_NEW_POSTS_PER_RUN]
 
         print(f"[{name}] 发现 {len(new_posts)} 篇新文章，正在生成 AI 摘要...")
 
