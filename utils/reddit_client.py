@@ -114,6 +114,7 @@ def reddit_get(url, timeout=10):
     """
     统一的 Reddit GET 请求方法。
     - 自动使用 OAuth2（如已配置）
+    - 无凭证时直接跳过（不发请求、不触发熔断）
     - 自动限流（匿名 4s / OAuth 1s 间隔）
     - 自动重试 429（1 次）
     - 熔断器：连续 3 次 403 后停止本轮所有 Reddit 调用
@@ -122,6 +123,13 @@ def reddit_get(url, timeout=10):
 
     # 熔断器检查
     if _circuit_open:
+        return None
+
+    # 无凭证时直接跳过，避免必定 403 的匿名请求产生噪音
+    if not REDDIT_CLIENT_ID or not REDDIT_CLIENT_SECRET:
+        _set_last_request_meta(mode='skipped', token_state='missing_credentials',
+                               request_state='skipped', status_code=None,
+                               request_url=url, final_url='')
         return None
 
     _throttle()
