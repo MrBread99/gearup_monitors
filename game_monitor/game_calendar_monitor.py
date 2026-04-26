@@ -40,8 +40,11 @@ qwen_client = OpenAI(
 # ==========================================
 
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) OSINT-Monitor/2.1'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                  '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 }
+
+STEAM_API_KEY = os.environ.get('STEAM_API_KEY', '')
 
 # 已监控游戏的 Steam AppID — 从统一游戏注册表 (game_registry.py) 加载
 # 过滤掉没有 Steam AppID 的游戏（只有有 AppID 的游戏才能查 News）
@@ -615,6 +618,12 @@ def check_steam_news_updates():
     steam_news_403_fail_counts = old_snapshot.get('steam_news_403_fail_counts', {})
     steam_news_403_suppressed_until = old_snapshot.get('steam_news_403_suppressed_until', {})
 
+    # 接入 API Key 后清除旧的 403 退避状态，让所有 AppID 立即重试
+    if STEAM_API_KEY and (steam_news_403_fail_counts or steam_news_403_suppressed_until):
+        print("[Calendar] 检测到 STEAM_API_KEY，清除旧的 Steam News 403 退避状态。")
+        steam_news_403_fail_counts.clear()
+        steam_news_403_suppressed_until.clear()
+
     for game_name, app_id in TRACKED_GAMES.items():
         app_key = str(app_id)
         now_utc = datetime.now(timezone.utc)
@@ -639,6 +648,8 @@ def check_steam_news_updates():
             f"https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/"
             f"?appid={app_id}&count=5&maxlength=2000&format=json"
         )
+        if STEAM_API_KEY:
+            url += f"&key={STEAM_API_KEY}"
 
         try:
             response = requests.get(url, headers=HEADERS, timeout=10)
