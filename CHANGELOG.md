@@ -18,7 +18,7 @@
 
 ### 🔴 修复
 
-- **ExitLag Cloudflare 全路径封锁** (`competitor_blog_monitor.py`): ExitLag Cloudflare 封锁所有数据中心 IP（RSS Feed / WP REST API / Playwright / requests / Google Search / DuckDuckGo 均不可用）。ExitLag 博客监控暂停，由定价模块 + Discord 覆盖；代码保留完整实现，接入住宅代理后可一行取消注释恢复
+- **ExitLag Cloudflare 全面封锁** (`competitor_blog_monitor.py` + `exitlag_pricing.py`): ExitLag Cloudflare 封锁所有数据中心 IP（Playwright / RSS / WP API / requests / Google Search / DuckDuckGo 均不可用）。ExitLag **博客监控 + 定价监控均暂停**，仅保留 Discord 覆盖；代码保留完整实现，接入住宅代理后可一行取消注释恢复
 - **LagoFast `__NEXT_DATA__` 全站 3592 篇爆炸** (`competitor_blog_monitor.py`): `__NEXT_DATA__` JSON 包含全站所有文章，快照清空后 3392 篇被当作新文章逐一抓全文 + 调 AI 导致超时。修复：每分类最多解析 15 篇（总上限 50）；非首次运行单次报警硬上限 5 篇
 - **首次运行静默问题** (`competitor_blog_monitor.py`): 原设计首次运行仅保存基线不报警，导致部署后永远看不到第一批文章。改为首次运行保存基线 + 报最近 2 篇文章，附带快照版本号（`SNAPSHOT_VERSION`），版本升级时自动清空旧快照重建
 - **Qwen API 无超时导致 workflow 卡死 6h** (`competitor_blog_monitor.py` + `run_all.py`): OpenAI SDK 默认超时 600s/请求，DashScope 无响应时可卡数十分钟。所有 Qwen 客户端统一添加 `timeout=120.0`（2 分钟硬限）；workflow job 新增 `timeout-minutes: 20` 兜底

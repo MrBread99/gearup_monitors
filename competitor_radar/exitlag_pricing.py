@@ -25,20 +25,22 @@ from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBH
 
 # 竞品配置
 COMPETITORS = {
-    'ExitLag': {
-        'regions': {
-            'en': 'English (Global)',
-            'zh-tw': '繁體中文 (Taiwan/HK)',
-            'jp': '日本語 (Japan)',
-            'ko': '한국어 (Korea)',
-            'pt': 'Português (Brazil)',
-            'ru': 'Русский (Russia/CIS)',
-            'es': 'Español (LATAM)',
-            'ar': 'العربية (Middle East)',
-            'de': 'Deutsch (Germany)',
-        },
-        'url_template': 'https://www.exitlag.com/{region}/pricing',
-    },
+    # ExitLag: Cloudflare 封锁所有数据中心 IP，定价监控暂停。
+    # 仍由 Discord 监控覆盖。接入住宅代理后取消注释即可恢复。
+    # 'ExitLag': {
+    #     'regions': {
+    #         'en': 'English (Global)',
+    #         'zh-tw': '繁體中文 (Taiwan/HK)',
+    #         'jp': '日本語 (Japan)',
+    #         'ko': '한국어 (Korea)',
+    #         'pt': 'Português (Brazil)',
+    #         'ru': 'Русский (Russia/CIS)',
+    #         'es': 'Español (LATAM)',
+    #         'ar': 'العربية (Middle East)',
+    #         'de': 'Deutsch (Germany)',
+    #     },
+    #     'url_template': 'https://www.exitlag.com/{region}/pricing',
+    # },
     'LagoFast': {
         'regions': {
             'en': 'English (Global)',
