@@ -657,15 +657,19 @@ def check_steam_news_updates():
                 if response.status_code == 403:
                     fail_count = int(steam_news_403_fail_counts.get(app_key, 0)) + 1
                     steam_news_403_fail_counts[app_key] = fail_count
-                    if fail_count < STEAM_NEWS_403_FAIL_THRESHOLD:
-                        report_scrape_block('steam_news_api', url, response.status_code)
-                    else:
+                    if fail_count >= STEAM_NEWS_403_FAIL_THRESHOLD:
                         backoff_until = now_utc + timedelta(days=STEAM_NEWS_403_BACKOFF_DAYS)
                         steam_news_403_suppressed_until[app_key] = backoff_until.isoformat()
                         print(
                             f"[Calendar] {game_name} Steam News returned 403 for {fail_count} consecutive runs; "
                             f"suppressing this AppID for {STEAM_NEWS_403_BACKOFF_DAYS} days."
                         )
+                    elif not STEAM_API_KEY:
+                        # 无 API Key 时才报数据源异常（系统性问题）
+                        # 有 Key 时个别游戏 403 是 Valve 端限制，仅记日志
+                        report_scrape_block('steam_news_api', url, response.status_code)
+                    else:
+                        print(f"[Calendar] {game_name} Steam News 403 ({fail_count}/{STEAM_NEWS_403_FAIL_THRESHOLD})")
                 else:
                     report_scrape_block('steam_news_api', url, response.status_code)
                 continue
