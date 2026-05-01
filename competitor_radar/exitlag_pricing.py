@@ -58,8 +58,8 @@ COMPETITORS = {
     },
 }
 
-# 兼容旧配置
-REGIONS = COMPETITORS['ExitLag']['regions']
+# 兼容旧配置（ExitLag 暂停后使用空字典）
+REGIONS = COMPETITORS.get('ExitLag', {}).get('regions', {})
 
 # 套餐名与玩家数的映射
 PLAN_TIERS = ['Solo', 'Duo', 'Squad']
