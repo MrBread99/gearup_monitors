@@ -184,6 +184,12 @@ _SCRAPE_ADVICE = {
         'long_term': '若持续大面积 403，优先升级 Chromium / playwright-stealth 版本；仍无改善时再考虑代理 IP 轮换',
         'min_notify_count': 2,
     },
+    'competitor_pricing': {
+        'display_name': '竞品定价监控',
+        'reason': '竞品定价页所有地区均未解析到可用价格数据，可能为页面结构变化、反爬拦截或目标站点不可用',
+        'short_term': '本次已跳过该竞品定价变动检测；等待下次运行自动重试',
+        'long_term': '若持续出现，优先检查页面结构和 Playwright 抓取结果；如为 Cloudflare 长期拦截，再考虑代理或官方接口',
+    },
     'trustpilot': {
         'display_name': 'Trustpilot（品牌评分监控）',
         'reason': 'Playwright + stealth 等待 Cloudflare challenge 解除后仍未获取到页面内容，requests fallback 同样被拦截',
@@ -309,6 +315,12 @@ _SCRAPE_ADVICE = {
         'reason': 'LinkedIn 公开公司页不可达或页面结构变化，无法解析 Updates 区块',
         'short_term': '本次已跳过 ExitLag LinkedIn 动态检测；等待下次运行自动重试',
         'long_term': '若持续出现，优先检查 LinkedIn 公开页结构是否变化；如 GitHub Actions IP 被长期拦截，再考虑代理或 LinkedIn 官方接口方案',
+    },
+    'competitor_discord': {
+        'display_name': '竞品 Discord 情报频道',
+        'reason': 'Discord API 请求失败、鉴权失败或目标频道配置异常，无法拉取竞品公告消息',
+        'short_term': '本次已跳过 Discord 情报检测；等待下次运行自动重试',
+        'long_term': '若持续出现，优先检查 DISCORD_BOT_TOKEN、TARGET_CHANNEL_ID、Bot 频道权限和 Discord API 状态',
     },
 }
 

@@ -100,7 +100,7 @@ def _record_health_failure(snapshot: dict, status_code: int | None, reason: str)
 
     failures = health["consecutive_failures"]
     print(f"[LinkedIn] 数据源失败 {failures}/{HEALTH_ALERT_FAILURES}: {reason}")
-    if failures >= HEALTH_ALERT_FAILURES:
+    if failures >= HEALTH_ALERT_FAILURES and not health.get("failure_alert_active"):
         report_scrape_block("exitlag_linkedin", COMPANY_URL, status_code)
         health["failure_alert_active"] = True
 

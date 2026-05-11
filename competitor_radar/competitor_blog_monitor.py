@@ -62,6 +62,14 @@ MAX_SNAPSHOT_ENTRIES = 200
 # 快照版本号 — 升级此值会清空旧快照，触发所有竞品的"首次运行"流程。
 # v3: 修复 __NEXT_DATA__ 3592 篇全量爆炸 + 限制解析/报警数量
 SNAPSHOT_VERSION = 3
+HEALTH_ALERT_FAILURES = 3
+
+BLOG_SOURCE_URLS = {
+    "lagofast": "https://www.lagofast.com/en/blog/",
+    "exitlag": "https://www.exitlag.com/blog/",
+}
+
+_last_blog_failure: dict = {}
 
 
 # ==========================================
@@ -90,6 +98,81 @@ def save_snapshot(data: dict):
             data[key] = data[key][-MAX_SNAPSHOT_ENTRIES:]
     with open(SNAPSHOT_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _get_health(snapshot: dict, key: str) -> dict:
+    health_map = snapshot.setdefault("_health", {})
+    return health_map.setdefault(f"{key}_blog", {
+        "consecutive_failures": 0,
+        "last_success_at": "",
+        "last_failure_at": "",
+        "last_status_code": None,
+        "last_post_count": 0,
+        "failure_alert_active": False,
+    })
+
+
+def _remember_blog_failure(key: str, status_code: int | None, reason: str):
+    _last_blog_failure[key] = {
+        "status_code": status_code,
+        "reason": reason,
+        "url": BLOG_SOURCE_URLS.get(key, ""),
+    }
+
+
+def _record_blog_failure(snapshot: dict, name: str) -> None:
+    key = name.lower()
+    meta = _last_blog_failure.get(key, {})
+    status_code = meta.get("status_code")
+    reason = meta.get("reason") or "抓取完成但返回 0 篇文章，可能是页面结构变化或数据源为空"
+    url = meta.get("url") or BLOG_SOURCE_URLS.get(key, "")
+
+    health = _get_health(snapshot, key)
+    health["consecutive_failures"] = int(health.get("consecutive_failures", 0) or 0) + 1
+    health["last_failure_at"] = _now_iso()
+    health["last_status_code"] = status_code
+    health["last_failure_reason"] = reason
+
+    failures = health["consecutive_failures"]
+    print(f"[{name}] 博客数据源失败 {failures}/{HEALTH_ALERT_FAILURES}: {reason}")
+    if failures >= HEALTH_ALERT_FAILURES and not health.get("failure_alert_active"):
+        report_scrape_block(f"{key}_blog", url=url, status_code=status_code)
+        health["failure_alert_active"] = True
+
+
+def _record_blog_success(snapshot: dict, name: str, post_count: int) -> dict | None:
+    key = name.lower()
+    health = _get_health(snapshot, key)
+    previous_failures = int(health.get("consecutive_failures", 0) or 0)
+    was_alerting = bool(health.get("failure_alert_active"))
+
+    health["consecutive_failures"] = 0
+    health["last_success_at"] = _now_iso()
+    health["last_status_code"] = 200
+    health["last_post_count"] = post_count
+    health["last_failure_reason"] = ""
+    health["failure_alert_active"] = False
+    _last_blog_failure.pop(key, None)
+
+    if was_alerting or previous_failures >= HEALTH_ALERT_FAILURES:
+        return {
+            "game": name,
+            "region": "Global",
+            "country": "",
+            "issue": (
+                f"{name} 博客数据源已恢复\n"
+                f"    恢复前连续失败: {previous_failures} 次\n"
+                f"    当前解析文章数: {post_count}"
+            ),
+            "alert_type": "competitor_radar",
+            "source_name": f"{name} 官方博客",
+            "source_url": BLOG_SOURCE_URLS.get(key, ""),
+        }
+    return None
 
 
 # ==========================================
@@ -554,13 +637,20 @@ def _fetch_lagofast_via_requests() -> list | None:
             if posts:
                 return posts
             # 退而解析 DOM
-            return _parse_lagofast_html_dom(resp.text)
+            posts = _parse_lagofast_html_dom(resp.text)
+            if posts:
+                return posts
+            _remember_blog_failure("lagofast", 200, "页面可达但 __NEXT_DATA__ 和 DOM 都未解析到文章")
+            return None
         print(f"[LagoFast] requests HTTP {resp.status_code}")
         if resp.status_code in (403, 429):
-            report_scrape_block("lagofast_blog", url=url, status_code=resp.status_code)
+            _remember_blog_failure("lagofast", resp.status_code, "requests 被反爬或限流")
+        else:
+            _remember_blog_failure("lagofast", resp.status_code, "requests 返回非 200")
         return None
     except Exception as e:
         print(f"[LagoFast] requests 失败: {e}")
+        _remember_blog_failure("lagofast", None, f"requests 异常: {e}")
         return None
 
 
@@ -576,13 +666,19 @@ def _fetch_lagofast_via_playwright() -> list | None:
     html, status = pw_fetch(url)
     if html is None or status != 200:
         if status == 403:
-            report_scrape_block("lagofast_blog", url=url, status_code=403)
+            _remember_blog_failure("lagofast", 403, "Playwright 被反爬拦截")
+        else:
+            _remember_blog_failure("lagofast", status, "Playwright 未获取到有效页面")
         return None
 
     posts = _parse_lagofast_nextdata(html)
     if posts:
         return posts
-    return _parse_lagofast_html_dom(html)
+    posts = _parse_lagofast_html_dom(html)
+    if posts:
+        return posts
+    _remember_blog_failure("lagofast", 200, "Playwright 页面可达但未解析到文章")
+    return None
 
 
 def fetch_lagofast_posts() -> list:
@@ -688,7 +784,12 @@ def check_competitor_blogs() -> list:
         posts = fetch_fn()
         if not posts:
             print(f"[{name}] 未获取到任何文章。")
+            _record_blog_failure(snapshot, name)
             continue
+
+        recovery_issue = _record_blog_success(snapshot, name, len(posts))
+        if recovery_issue:
+            all_issues.append(recovery_issue)
 
         # 无论是否有新文章，记录当前最新博客状态
         _latest_blog_status[name] = {

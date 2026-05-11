@@ -6,6 +6,7 @@ import sys
 import re
 import time
 import random
+from datetime import datetime, timezone
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBHOOK_URL
@@ -66,6 +67,8 @@ PLAN_TIERS = ['Solo', 'Duo', 'Squad']
 
 # 上次定价快照的存储路径
 SNAPSHOT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'exitlag_pricing_snapshot.json')
+HEALTH_ALERT_FAILURES = 3
+_last_pricing_failure = {}
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
@@ -329,16 +332,13 @@ def fetch_pricing_for_region(region_code, competitor_name='ExitLag'):
 
     # === 结果处理 ===
     if html_text is None and saw_cloudflare_403:
-        try:
-            from utils.notifier import report_scrape_block
-            report_scrape_block('cloudflare_pricing', url=url, status_code=403)
-        except Exception:
-            pass
+        _remember_pricing_failure(competitor_name, 403, '所有抓取层级均遇到 Cloudflare 403')
         return None
 
     if html_text is None:
         if status_code:
             print(f"[{competitor_name}] {region_code}: HTTP {status_code}")
+        _remember_pricing_failure(competitor_name, status_code, f'{region_code} 未获取到定价页面')
         return None
 
     try:
@@ -364,6 +364,7 @@ def fetch_pricing_for_region(region_code, competitor_name='ExitLag'):
 
     except Exception as e:
         print(f"[{competitor_name}] 解析 {region_code} 定价失败: {e}")
+        _remember_pricing_failure(competitor_name, 200, f'{region_code} 页面可达但解析定价失败: {e}')
         return None
 
 
@@ -384,6 +385,89 @@ def save_snapshot(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
+def _now_iso():
+    return datetime.now(timezone.utc).isoformat(timespec='seconds')
+
+
+def _pricing_health_key(competitor_name):
+    return competitor_name.lower().replace(' ', '_') + '_pricing'
+
+
+def _get_pricing_health(snapshot, competitor_name):
+    health_map = snapshot.setdefault('_health', {})
+    return health_map.setdefault(_pricing_health_key(competitor_name), {
+        'consecutive_failures': 0,
+        'last_success_at': '',
+        'last_failure_at': '',
+        'last_status_code': None,
+        'last_region_success_count': 0,
+        'failure_alert_active': False,
+    })
+
+
+def _remember_pricing_failure(competitor_name, status_code=None, reason=''):
+    key = competitor_name.lower().replace(' ', '_')
+    _last_pricing_failure[key] = {
+        'status_code': status_code,
+        'reason': reason,
+    }
+
+
+def _record_pricing_failure(snapshot, competitor_name, total_regions):
+    key = competitor_name.lower().replace(' ', '_')
+    meta = _last_pricing_failure.get(key, {})
+    status_code = meta.get('status_code')
+    reason = meta.get('reason') or f'全部 {total_regions} 个地区均未解析到定价数据'
+
+    health = _get_pricing_health(snapshot, competitor_name)
+    health['consecutive_failures'] = int(health.get('consecutive_failures', 0) or 0) + 1
+    health['last_failure_at'] = _now_iso()
+    health['last_status_code'] = status_code
+    health['last_failure_reason'] = reason
+    health['last_region_success_count'] = 0
+
+    failures = health['consecutive_failures']
+    print(f"[{competitor_name}] 定价数据源失败 {failures}/{HEALTH_ALERT_FAILURES}: {reason}")
+    if failures >= HEALTH_ALERT_FAILURES and not health.get('failure_alert_active'):
+        try:
+            from utils.notifier import report_scrape_block
+            report_scrape_block('competitor_pricing', status_code=status_code)
+        except Exception:
+            pass
+        health['failure_alert_active'] = True
+
+
+def _record_pricing_success(snapshot, competitor_name, success_count):
+    key = competitor_name.lower().replace(' ', '_')
+    health = _get_pricing_health(snapshot, competitor_name)
+    previous_failures = int(health.get('consecutive_failures', 0) or 0)
+    was_alerting = bool(health.get('failure_alert_active'))
+
+    health['consecutive_failures'] = 0
+    health['last_success_at'] = _now_iso()
+    health['last_status_code'] = 200
+    health['last_region_success_count'] = success_count
+    health['last_failure_reason'] = ''
+    health['failure_alert_active'] = False
+    _last_pricing_failure.pop(key, None)
+
+    if was_alerting or previous_failures >= HEALTH_ALERT_FAILURES:
+        return {
+            'game': competitor_name,
+            'region': 'Global',
+            'country': '',
+            'issue': (
+                f"{competitor_name} 定价数据源已恢复\n"
+                f"    恢复前连续失败: {previous_failures} 次\n"
+                f"    当前成功解析地区数: {success_count}"
+            ),
+            'alert_type': 'competitor_radar',
+            'source_name': f'{competitor_name} Pricing Page',
+            'source_url': COMPETITORS.get(competitor_name, {}).get('url_template', '').replace('{region}', 'en'),
+        }
+    return None
+
+
 def check_competitor_pricing(competitor_name):
     """
     通用竞品定价检测：抓取指定竞品所有地区定价，与上次快照比对，返回变动报警。
@@ -397,6 +481,7 @@ def check_competitor_pricing(competitor_name):
     competitor_key = competitor_name.lower().replace(' ', '_')
     old_competitor_data = old_snapshot.get(competitor_key, {})
     new_competitor_data = {}
+    total_regions = len(regions)
 
     for region_code, region_name in regions.items():
         print(f"  - 正在抓取 {competitor_name} {region_name} 定价...")
@@ -442,6 +527,14 @@ def check_competitor_pricing(competitor_name):
                     'source_url': url
                 })
 
+    recovery_issue = None
+    if new_competitor_data:
+        recovery_issue = _record_pricing_success(old_snapshot, competitor_name, len(new_competitor_data))
+        if recovery_issue:
+            issues.append(recovery_issue)
+    elif total_regions:
+        _record_pricing_failure(old_snapshot, competitor_name, total_regions)
+
     # 首次运行
     if not old_competitor_data and new_competitor_data:
         print(f"[{competitor_name}] 首次运行，已保存定价基线快照。")
@@ -449,6 +542,8 @@ def check_competitor_pricing(competitor_name):
     # 更新快照（保留其他竞品的快照数据）
     if new_competitor_data:
         old_snapshot[competitor_key] = new_competitor_data
+        save_snapshot(old_snapshot)
+    elif total_regions:
         save_snapshot(old_snapshot)
 
     return issues

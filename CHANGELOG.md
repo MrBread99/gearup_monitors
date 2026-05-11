@@ -13,6 +13,9 @@
 - **心跳附带博客状态** (`competitor_radar/run_all.py`): 无新情报时的系统心跳消息自动附带各竞品当前最新博客标题、日期和链接
 - **ExitLag LinkedIn 动态监控** (`competitor_radar/linkedin_monitor.py`): 新增 ExitLag 公司页公开 Updates 监控，发现新动态后并入【竞品情报警报】发送 POPO；首次运行仅保存基线，避免历史动态刷屏
 - **LinkedIn 数据源健康状态** (`competitor_radar/linkedin_monitor.py`): 快照中记录连续失败次数、最近成功时间、解析动态数；页面不可达或解析 0 条时先累计失败，连续 3 次才发数据源异常，恢复后提示一次
+- **LagoFast 博客数据源健康状态** (`competitor_radar/competitor_blog_monitor.py`): 将博客抓取失败、页面可达但解析 0 篇文章纳入跨运行健康状态；连续 3 次失败才发数据源异常，同一故障期只报一次，恢复后提示一次
+- **Discord 情报源健康状态** (`competitor_radar/run_all.py`): 将 Discord 缺少凭证、API 非 200、请求异常纳入跨运行健康状态；连续 3 次失败才发数据源异常，同一故障期只报一次，恢复后提示一次
+- **LagoFast 定价监控健康状态** (`competitor_radar/exitlag_pricing.py`): 当所有地区都无法解析到价格时才累计定价数据源失败；连续 3 次失败才发数据源异常，同一故障期只报一次，恢复后提示一次
 - **Steam News API Key 接入** (`game_calendar_monitor.py` + `monitor.yml`): Steam News API 请求附带 `STEAM_API_KEY`，解决无 Key 被限流/封锁的问题；User-Agent 从 `OSINT-Monitor/2.1` 改为标准 Chrome UA
 - **Reddit 无凭证静默跳过** (`utils/reddit_client.py`): 没有 Reddit OAuth 凭证时 `reddit_get()` 直接返回 None，不发请求、不触发熔断、不产生噪音
   - **ExitLag 抓取策略**（WordPress + Cloudflare，四层降级）: RSS Feed 优先（Cloudflare 不拦截 `/feed/` 端点，返回全文）→ WP REST API → Playwright + stealth → requests HTML 解析
@@ -34,7 +37,9 @@
 - **`competitor_radar/run_all.py`**: 聚合入口新增博客监控步骤（Discord + 定价 + 博客），合并为一条消息发出
 - **`competitor_radar/run_all.py`**: 聚合入口新增 LinkedIn 动态监控步骤（Discord + 定价 + 博客 + LinkedIn），无新情报心跳附带当前 LinkedIn 最新动态摘要
 - **`competitor_radar.yml`**: 快照缓存路径新增 `blog_monitor_snapshot.json` / `linkedin_monitor_snapshot.json`；job 新增 `timeout-minutes: 20`
+- **`competitor_radar.yml`**: 快照缓存路径新增 `competitor_health_snapshot.json`，用于保存 Discord 等聚合入口级数据源健康状态
 - **`notifier.py`**: 新增 `exitlag_linkedin` 数据源异常说明，LinkedIn 页面不可达或结构变化时进入统一数据源异常汇总
+- **`notifier.py`**: 新增 `competitor_pricing` 数据源异常说明，竞品定价页全地区不可解析时进入统一数据源异常汇总
 
 ---
 

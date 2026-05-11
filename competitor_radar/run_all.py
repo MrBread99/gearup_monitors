@@ -25,12 +25,93 @@ from openai import OpenAI
 DISCORD_BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
 TARGET_CHANNEL_ID = os.environ.get("TARGET_CHANNEL_ID", "")
 QWEN_API_KEY = os.environ.get("QWEN_API_KEY", "")
+HEALTH_SNAPSHOT_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "competitor_health_snapshot.json",
+)
+HEALTH_ALERT_FAILURES = 3
 
 qwen_client = OpenAI(
     api_key=QWEN_API_KEY,
     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
     timeout=120.0,  # 单次 API 调用最多 2 分钟，防止无响应卡死
 ) if QWEN_API_KEY else None
+
+
+def _load_health_snapshot() -> dict:
+    if os.path.exists(HEALTH_SNAPSHOT_FILE):
+        try:
+            with open(HEALTH_SNAPSHOT_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"_version": 1}
+
+
+def _save_health_snapshot(snapshot: dict):
+    snapshot["_version"] = 1
+    with open(HEALTH_SNAPSHOT_FILE, "w", encoding="utf-8") as f:
+        json.dump(snapshot, f, ensure_ascii=False, indent=2)
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _get_health(snapshot: dict, key: str) -> dict:
+    health_map = snapshot.setdefault("_health", {})
+    return health_map.setdefault(key, {
+        "consecutive_failures": 0,
+        "last_success_at": "",
+        "last_failure_at": "",
+        "last_status_code": None,
+        "last_item_count": 0,
+        "failure_alert_active": False,
+    })
+
+
+def _record_discord_failure(snapshot: dict, status_code: int | None, reason: str):
+    health = _get_health(snapshot, "discord")
+    health["consecutive_failures"] = int(health.get("consecutive_failures", 0) or 0) + 1
+    health["last_failure_at"] = _now_iso()
+    health["last_status_code"] = status_code
+    health["last_failure_reason"] = reason
+
+    failures = health["consecutive_failures"]
+    print(f"[Discord] 数据源失败 {failures}/{HEALTH_ALERT_FAILURES}: {reason}")
+    if failures >= HEALTH_ALERT_FAILURES and not health.get("failure_alert_active"):
+        from utils.notifier import report_scrape_block
+        report_scrape_block("competitor_discord", status_code=status_code)
+        health["failure_alert_active"] = True
+
+
+def _record_discord_success(snapshot: dict, message_count: int) -> list:
+    health = _get_health(snapshot, "discord")
+    previous_failures = int(health.get("consecutive_failures", 0) or 0)
+    was_alerting = bool(health.get("failure_alert_active"))
+
+    health["consecutive_failures"] = 0
+    health["last_success_at"] = _now_iso()
+    health["last_status_code"] = 200
+    health["last_item_count"] = message_count
+    health["last_failure_reason"] = ""
+    health["failure_alert_active"] = False
+
+    if was_alerting or previous_failures >= HEALTH_ALERT_FAILURES:
+        return [{
+            "game": "竞品 Discord",
+            "region": "Global",
+            "country": "",
+            "issue": (
+                "竞品 Discord 数据源已恢复\n"
+                f"    恢复前连续失败: {previous_failures} 次\n"
+                f"    当前拉取消息数: {message_count}"
+            ),
+            "alert_type": "competitor_radar",
+            "source_name": "竞品 Discord 情报频道",
+            "source_url": f"https://discord.com/channels/@me/{TARGET_CHANNEL_ID}" if TARGET_CHANNEL_ID else "",
+        }]
+    return []
 
 
 def _summarize_discord_msg(content, author_name):
@@ -66,9 +147,12 @@ def collect_discord_issues():
     """
     拉取过去 24 小时内竞品 Discord 频道的消息，返回 issue 列表。
     """
+    health_snapshot = _load_health_snapshot()
     issues = []
     if not DISCORD_BOT_TOKEN or not TARGET_CHANNEL_ID:
         print("[Discord] 缺少 DISCORD_BOT_TOKEN 或 TARGET_CHANNEL_ID，跳过。")
+        _record_discord_failure(health_snapshot, None, "缺少 DISCORD_BOT_TOKEN 或 TARGET_CHANNEL_ID")
+        _save_health_snapshot(health_snapshot)
         return issues
 
     url = f"https://discord.com/api/v10/channels/{TARGET_CHANNEL_ID}/messages?limit=25"
@@ -80,11 +164,18 @@ def collect_discord_issues():
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code != 200:
             print(f"[Discord] 抓取失败 HTTP {response.status_code}: {response.text}")
+            _record_discord_failure(health_snapshot, response.status_code, "Discord API 返回非 200")
+            _save_health_snapshot(health_snapshot)
             return issues
         messages = response.json()
     except Exception as e:
         print(f"[Discord] 请求异常: {e}")
+        _record_discord_failure(health_snapshot, None, f"请求异常: {e}")
+        _save_health_snapshot(health_snapshot)
         return issues
+
+    issues.extend(_record_discord_success(health_snapshot, len(messages)))
+    _save_health_snapshot(health_snapshot)
 
     cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
     for msg in messages:
