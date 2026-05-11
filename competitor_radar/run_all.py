@@ -1,6 +1,6 @@
 """
 竞品情报聚合入口 — 每 24 小时运行一次
-将 Discord 情报侦听 + 竞品定价监控合并为一条 POPO 消息发出。
+将 Discord 情报侦听 + 竞品定价 + 博客 + LinkedIn 动态合并为一条 POPO 消息发出。
 """
 import requests
 import json
@@ -142,11 +142,28 @@ def collect_blog_issues():
     return results
 
 
+def collect_linkedin_issues():
+    """调用 linkedin_monitor 模块，返回 ExitLag LinkedIn 新动态 issue。"""
+    from competitor_radar.linkedin_monitor import check_exitlag_linkedin
+    results = check_exitlag_linkedin()
+    print(f"[LinkedIn] 检测到 {len(results)} 条新动态。")
+    return results
+
+
 def _get_blog_status():
     """获取博客监控状态摘要（用于心跳消息）。"""
     try:
         from competitor_radar.competitor_blog_monitor import get_blog_status_summary
         return get_blog_status_summary()
+    except Exception:
+        return ""
+
+
+def _get_linkedin_status():
+    """获取 LinkedIn 当前最新动态摘要（用于心跳消息）。"""
+    try:
+        from competitor_radar.linkedin_monitor import get_linkedin_status_summary
+        return get_linkedin_status_summary()
     except Exception:
         return ""
 
@@ -187,6 +204,13 @@ def main():
         print(f"[Blog] 执行失败: {e}")
         report_monitor_crash("竞品情报: 博客监控", e)
 
+    # 4. ExitLag LinkedIn 动态
+    try:
+        all_issues.extend(collect_linkedin_issues())
+    except Exception as e:
+        print(f"[LinkedIn] 执行失败: {e}")
+        report_monitor_crash("竞品情报: LinkedIn 动态", e)
+
     # 汇总发送 — 所有情报合并为一条消息
     if all_issues:
         send_popo_alert(POPO_WEBHOOK_URL, all_issues)
@@ -194,9 +218,12 @@ def main():
         print("过去 24 小时内无竞品情报变动，静默退出。")
         if not has_scrape_block_alerts():
             blog_status = _get_blog_status()
+            linkedin_status = _get_linkedin_status()
             summary = "过去 24 小时无新增竞品情报，且未检测到数据源异常。"
             if blog_status:
                 summary += f"\n\n当前各竞品最新博客:\n{blog_status}"
+            if linkedin_status:
+                summary += f"\n\n当前 LinkedIn 最新动态:\n{linkedin_status}"
             send_system_heartbeat(
                 POPO_WEBHOOK_URL,
                 "竞品情报聚合",

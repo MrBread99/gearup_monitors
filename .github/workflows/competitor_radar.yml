@@ -40,11 +40,12 @@ jobs:
           path: |
             competitor_radar/exitlag_pricing_snapshot.json
             competitor_radar/blog_monitor_snapshot.json
+            competitor_radar/linkedin_monitor_snapshot.json
           key: competitor-snapshots-${{ github.run_id }}
           restore-keys: |
             competitor-snapshots-
 
-      # ===== 竞品情报聚合（Discord 24h + 定价变动），一条消息发出 =====
+      # ===== 竞品情报聚合（Discord 24h + 定价变动 + 博客 + LinkedIn），一条消息发出 =====
       - name: Run Competitor Radar (All)
         env:
           POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}

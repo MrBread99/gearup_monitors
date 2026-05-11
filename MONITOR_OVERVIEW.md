@@ -34,16 +34,17 @@ gearup_monitors/
 │   └── russia_event_monitor.py      # 俄罗斯大型活动日历 + 网络管控预警（AI 不可用时仍报警）
 │
 ├── competitor_radar/
-│   ├── run_all.py                   # ★ 聚合入口（Discord 24h + 定价 + 博客），合并为一条消息；无结果时发心跳
+│   ├── run_all.py                   # ★ 聚合入口（Discord 24h + 定价 + 博客 + LinkedIn），合并为一条消息；无结果时发心跳
 │   ├── discord_listener.py          # 竞品 Discord 公告 + Qwen AI 翻译提炼
 │   ├── exitlag_pricing.py           # 多竞品定价追踪（Playwright + stealth 三层降级）
 │   │                                #   降级顺序：Playwright headless Chromium > cloudscraper 单例 > requests
 │   │                                #   403 时销毁整个 browser context（含 cookie/storage）并重建
 │   │                                #   Chromium 启动参数含 --disable-blink-features=AutomationControlled
-│   └── competitor_blog_monitor.py   # 竞品博客动态监控 + Qwen AI 中文摘要
+│   ├── competitor_blog_monitor.py   # 竞品博客动态监控 + Qwen AI 中文摘要
 │                                    #   ExitLag: WP REST API → Playwright + stealth → requests
 │                                    #   LagoFast: requests + __NEXT_DATA__ JSON → Playwright
 │                                    #   快照去重（slug），首次运行保存基线不报警
+│   └── linkedin_monitor.py          # ExitLag LinkedIn 公司动态监控（公开 Updates HTML + Playwright fallback + 跨运行健康状态）
 │
 ├── brand_monitor/
 │   ├── run_all.py                   # ★ 聚合入口（9 地区舆情），合并为一条消息；无结果时发心跳
@@ -178,10 +179,11 @@ gearup_monitors/
 
 | 模块 | 功能 | 覆盖 |
 |------|------|------|
-| `run_all.py` | 聚合 Discord + 定价 + 博客，**合并一条消息**发出；无结果时发心跳 | 每天北京时间 09:00 |
+| `run_all.py` | 聚合 Discord + 定价 + 博客 + LinkedIn，**合并一条消息**发出；无结果时发心跳 | 每天北京时间 09:00 |
 | `discord_listener.py` | Discord 公告监听 + Qwen AI 翻译提炼 | 竞品 Discord 频道 |
 | `exitlag_pricing.py` | 多竞品定价变动追踪，Playwright + stealth 绕 Cloudflare | ExitLag 9 地区 + LagoFast 10 地区 = 19 个 |
 | `competitor_blog_monitor.py` | 竞品博客新文章监控 + Qwen AI 中文摘要 | ExitLag 博客 + LagoFast 博客 |
+| `linkedin_monitor.py` | ExitLag LinkedIn 公司动态监控，发现新动态后并入竞品情报警报；连续失败到阈值才报数据源异常，恢复时提示一次 | ExitLag 公司页 |
 
 **定价抓取降级链**: Playwright headless Chromium (playwright-stealth) → cloudscraper 单例会话复用 → requests。Playwright 403 时销毁整个 browser context（含 cookie/storage）并重建重试；所有层级均尝试后统一判断是否报警（单次 403 仅日志，≥2 次才发 POPO）。
 
@@ -234,7 +236,7 @@ gearup_monitors/
 | `monitor.yml` | 每 2 小时 | monitor.py + russia_event_monitor.py + game_calendar_monitor.py | `continue-on-error: true` + step ID + 运行摘要 |
 | `brand_monitor.yml` | 每天北京 08:00 | `brand_monitor/run_all.py`，自动 push 舆情报告到 `reports/` | `permissions: contents: write` + 运行摘要 |
 | `competitor_radar.yml` | 每天北京 09:00 | `competitor_radar/run_all.py` | `playwright install chromium` + `requirements-ci.txt` + 运行摘要 |
-|                        |                 | Discord + 定价 + 博客监控 | 博客快照文件加入 cache |
+|                        |                 | Discord + 定价 + 博客 + LinkedIn 监控 | 博客/LinkedIn 快照文件加入 cache |
 
 ---
 

@@ -304,6 +304,12 @@ _SCRAPE_ADVICE = {
         'short_term': '本次已跳过 LagoFast 博客检测；等待下次运行自动重试',
         'long_term': '若持续出现，检查 LagoFast 前端是否改版导致 __NEXT_DATA__ 结构变化，或增加 Playwright 反爬能力',
     },
+    'exitlag_linkedin': {
+        'display_name': 'ExitLag LinkedIn 公司动态',
+        'reason': 'LinkedIn 公开公司页不可达或页面结构变化，无法解析 Updates 区块',
+        'short_term': '本次已跳过 ExitLag LinkedIn 动态检测；等待下次运行自动重试',
+        'long_term': '若持续出现，优先检查 LinkedIn 公开页结构是否变化；如 GitHub Actions IP 被长期拦截，再考虑代理或 LinkedIn 官方接口方案',
+    },
 }
 
 def send_popo_alert(webhook_url, issues_list):
