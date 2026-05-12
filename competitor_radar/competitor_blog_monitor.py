@@ -248,6 +248,10 @@ _RSS_NS = {
     "dc": "http://purl.org/dc/elements/1.1/",
 }
 
+_SITEMAP_NS = {
+    "sm": "http://www.sitemaps.org/schemas/sitemap/0.9",
+}
+
 
 def _fetch_exitlag_via_google() -> list | None:
     """
@@ -359,53 +363,173 @@ def _fetch_exitlag_via_rss() -> list | None:
         return None
 
 
+def _title_from_slug(slug: str) -> str:
+    return " ".join(word.capitalize() for word in slug.replace("-", " ").split())
+
+
+def _is_exitlag_blog_article_url(url: str) -> bool:
+    if "exitlag.com/blog/" not in url:
+        return False
+    if any(part in url for part in ["/category/", "/tag/", "/page/", "/wp-json/", "/feed/"]):
+        return False
+    slug = url.rstrip("/").split("/")[-1]
+    return bool(slug and slug not in {"blog", "all-posts"})
+
+
+def _parse_exitlag_sitemap_xml(xml_bytes: bytes) -> tuple[list[dict], list[str]]:
+    """
+    解析 sitemap XML。
+    返回 (文章列表, 子 sitemap URL 列表)。
+    """
+    root = ET.fromstring(xml_bytes)
+    posts = []
+    child_sitemaps = []
+
+    if root.tag.endswith("sitemapindex"):
+        for node in root.findall("sm:sitemap", _SITEMAP_NS):
+            loc = (node.findtext("sm:loc", "", _SITEMAP_NS) or "").strip()
+            if loc and ("post" in loc or "blog" in loc):
+                child_sitemaps.append(loc)
+        return posts, child_sitemaps
+
+    if root.tag.endswith("urlset"):
+        for node in root.findall("sm:url", _SITEMAP_NS):
+            loc = (node.findtext("sm:loc", "", _SITEMAP_NS) or "").strip()
+            if not _is_exitlag_blog_article_url(loc):
+                continue
+            slug = loc.rstrip("/").split("/")[-1]
+            lastmod = (node.findtext("sm:lastmod", "", _SITEMAP_NS) or "").strip()
+            posts.append({
+                "slug": slug,
+                "title": _title_from_slug(slug),
+                "url": loc,
+                "date": lastmod,
+                "excerpt": "",
+                "content": f"文章标题: {_title_from_slug(slug)}",
+            })
+
+    return posts, child_sitemaps
+
+
+def _fetch_exitlag_via_sitemap() -> list | None:
+    """
+    通过 sitemap 发现 ExitLag 最新博客文章。
+    这是低频、结构化 fallback，适合在页面/搜索/RSS 不稳定时降低漏报。
+    """
+    sitemap_urls = [
+        "https://www.exitlag.com/post-sitemap.xml",
+        "https://www.exitlag.com/blog-sitemap.xml",
+        "https://www.exitlag.com/sitemap.xml",
+    ]
+    posts = []
+    seen_urls = set()
+
+    for sitemap_url in sitemap_urls:
+        try:
+            time.sleep(random.uniform(1.0, 2.0))
+            resp = req_lib.get(sitemap_url, headers=HEADERS, timeout=20)
+            if resp.status_code != 200:
+                print(f"[ExitLag] Sitemap HTTP {resp.status_code}: {sitemap_url}")
+                _remember_blog_failure("exitlag", resp.status_code, "Sitemap 返回非 200")
+                continue
+
+            parsed_posts, child_sitemaps = _parse_exitlag_sitemap_xml(resp.content)
+            posts.extend(parsed_posts)
+
+            for child_url in child_sitemaps[:5]:
+                if child_url in seen_urls:
+                    continue
+                seen_urls.add(child_url)
+                try:
+                    time.sleep(random.uniform(1.0, 2.0))
+                    child_resp = req_lib.get(child_url, headers=HEADERS, timeout=20)
+                    if child_resp.status_code != 200:
+                        continue
+                    child_posts, _ = _parse_exitlag_sitemap_xml(child_resp.content)
+                    posts.extend(child_posts)
+                except Exception as e:
+                    print(f"[ExitLag] 子 Sitemap 请求异常 {child_url}: {e}")
+
+            if posts:
+                break
+        except ET.ParseError as e:
+            print(f"[ExitLag] Sitemap XML 解析失败 {sitemap_url}: {e}")
+            _remember_blog_failure("exitlag", 200, "Sitemap XML 解析失败")
+        except Exception as e:
+            print(f"[ExitLag] Sitemap 请求异常 {sitemap_url}: {e}")
+            _remember_blog_failure("exitlag", None, f"Sitemap 请求异常: {e}")
+
+    if not posts:
+        return None
+
+    unique_posts = []
+    seen_slugs = set()
+    for post in posts:
+        if post["slug"] in seen_slugs:
+            continue
+        seen_slugs.add(post["slug"])
+        unique_posts.append(post)
+
+    unique_posts.sort(key=lambda item: item.get("date", ""), reverse=True)
+    print(f"[ExitLag] Sitemap 获取到 {len(unique_posts)} 篇文章。")
+    return unique_posts[:50]
+
+
 def _fetch_exitlag_via_wp_api() -> list | None:
     """
     通过 WordPress REST API 获取最新博客文章（最可靠，含全文）。
     ExitLag 博客基于 WordPress，REST API 默认公开。
     """
-    api_url = "https://www.exitlag.com/blog/wp-json/wp/v2/posts"
+    api_urls = [
+        "https://www.exitlag.com/wp-json/wp/v2/posts",
+        "https://www.exitlag.com/blog/wp-json/wp/v2/posts",
+    ]
     params = {
         "per_page": 10,
         "orderby": "date",
         "order": "desc",
         "_fields": "id,slug,title,link,date,excerpt,content",
     }
-    try:
-        time.sleep(random.uniform(1.0, 3.0))
-        resp = req_lib.get(api_url, params=params, headers=API_HEADERS, timeout=20)
-        if resp.status_code == 200:
-            posts = resp.json()
-            results = []
-            for post in posts:
-                title_html = post.get("title", {}).get("rendered", "")
-                excerpt_html = post.get("excerpt", {}).get("rendered", "")
-                content_html = post.get("content", {}).get("rendered", "")
+    for api_url in api_urls:
+        try:
+            time.sleep(random.uniform(1.0, 3.0))
+            resp = req_lib.get(api_url, params=params, headers=API_HEADERS, timeout=20)
+            if resp.status_code == 200:
+                posts = resp.json()
+                results = []
+                for post in posts:
+                    title_html = post.get("title", {}).get("rendered", "")
+                    excerpt_html = post.get("excerpt", {}).get("rendered", "")
+                    content_html = post.get("content", {}).get("rendered", "")
 
-                title = BeautifulSoup(title_html, "html.parser").get_text(strip=True)
-                excerpt = BeautifulSoup(excerpt_html, "html.parser").get_text(strip=True)
-                content = BeautifulSoup(content_html, "html.parser").get_text(" ", strip=True)
+                    title = BeautifulSoup(title_html, "html.parser").get_text(strip=True)
+                    excerpt = BeautifulSoup(excerpt_html, "html.parser").get_text(strip=True)
+                    content = BeautifulSoup(content_html, "html.parser").get_text(" ", strip=True)
 
-                results.append({
-                    "slug": post.get("slug", ""),
-                    "title": title,
-                    "url": post.get("link", ""),
-                    "date": post.get("date", ""),
-                    "excerpt": excerpt,
-                    "content": content,
-                })
-            print(f"[ExitLag] WordPress API 获取到 {len(results)} 篇文章。")
-            return results
-        else:
-            print(f"[ExitLag] WordPress API HTTP {resp.status_code}")
+                    url = post.get("link", "")
+                    if url and not _is_exitlag_blog_article_url(url):
+                        continue
+
+                    results.append({
+                        "slug": post.get("slug", ""),
+                        "title": title,
+                        "url": url,
+                        "date": post.get("date", ""),
+                        "excerpt": excerpt,
+                        "content": content,
+                    })
+                print(f"[ExitLag] WordPress API 获取到 {len(results)} 篇文章。")
+                return results if results else None
+
+            print(f"[ExitLag] WordPress API HTTP {resp.status_code}: {api_url}")
             if resp.status_code in (403, 429):
                 _remember_blog_failure("exitlag", resp.status_code, "WordPress API 被反爬或限流")
             else:
                 _remember_blog_failure("exitlag", resp.status_code, "WordPress API 返回非 200")
-            return None
-    except Exception as e:
-        print(f"[ExitLag] WordPress API 请求异常: {e}")
-        return None
+        except Exception as e:
+            print(f"[ExitLag] WordPress API 请求异常 {api_url}: {e}")
+            _remember_blog_failure("exitlag", None, f"WordPress API 请求异常: {e}")
+    return None
 
 
 def _parse_exitlag_html(html: str) -> list:
@@ -543,6 +667,16 @@ def fetch_exitlag_posts() -> list:
     优先解析公开博客页；失败时降级 Playwright、Google/DDG 索引、RSS。
     """
     posts = _fetch_exitlag_via_requests()
+    if posts is not None:
+        return posts
+
+    print("[ExitLag] requests 不可用，尝试 WordPress REST API...")
+    posts = _fetch_exitlag_via_wp_api()
+    if posts is not None:
+        return posts
+
+    print("[ExitLag] WordPress API 不可用，尝试 Sitemap...")
+    posts = _fetch_exitlag_via_sitemap()
     if posts is not None:
         return posts
 

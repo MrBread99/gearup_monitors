@@ -182,7 +182,7 @@ gearup_monitors/
 | `run_all.py` | 聚合 Discord + 定价 + 博客 + LinkedIn，**合并一条消息**发出；无结果时发心跳；Discord 连续失败到阈值才报异常，恢复时提示一次 | 每天北京时间 09:00 |
 | `discord_listener.py` | Discord 公告监听 + Qwen AI 翻译提炼 | 竞品 Discord 频道 |
 | `exitlag_pricing.py` | 多竞品定价变动追踪，ExitLag 改用公开 webhook 结账页，LagoFast 保持 Playwright + fallback；所有地区连续失败到阈值才报异常，恢复时提示一次 | ExitLag Global + LagoFast 10 地区 = 11 个 |
-| `competitor_blog_monitor.py` | 竞品博客新文章监控 + Qwen AI 中文摘要；ExitLag 恢复公开博客页解析，失败降级 Playwright / 搜索索引 / RSS | ExitLag 博客 + LagoFast 博客 |
+| `competitor_blog_monitor.py` | 竞品博客新文章监控 + Qwen AI 中文摘要；ExitLag 恢复公开博客页解析，失败降级 WP REST / Sitemap / Playwright / 搜索索引 / RSS | ExitLag 博客 + LagoFast 博客 |
 | `linkedin_monitor.py` | ExitLag LinkedIn 公司动态监控，发现新动态后并入竞品情报警报；连续失败到阈值才报数据源异常，恢复时提示一次 | ExitLag 公司页 |
 
 **定价抓取策略**: ExitLag 使用 `https://webhook.exitlag.com/pricing` 公开结账页解析 Solo/Duo/Squad 套餐；LagoFast 继续使用 Playwright headless Chromium (playwright-stealth) → cloudscraper 单例会话复用 → requests。Playwright 403 时销毁整个 browser context（含 cookie/storage）并重建重试。
@@ -192,7 +192,7 @@ gearup_monitors/
 多竞品架构：`COMPETITORS` 字典配置，新增竞品只需加一条配置。
 
 **博客监控抓取策略**:
-- ExitLag: 公开博客页 requests + DOM 解析 → Playwright → Google/DDG 搜索索引 → RSS Feed
+- ExitLag: 公开博客页 requests + DOM 解析 → WP REST API → Sitemap → Playwright → Google/DDG 搜索索引 → RSS Feed
 - LagoFast（Next.js）: requests + `__NEXT_DATA__` JSON 解析 → DOM 解析 fallback → Playwright
 - 快照去重：以文章 slug 为 key，跨运行持久化；首次运行保存基线，不生成报警
 - 新文章摘要过短时自动抓取全文页面，提供充分上下文给 AI
@@ -302,5 +302,5 @@ gearup_monitors/
 
 ## 十二、已知架构约束补充
 
-17. **竞品博客监控反爬策略** — ExitLag 博客优先解析公开博客页，失败时降级 Playwright、搜索索引和 RSS。LagoFast 博客（Next.js SSR）优先通过 requests 抓取 `__NEXT_DATA__` JSON（服务端渲染的结构化数据），失败时尝试 DOM 解析和 Playwright
+17. **竞品博客监控反爬策略** — ExitLag 博客优先解析公开博客页，失败时降级 WP REST API、Sitemap、Playwright、搜索索引和 RSS。LagoFast 博客（Next.js SSR）优先通过 requests 抓取 `__NEXT_DATA__` JSON（服务端渲染的结构化数据），失败时尝试 DOM 解析和 Playwright
 18. **博客快照首次运行** — `competitor_blog_monitor.py` 首次运行（快照中无对应竞品 key）仅保存当前文章列表为基线，不生成报警，避免首次部署时产生大量历史文章的误报

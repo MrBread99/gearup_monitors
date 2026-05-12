@@ -18,6 +18,7 @@
 - **LagoFast 定价监控健康状态** (`competitor_radar/exitlag_pricing.py`): 当所有地区都无法解析到价格时才累计定价数据源失败；连续 3 次失败才发数据源异常，同一故障期只报一次，恢复后提示一次
 - **ExitLag 定价监控恢复** (`competitor_radar/exitlag_pricing.py`): ExitLag 价格源改为公开结账页 `https://webhook.exitlag.com/pricing`，解析 Solo/Duo/Squad 的月付/季付/年付价格和折扣，绕开主站多地区 pricing 的 Cloudflare 拦截
 - **ExitLag 博客监控恢复** (`competitor_radar/competitor_blog_monitor.py`): 重新启用 ExitLag 博客监控，优先解析公开博客页 DOM，失败时降级 Playwright、Google/DDG 搜索索引和 RSS；RSS/API 失败也纳入跨运行健康状态，避免即时刷异常
+- **ExitLag 博客结构化 fallback** (`competitor_radar/competitor_blog_monitor.py`): 新增 WP REST 多端点和 Sitemap 解析 fallback，可从 `post-sitemap.xml` / `sitemap.xml` 中发现 `/blog/` 文章，降低公开博客页改版或短期不可达造成的漏报
 - **Steam News API Key 接入** (`game_calendar_monitor.py` + `monitor.yml`): Steam News API 请求附带 `STEAM_API_KEY`，解决无 Key 被限流/封锁的问题；User-Agent 从 `OSINT-Monitor/2.1` 改为标准 Chrome UA
 - **Reddit 无凭证静默跳过** (`utils/reddit_client.py`): 没有 Reddit OAuth 凭证时 `reddit_get()` 直接返回 None，不发请求、不触发熔断、不产生噪音
   - **ExitLag 抓取策略**（WordPress + Cloudflare，四层降级）: RSS Feed 优先（Cloudflare 不拦截 `/feed/` 端点，返回全文）→ WP REST API → Playwright + stealth → requests HTML 解析
