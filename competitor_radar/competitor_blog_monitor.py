@@ -309,7 +309,9 @@ def _fetch_exitlag_via_rss() -> list | None:
         if resp.status_code != 200:
             print(f"[ExitLag] RSS Feed HTTP {resp.status_code}")
             if resp.status_code in (403, 429):
-                report_scrape_block("exitlag_blog_rss", url=feed_url, status_code=resp.status_code)
+                _remember_blog_failure("exitlag", resp.status_code, "RSS Feed 被反爬或限流")
+            else:
+                _remember_blog_failure("exitlag", resp.status_code, "RSS Feed 返回非 200")
             return None
 
         root = ET.fromstring(resp.content)
@@ -397,7 +399,9 @@ def _fetch_exitlag_via_wp_api() -> list | None:
         else:
             print(f"[ExitLag] WordPress API HTTP {resp.status_code}")
             if resp.status_code in (403, 429):
-                report_scrape_block("exitlag_blog_api", url=api_url, status_code=resp.status_code)
+                _remember_blog_failure("exitlag", resp.status_code, "WordPress API 被反爬或限流")
+            else:
+                _remember_blog_failure("exitlag", resp.status_code, "WordPress API 返回非 200")
             return None
     except Exception as e:
         print(f"[ExitLag] WordPress API 请求异常: {e}")
@@ -441,6 +445,47 @@ def _parse_exitlag_html(html: str) -> list:
             "content": excerpt,  # 列表页只有摘要
         })
 
+    for link in soup.select('a[href*="/blog/"]'):
+        url = link.get("href", "")
+        if not url:
+            continue
+        if url.startswith("/"):
+            url = f"https://www.exitlag.com{url}"
+        if "exitlag.com/blog/" not in url:
+            continue
+        if any(part in url for part in ["/category/", "/tag/", "/page/", "/wp-json/", "/feed/"]):
+            continue
+        slug = url.rstrip("/").split("/")[-1]
+        if not slug or slug in {"blog", "all-posts"} or slug in seen_slugs:
+            continue
+
+        title = link.get_text(" ", strip=True)
+        if not title or len(title) < 8:
+            title_attr = link.get("title", "")
+            title = title_attr.strip()
+        if not title or len(title) < 8:
+            continue
+
+        seen_slugs.add(slug)
+        parent = link.find_parent(["article", "li", "div"])
+        excerpt = ""
+        date_str = ""
+        if parent:
+            parent_text = parent.get_text(" ", strip=True)
+            excerpt = parent_text.replace(title, "", 1).strip()[:500]
+            time_el = parent.select_one("time[datetime]") if hasattr(parent, "select_one") else None
+            if time_el:
+                date_str = time_el.get("datetime", "")
+
+        results.append({
+            "slug": slug,
+            "title": title,
+            "url": url,
+            "date": date_str,
+            "excerpt": excerpt,
+            "content": excerpt,
+        })
+
     print(f"[ExitLag] HTML 解析获取到 {len(results)} 篇文章。")
     return results
 
@@ -457,10 +502,16 @@ def _fetch_exitlag_via_playwright() -> list | None:
     html, status = pw_fetch(url)
     if html is None or status != 200:
         if status == 403:
-            report_scrape_block("exitlag_blog", url=url, status_code=403)
+            _remember_blog_failure("exitlag", 403, "Playwright 被反爬拦截")
+        else:
+            _remember_blog_failure("exitlag", status, "Playwright 未获取到有效页面")
         return None
 
-    return _parse_exitlag_html(html)
+    posts = _parse_exitlag_html(html)
+    if posts:
+        return posts
+    _remember_blog_failure("exitlag", 200, "Playwright 页面可达但未解析到文章")
+    return None
 
 
 def _fetch_exitlag_via_requests() -> list | None:
@@ -470,27 +521,40 @@ def _fetch_exitlag_via_requests() -> list | None:
         time.sleep(random.uniform(2.0, 4.0))
         resp = req_lib.get(url, headers=HEADERS, timeout=20)
         if resp.status_code == 200:
-            return _parse_exitlag_html(resp.text)
+            posts = _parse_exitlag_html(resp.text)
+            if posts:
+                return posts
+            _remember_blog_failure("exitlag", 200, "页面可达但未解析到文章")
+            return None
         if resp.status_code in (403, 429):
-            report_scrape_block("exitlag_blog", url=url, status_code=resp.status_code)
+            _remember_blog_failure("exitlag", resp.status_code, "requests 被反爬或限流")
+        else:
+            _remember_blog_failure("exitlag", resp.status_code, "requests 返回非 200")
         return None
     except Exception as e:
         print(f"[ExitLag] requests 失败: {e}")
+        _remember_blog_failure("exitlag", None, f"requests 异常: {e}")
         return None
 
 
 def fetch_exitlag_posts() -> list:
     """
     获取 ExitLag 博客文章。
-    ExitLag Cloudflare 封锁所有数据中心 IP（RSS/API/Playwright/requests 全 403），
-    因此仅使用 Google Search 间接获取（通过搜索引擎索引，不碰 ExitLag 域名）。
+    优先解析公开博客页；失败时降级 Playwright、Google/DDG 索引、RSS。
     """
+    posts = _fetch_exitlag_via_requests()
+    if posts is not None:
+        return posts
+
+    print("[ExitLag] requests 不可用，尝试 Playwright...")
+    posts = _fetch_exitlag_via_playwright()
+    if posts is not None:
+        return posts
+
     posts = _fetch_exitlag_via_google()
     if posts is not None:
         return posts
 
-    # Google/DDG 搜索也失败时，尝试 RSS 作为唯一直连备选
-    # （不再尝试 WP API / Playwright / requests，避免浪费 5+ 分钟在必定 403 的重试上）
     print("[ExitLag] Google/DDG 不可用，最后尝试 RSS Feed...")
     posts = _fetch_exitlag_via_rss()
     if posts is not None:
@@ -735,9 +799,7 @@ def _fetch_article_content(url: str) -> str:
 # ==========================================
 
 COMPETITORS = {
-    # ExitLag: Cloudflare 封锁所有数据中心 IP（含搜索引擎 fallback），暂停博客监控。
-    # 仍由定价模块 + Discord 监控覆盖。如需恢复，取消下行注释并接入住宅代理。
-    # "ExitLag": fetch_exitlag_posts,
+    "ExitLag": fetch_exitlag_posts,
     "LagoFast": fetch_lagofast_posts,
 }
 
