@@ -36,12 +36,12 @@ gearup_monitors/
 ├── competitor_radar/
 │   ├── run_all.py                   # ★ 聚合入口（Discord 24h + 定价 + 博客 + LinkedIn），合并为一条消息；含 Discord 健康状态
 │   ├── discord_listener.py          # 竞品 Discord 公告 + Qwen AI 翻译提炼
-│   ├── exitlag_pricing.py           # 多竞品定价追踪（Playwright + stealth 三层降级 + 跨运行健康状态）
+│   ├── exitlag_pricing.py           # 多竞品定价追踪（Playwright + stealth 三层降级 + 跨运行健康状态 + 来源命中追踪）
 │   │                                #   降级顺序：Playwright headless Chromium > cloudscraper 单例 > requests
 │   │                                #   403 时销毁整个 browser context（含 cookie/storage）并重建
 │   │                                #   Chromium 启动参数含 --disable-blink-features=AutomationControlled
-│   ├── competitor_blog_monitor.py   # 竞品博客动态监控 + Qwen AI 中文摘要 + 跨运行健康状态
-│                                    #   ExitLag: WP REST API → Playwright + stealth → requests
+│   ├── competitor_blog_monitor.py   # 竞品博客动态监控 + Qwen AI 中文摘要 + 跨运行健康状态 + 来源命中追踪
+│                                    #   ExitLag: requests HTML → WP REST API → Sitemap → Playwright → Google/DDG → RSS
 │                                    #   LagoFast: requests + __NEXT_DATA__ JSON → Playwright
 │                                    #   快照去重（slug），首次运行保存基线不报警
 │   └── linkedin_monitor.py          # ExitLag LinkedIn 公司动态监控（公开 Updates HTML + Playwright fallback + 跨运行健康状态）

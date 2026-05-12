@@ -5,7 +5,7 @@
 发现新文章时通过 Qwen AI 生成中文摘要并发送 POPO 报警。
 
 抓取策略（绕过反爬）：
-- ExitLag: WordPress REST API 优先 → Playwright + stealth → requests HTML 解析
+- ExitLag: requests HTML → WordPress REST API → Sitemap → Playwright → Google/DDG → RSS
 - LagoFast: requests + __NEXT_DATA__ JSON 解析 → Playwright fallback
 
 去重机制：
@@ -70,6 +70,7 @@ BLOG_SOURCE_URLS = {
 }
 
 _last_blog_failure: dict = {}
+_last_blog_source_trace: dict = {}
 
 
 # ==========================================
@@ -112,21 +113,73 @@ def _get_health(snapshot: dict, key: str) -> dict:
         "last_failure_at": "",
         "last_status_code": None,
         "last_post_count": 0,
+        "last_success_source": "",
+        "last_attempted_sources": [],
+        "last_source_failures": [],
         "failure_alert_active": False,
     })
 
 
-def _remember_blog_failure(key: str, status_code: int | None, reason: str):
+def _reset_blog_source_trace(key: str):
+    _last_blog_source_trace[key] = {
+        "attempted_sources": [],
+        "source_failures": [],
+        "success_source": "",
+    }
+
+
+def _source_trace(key: str) -> dict:
+    return _last_blog_source_trace.setdefault(key, {
+        "attempted_sources": [],
+        "source_failures": [],
+        "success_source": "",
+    })
+
+
+def _record_blog_source_attempt(key: str, source: str):
+    if not source:
+        return
+    trace = _source_trace(key)
+    if source not in trace["attempted_sources"]:
+        trace["attempted_sources"].append(source)
+
+
+def _remember_blog_failure(
+    key: str,
+    status_code: int | None,
+    reason: str,
+    source: str = "",
+    url: str = "",
+):
+    _record_blog_source_attempt(key, source)
+    if source:
+        failures = _source_trace(key)["source_failures"]
+        failures.append({
+            "source": source,
+            "status_code": status_code,
+            "reason": reason,
+        })
+        del failures[:-8]
     _last_blog_failure[key] = {
         "status_code": status_code,
         "reason": reason,
-        "url": BLOG_SOURCE_URLS.get(key, ""),
+        "url": url or BLOG_SOURCE_URLS.get(key, ""),
     }
+
+
+def _remember_blog_success(key: str, source: str, posts: list) -> list:
+    _record_blog_source_attempt(key, source)
+    trace = _source_trace(key)
+    trace["success_source"] = source
+    for post in posts:
+        post["_source_mode"] = source
+    return posts
 
 
 def _record_blog_failure(snapshot: dict, name: str) -> None:
     key = name.lower()
     meta = _last_blog_failure.get(key, {})
+    trace = _source_trace(key)
     status_code = meta.get("status_code")
     reason = meta.get("reason") or "抓取完成但返回 0 篇文章，可能是页面结构变化或数据源为空"
     url = meta.get("url") or BLOG_SOURCE_URLS.get(key, "")
@@ -136,6 +189,8 @@ def _record_blog_failure(snapshot: dict, name: str) -> None:
     health["last_failure_at"] = _now_iso()
     health["last_status_code"] = status_code
     health["last_failure_reason"] = reason
+    health["last_attempted_sources"] = trace.get("attempted_sources", [])
+    health["last_source_failures"] = trace.get("source_failures", [])
 
     failures = health["consecutive_failures"]
     print(f"[{name}] 博客数据源失败 {failures}/{HEALTH_ALERT_FAILURES}: {reason}")
@@ -147,13 +202,18 @@ def _record_blog_failure(snapshot: dict, name: str) -> None:
 def _record_blog_success(snapshot: dict, name: str, post_count: int) -> dict | None:
     key = name.lower()
     health = _get_health(snapshot, key)
+    trace = _source_trace(key)
     previous_failures = int(health.get("consecutive_failures", 0) or 0)
     was_alerting = bool(health.get("failure_alert_active"))
+    success_source = trace.get("success_source", "")
 
     health["consecutive_failures"] = 0
     health["last_success_at"] = _now_iso()
     health["last_status_code"] = 200
     health["last_post_count"] = post_count
+    health["last_success_source"] = success_source
+    health["last_attempted_sources"] = trace.get("attempted_sources", [])
+    health["last_source_failures"] = trace.get("source_failures", [])
     health["last_failure_reason"] = ""
     health["failure_alert_active"] = False
     _last_blog_failure.pop(key, None)
@@ -166,10 +226,11 @@ def _record_blog_success(snapshot: dict, name: str, post_count: int) -> dict | N
             "issue": (
                 f"{name} 博客数据源已恢复\n"
                 f"    恢复前连续失败: {previous_failures} 次\n"
-                f"    当前解析文章数: {post_count}"
+                f"    当前解析文章数: {post_count}\n"
+                f"    当前命中来源: {success_source or '未知'}"
             ),
             "alert_type": "competitor_radar",
-            "source_name": f"{name} 官方博客",
+            "source_name": f"{name} 官方博客" + (f" ({success_source})" if success_source else ""),
             "source_url": BLOG_SOURCE_URLS.get(key, ""),
         }
     return None
@@ -263,11 +324,14 @@ def _fetch_exitlag_via_google() -> list | None:
         from utils.google_client import google_search
     except ImportError:
         print("[ExitLag] google_client 不可用，跳过搜索引擎方式。")
+        _remember_blog_failure("exitlag", None, "google_client 不可用", source="google_search")
         return None
 
+    _record_blog_source_attempt("exitlag", "google_search")
     results = google_search(query="blog", site="exitlag.com/blog", max_results=10)
     if not results:
         print("[ExitLag] Google/DDG 搜索无结果。")
+        _remember_blog_failure("exitlag", None, "Google/DDG 搜索无结果", source="google_search")
         return None
 
     posts = []
@@ -292,7 +356,10 @@ def _fetch_exitlag_via_google() -> list | None:
         })
 
     print(f"[ExitLag] Google/DDG 搜索获取到 {len(posts)} 篇文章。")
-    return posts if posts else None
+    if posts:
+        return _remember_blog_success("exitlag", "google_search", posts)
+    _remember_blog_failure("exitlag", None, "Google/DDG 搜索结果未解析到文章", source="google_search")
+    return None
 
 
 def _fetch_exitlag_via_rss() -> list | None:
@@ -308,20 +375,22 @@ def _fetch_exitlag_via_rss() -> list | None:
         "Accept-Language": "en-US,en;q=0.9",
     }
     try:
+        _record_blog_source_attempt("exitlag", "rss_feed")
         time.sleep(random.uniform(1.0, 2.0))
         resp = req_lib.get(feed_url, headers=rss_headers, timeout=20)
         if resp.status_code != 200:
             print(f"[ExitLag] RSS Feed HTTP {resp.status_code}")
             if resp.status_code in (403, 429):
-                _remember_blog_failure("exitlag", resp.status_code, "RSS Feed 被反爬或限流")
+                _remember_blog_failure("exitlag", resp.status_code, "RSS Feed 被反爬或限流", source="rss_feed", url=feed_url)
             else:
-                _remember_blog_failure("exitlag", resp.status_code, "RSS Feed 返回非 200")
+                _remember_blog_failure("exitlag", resp.status_code, "RSS Feed 返回非 200", source="rss_feed", url=feed_url)
             return None
 
         root = ET.fromstring(resp.content)
         channel = root.find("channel")
         if channel is None:
             print("[ExitLag] RSS Feed 格式异常: 缺少 <channel>")
+            _remember_blog_failure("exitlag", 200, "RSS Feed 格式异常: 缺少 channel", source="rss_feed", url=feed_url)
             return None
 
         results = []
@@ -353,13 +422,18 @@ def _fetch_exitlag_via_rss() -> list | None:
             })
 
         print(f"[ExitLag] RSS Feed 获取到 {len(results)} 篇文章。")
-        return results if results else None
+        if results:
+            return _remember_blog_success("exitlag", "rss_feed", results)
+        _remember_blog_failure("exitlag", 200, "RSS Feed 未解析到文章", source="rss_feed", url=feed_url)
+        return None
 
     except ET.ParseError as e:
         print(f"[ExitLag] RSS Feed XML 解析失败: {e}")
+        _remember_blog_failure("exitlag", 200, f"RSS Feed XML 解析失败: {e}", source="rss_feed", url=feed_url)
         return None
     except Exception as e:
         print(f"[ExitLag] RSS Feed 请求异常: {e}")
+        _remember_blog_failure("exitlag", None, f"RSS Feed 请求异常: {e}", source="rss_feed", url=feed_url)
         return None
 
 
@@ -426,11 +500,12 @@ def _fetch_exitlag_via_sitemap() -> list | None:
 
     for sitemap_url in sitemap_urls:
         try:
+            _record_blog_source_attempt("exitlag", "sitemap")
             time.sleep(random.uniform(1.0, 2.0))
             resp = req_lib.get(sitemap_url, headers=HEADERS, timeout=20)
             if resp.status_code != 200:
                 print(f"[ExitLag] Sitemap HTTP {resp.status_code}: {sitemap_url}")
-                _remember_blog_failure("exitlag", resp.status_code, "Sitemap 返回非 200")
+                _remember_blog_failure("exitlag", resp.status_code, "Sitemap 返回非 200", source="sitemap", url=sitemap_url)
                 continue
 
             parsed_posts, child_sitemaps = _parse_exitlag_sitemap_xml(resp.content)
@@ -454,10 +529,10 @@ def _fetch_exitlag_via_sitemap() -> list | None:
                 break
         except ET.ParseError as e:
             print(f"[ExitLag] Sitemap XML 解析失败 {sitemap_url}: {e}")
-            _remember_blog_failure("exitlag", 200, "Sitemap XML 解析失败")
+            _remember_blog_failure("exitlag", 200, "Sitemap XML 解析失败", source="sitemap", url=sitemap_url)
         except Exception as e:
             print(f"[ExitLag] Sitemap 请求异常 {sitemap_url}: {e}")
-            _remember_blog_failure("exitlag", None, f"Sitemap 请求异常: {e}")
+            _remember_blog_failure("exitlag", None, f"Sitemap 请求异常: {e}", source="sitemap", url=sitemap_url)
 
     if not posts:
         return None
@@ -472,7 +547,7 @@ def _fetch_exitlag_via_sitemap() -> list | None:
 
     unique_posts.sort(key=lambda item: item.get("date", ""), reverse=True)
     print(f"[ExitLag] Sitemap 获取到 {len(unique_posts)} 篇文章。")
-    return unique_posts[:50]
+    return _remember_blog_success("exitlag", "sitemap", unique_posts[:50])
 
 
 def _fetch_exitlag_via_wp_api() -> list | None:
@@ -492,6 +567,7 @@ def _fetch_exitlag_via_wp_api() -> list | None:
     }
     for api_url in api_urls:
         try:
+            _record_blog_source_attempt("exitlag", "wp_rest_api")
             time.sleep(random.uniform(1.0, 3.0))
             resp = req_lib.get(api_url, params=params, headers=API_HEADERS, timeout=20)
             if resp.status_code == 200:
@@ -519,16 +595,19 @@ def _fetch_exitlag_via_wp_api() -> list | None:
                         "content": content,
                     })
                 print(f"[ExitLag] WordPress API 获取到 {len(results)} 篇文章。")
-                return results if results else None
+                if results:
+                    return _remember_blog_success("exitlag", "wp_rest_api", results)
+                _remember_blog_failure("exitlag", 200, "WordPress API 未解析到博客文章", source="wp_rest_api", url=api_url)
+                return None
 
             print(f"[ExitLag] WordPress API HTTP {resp.status_code}: {api_url}")
             if resp.status_code in (403, 429):
-                _remember_blog_failure("exitlag", resp.status_code, "WordPress API 被反爬或限流")
+                _remember_blog_failure("exitlag", resp.status_code, "WordPress API 被反爬或限流", source="wp_rest_api", url=api_url)
             else:
-                _remember_blog_failure("exitlag", resp.status_code, "WordPress API 返回非 200")
+                _remember_blog_failure("exitlag", resp.status_code, "WordPress API 返回非 200", source="wp_rest_api", url=api_url)
         except Exception as e:
             print(f"[ExitLag] WordPress API 请求异常 {api_url}: {e}")
-            _remember_blog_failure("exitlag", None, f"WordPress API 请求异常: {e}")
+            _remember_blog_failure("exitlag", None, f"WordPress API 请求异常: {e}", source="wp_rest_api", url=api_url)
     return None
 
 
@@ -620,21 +699,23 @@ def _fetch_exitlag_via_playwright() -> list | None:
         from utils.playwright_client import pw_fetch
     except ImportError:
         print("[ExitLag] Playwright 未安装，跳过。")
+        _remember_blog_failure("exitlag", None, "Playwright 未安装", source="playwright", url="https://www.exitlag.com/blog/")
         return None
 
     url = "https://www.exitlag.com/blog/"
+    _record_blog_source_attempt("exitlag", "playwright")
     html, status = pw_fetch(url)
     if html is None or status != 200:
         if status == 403:
-            _remember_blog_failure("exitlag", 403, "Playwright 被反爬拦截")
+            _remember_blog_failure("exitlag", 403, "Playwright 被反爬拦截", source="playwright", url=url)
         else:
-            _remember_blog_failure("exitlag", status, "Playwright 未获取到有效页面")
+            _remember_blog_failure("exitlag", status, "Playwright 未获取到有效页面", source="playwright", url=url)
         return None
 
     posts = _parse_exitlag_html(html)
     if posts:
-        return posts
-    _remember_blog_failure("exitlag", 200, "Playwright 页面可达但未解析到文章")
+        return _remember_blog_success("exitlag", "playwright", posts)
+    _remember_blog_failure("exitlag", 200, "Playwright 页面可达但未解析到文章", source="playwright", url=url)
     return None
 
 
@@ -642,22 +723,23 @@ def _fetch_exitlag_via_requests() -> list | None:
     """普通 requests 兜底抓取。"""
     url = "https://www.exitlag.com/blog/"
     try:
+        _record_blog_source_attempt("exitlag", "requests_html")
         time.sleep(random.uniform(2.0, 4.0))
         resp = req_lib.get(url, headers=HEADERS, timeout=20)
         if resp.status_code == 200:
             posts = _parse_exitlag_html(resp.text)
             if posts:
-                return posts
-            _remember_blog_failure("exitlag", 200, "页面可达但未解析到文章")
+                return _remember_blog_success("exitlag", "requests_html", posts)
+            _remember_blog_failure("exitlag", 200, "页面可达但未解析到文章", source="requests_html", url=url)
             return None
         if resp.status_code in (403, 429):
-            _remember_blog_failure("exitlag", resp.status_code, "requests 被反爬或限流")
+            _remember_blog_failure("exitlag", resp.status_code, "requests 被反爬或限流", source="requests_html", url=url)
         else:
-            _remember_blog_failure("exitlag", resp.status_code, "requests 返回非 200")
+            _remember_blog_failure("exitlag", resp.status_code, "requests 返回非 200", source="requests_html", url=url)
         return None
     except Exception as e:
         print(f"[ExitLag] requests 失败: {e}")
-        _remember_blog_failure("exitlag", None, f"requests 异常: {e}")
+        _remember_blog_failure("exitlag", None, f"requests 异常: {e}", source="requests_html", url=url)
         return None
 
 
@@ -666,6 +748,8 @@ def fetch_exitlag_posts() -> list:
     获取 ExitLag 博客文章。
     优先解析公开博客页；失败时降级 Playwright、Google/DDG 索引、RSS。
     """
+    _reset_blog_source_trace("exitlag")
+
     posts = _fetch_exitlag_via_requests()
     if posts is not None:
         return posts
@@ -951,7 +1035,8 @@ def get_blog_status_summary() -> str:
         return ""
     lines = []
     for name, info in _latest_blog_status.items():
-        lines.append(f"  [{name}] {info['title']}")
+        source = f" | 来源: {info['source']}" if info.get("source") else ""
+        lines.append(f"  [{name}] {info['title']}{source}")
         lines.append(f"    时间: {info['date']}  |  {info['url']}")
     return "\n".join(lines)
 
@@ -992,6 +1077,7 @@ def check_competitor_blogs() -> list:
             "title": posts[0]["title"],
             "date": posts[0].get("date", "未知"),
             "url": posts[0]["url"],
+            "source": posts[0].get("_source_mode", ""),
         }
 
         is_first_run = key not in snapshot
@@ -1041,7 +1127,10 @@ def check_competitor_blogs() -> list:
                 "country": "",
                 "issue": issue_text,
                 "alert_type": "competitor_radar",
-                "source_name": f"{name} 官方博客",
+                "source_name": (
+                    f"{name} 官方博客"
+                    + (f" ({post.get('_source_mode')})" if post.get("_source_mode") else "")
+                ),
                 "source_url": post["url"],
             })
 

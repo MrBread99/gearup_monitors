@@ -60,6 +60,7 @@ PLAN_TIERS = ['Solo', 'Duo', 'Squad']
 SNAPSHOT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'exitlag_pricing_snapshot.json')
 HEALTH_ALERT_FAILURES = 3
 _last_pricing_failure = {}
+_last_pricing_source_trace = {}
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
@@ -364,22 +365,32 @@ def fetch_exitlag_webhook_pricing():
     """
     url = COMPETITORS['ExitLag']['url_template']
     html_text = None
+    html_source = ''
     last_status = None
 
     try:
+        _record_pricing_source_attempt('ExitLag', 'webhook_requests')
         time.sleep(random.uniform(1.0, 2.0))
         response = requests.get(url, headers=WEBHOOK_HEADERS, timeout=20)
         last_status = response.status_code
         if response.status_code == 200:
             html_text = response.text
+            html_source = 'webhook_requests'
         else:
             print(f"[ExitLag] webhook pricing requests HTTP {response.status_code}")
+            _remember_pricing_source_failure('ExitLag', 'webhook_requests', response.status_code, 'webhook pricing requests 返回非 200')
     except Exception as e:
         print(f"[ExitLag] webhook pricing requests 失败: {e}")
+        _remember_pricing_source_failure('ExitLag', 'webhook_requests', None, f'webhook pricing requests 失败: {e}')
 
     if html_text is None:
+        _record_pricing_source_attempt('ExitLag', 'webhook_playwright')
         html_text, status = _fetch_with_playwright(url)
         last_status = status or last_status
+        if html_text is not None:
+            html_source = 'webhook_playwright'
+        if html_text is None:
+            _remember_pricing_source_failure('ExitLag', 'webhook_playwright', status, 'webhook pricing Playwright 未获取到页面')
 
     if html_text is None:
         _remember_pricing_failure('ExitLag', last_status, 'webhook pricing requests/Playwright 均未获取到页面')
@@ -387,8 +398,11 @@ def fetch_exitlag_webhook_pricing():
 
     pricing = _parse_exitlag_webhook_pricing(html_text)
     if not pricing:
+        _remember_pricing_source_failure('ExitLag', 'webhook_pricing_parser', 200, 'webhook pricing 页面可达但未解析到套餐价格')
         _remember_pricing_failure('ExitLag', 200, 'webhook pricing 页面可达但未解析到套餐价格')
         return None
+    _remember_pricing_source_success('ExitLag', html_source or 'webhook_pricing')
+    pricing['source_mode'] = html_source or 'webhook_pricing'
     return pricing
 
 
@@ -405,41 +419,60 @@ def fetch_pricing_for_region(region_code, competitor_name='ExitLag'):
     url = url_template.replace('{region}', region_code)
 
     html_text = None
+    html_source = ''
     status_code = 0
     saw_cloudflare_403 = False
 
     # === Tier 1: Playwright（真实浏览器，最可靠） ===
+    _record_pricing_source_attempt(competitor_name, 'playwright')
     html_text, status_code = _fetch_with_playwright(url)
     if status_code == 403:
         saw_cloudflare_403 = True
+        _remember_pricing_source_failure(competitor_name, 'playwright', 403, f'{region_code} Playwright 被 Cloudflare 拦截')
+    elif html_text is None:
+        _remember_pricing_source_failure(competitor_name, 'playwright', status_code, f'{region_code} Playwright 未获取到页面')
+    else:
+        html_source = 'playwright'
 
     # === Tier 2: cloudscraper（会话复用） ===
     if html_text is None:
         scraper = _get_cloudscraper_session()
         if scraper:
             try:
+                _record_pricing_source_attempt(competitor_name, 'cloudscraper')
                 time.sleep(random.uniform(2.0, 5.0))
                 response = scraper.get(url, timeout=20)
                 status_code = response.status_code
                 if status_code == 200:
                     html_text = response.text
+                    html_source = 'cloudscraper'
                 elif status_code == 403:
                     saw_cloudflare_403 = True
+                    _remember_pricing_source_failure(competitor_name, 'cloudscraper', 403, f'{region_code} cloudscraper 被 Cloudflare 拦截')
+                else:
+                    _remember_pricing_source_failure(competitor_name, 'cloudscraper', status_code, f'{region_code} cloudscraper 返回非 200')
             except Exception as e:
                 print(f"[{competitor_name}] cloudscraper {region_code} 失败: {e}")
+                _remember_pricing_source_failure(competitor_name, 'cloudscraper', None, f'{region_code} cloudscraper 失败: {e}')
 
     # === Tier 3: 普通 requests（最后兜底） ===
     if html_text is None:
         try:
+            _record_pricing_source_attempt(competitor_name, 'requests_html')
             time.sleep(random.uniform(1.0, 3.0))
             response = requests.get(url, headers=HEADERS, timeout=15)
             status_code = response.status_code
             if status_code == 200:
                 html_text = response.text
+                html_source = 'requests_html'
             elif status_code == 403:
                 saw_cloudflare_403 = True
+                _remember_pricing_source_failure(competitor_name, 'requests_html', 403, f'{region_code} requests 被 Cloudflare 拦截')
+            else:
+                _remember_pricing_source_failure(competitor_name, 'requests_html', status_code, f'{region_code} requests 返回非 200')
         except Exception as e:
             print(f"[{competitor_name}] requests {region_code} 失败: {e}")
+            _remember_pricing_source_failure(competitor_name, 'requests_html', None, f'{region_code} requests 失败: {e}')
 
     # === 结果处理 ===
     if html_text is None and saw_cloudflare_403:
@@ -469,8 +502,10 @@ def fetch_pricing_for_region(region_code, competitor_name='ExitLag'):
             'prices_raw': prices,
             'discounts': discounts,
             'pricing_hash': str(hash(pricing_fingerprint)),
+            'source_mode': html_source,
         }
 
+        _remember_pricing_source_success(competitor_name, html_source)
         return pricing_data
 
     except Exception as e:
@@ -504,6 +539,53 @@ def _pricing_health_key(competitor_name):
     return competitor_name.lower().replace(' ', '_') + '_pricing'
 
 
+def _pricing_trace_key(competitor_name):
+    return competitor_name.lower().replace(' ', '_')
+
+
+def _reset_pricing_source_trace(competitor_name):
+    _last_pricing_source_trace[_pricing_trace_key(competitor_name)] = {
+        'attempted_sources': [],
+        'source_failures': [],
+        'success_source': '',
+    }
+
+
+def _pricing_source_trace(competitor_name):
+    key = _pricing_trace_key(competitor_name)
+    return _last_pricing_source_trace.setdefault(key, {
+        'attempted_sources': [],
+        'source_failures': [],
+        'success_source': '',
+    })
+
+
+def _record_pricing_source_attempt(competitor_name, source):
+    if not source:
+        return
+    trace = _pricing_source_trace(competitor_name)
+    if source not in trace['attempted_sources']:
+        trace['attempted_sources'].append(source)
+
+
+def _remember_pricing_source_failure(competitor_name, source, status_code=None, reason=''):
+    _record_pricing_source_attempt(competitor_name, source)
+    if not source:
+        return
+    failures = _pricing_source_trace(competitor_name)['source_failures']
+    failures.append({
+        'source': source,
+        'status_code': status_code,
+        'reason': reason,
+    })
+    del failures[:-8]
+
+
+def _remember_pricing_source_success(competitor_name, source):
+    _record_pricing_source_attempt(competitor_name, source)
+    _pricing_source_trace(competitor_name)['success_source'] = source
+
+
 def _get_pricing_health(snapshot, competitor_name):
     health_map = snapshot.setdefault('_health', {})
     return health_map.setdefault(_pricing_health_key(competitor_name), {
@@ -512,6 +594,9 @@ def _get_pricing_health(snapshot, competitor_name):
         'last_failure_at': '',
         'last_status_code': None,
         'last_region_success_count': 0,
+        'last_success_source': '',
+        'last_attempted_sources': [],
+        'last_source_failures': [],
         'failure_alert_active': False,
     })
 
@@ -527,6 +612,7 @@ def _remember_pricing_failure(competitor_name, status_code=None, reason=''):
 def _record_pricing_failure(snapshot, competitor_name, total_regions):
     key = competitor_name.lower().replace(' ', '_')
     meta = _last_pricing_failure.get(key, {})
+    trace = _pricing_source_trace(competitor_name)
     status_code = meta.get('status_code')
     reason = meta.get('reason') or f'全部 {total_regions} 个地区均未解析到定价数据'
 
@@ -536,6 +622,8 @@ def _record_pricing_failure(snapshot, competitor_name, total_regions):
     health['last_status_code'] = status_code
     health['last_failure_reason'] = reason
     health['last_region_success_count'] = 0
+    health['last_attempted_sources'] = trace.get('attempted_sources', [])
+    health['last_source_failures'] = trace.get('source_failures', [])
 
     failures = health['consecutive_failures']
     print(f"[{competitor_name}] 定价数据源失败 {failures}/{HEALTH_ALERT_FAILURES}: {reason}")
@@ -551,13 +639,18 @@ def _record_pricing_failure(snapshot, competitor_name, total_regions):
 def _record_pricing_success(snapshot, competitor_name, success_count):
     key = competitor_name.lower().replace(' ', '_')
     health = _get_pricing_health(snapshot, competitor_name)
+    trace = _pricing_source_trace(competitor_name)
     previous_failures = int(health.get('consecutive_failures', 0) or 0)
     was_alerting = bool(health.get('failure_alert_active'))
+    success_source = trace.get('success_source', '')
 
     health['consecutive_failures'] = 0
     health['last_success_at'] = _now_iso()
     health['last_status_code'] = 200
     health['last_region_success_count'] = success_count
+    health['last_success_source'] = success_source
+    health['last_attempted_sources'] = trace.get('attempted_sources', [])
+    health['last_source_failures'] = trace.get('source_failures', [])
     health['last_failure_reason'] = ''
     health['failure_alert_active'] = False
     _last_pricing_failure.pop(key, None)
@@ -570,10 +663,11 @@ def _record_pricing_success(snapshot, competitor_name, success_count):
             'issue': (
                 f"{competitor_name} 定价数据源已恢复\n"
                 f"    恢复前连续失败: {previous_failures} 次\n"
-                f"    当前成功解析地区数: {success_count}"
+                f"    当前成功解析地区数: {success_count}\n"
+                f"    当前命中来源: {success_source or '未知'}"
             ),
             'alert_type': 'competitor_radar',
-            'source_name': f'{competitor_name} Pricing Page',
+            'source_name': f'{competitor_name} Pricing Page' + (f' ({success_source})' if success_source else ''),
             'source_url': COMPETITORS.get(competitor_name, {}).get('url_template', '').replace('{region}', 'en'),
         }
     return None
@@ -593,6 +687,7 @@ def check_competitor_pricing(competitor_name):
     old_competitor_data = old_snapshot.get(competitor_key, {})
     new_competitor_data = {}
     total_regions = len(regions)
+    _reset_pricing_source_trace(competitor_name)
 
     for region_code, region_name in regions.items():
         print(f"  - 正在抓取 {competitor_name} {region_name} 定价...")
@@ -634,7 +729,10 @@ def check_competitor_pricing(competitor_name):
                     'country': '',
                     'issue': f"⚡ 竞品定价变动检测: {'; '.join(changes)}",
                     'alert_type': 'competitor_radar',
-                    'source_name': f'{competitor_name} Pricing Page',
+                    'source_name': (
+                        f'{competitor_name} Pricing Page'
+                        + (f" ({pricing.get('source_mode')})" if pricing.get('source_mode') else '')
+                    ),
                     'source_url': url
                 })
 
