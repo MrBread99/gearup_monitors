@@ -181,13 +181,13 @@ gearup_monitors/
 |------|------|------|
 | `run_all.py` | 聚合 Discord + 定价 + 博客 + LinkedIn，**合并一条消息**发出；无结果时发心跳；Discord 连续失败到阈值才报异常，恢复时提示一次 | 每天北京时间 09:00 |
 | `discord_listener.py` | Discord 公告监听 + Qwen AI 翻译提炼 | 竞品 Discord 频道 |
-| `exitlag_pricing.py` | 多竞品定价变动追踪，Playwright + stealth 绕 Cloudflare；所有地区连续失败到阈值才报异常，恢复时提示一次 | ExitLag 9 地区 + LagoFast 10 地区 = 19 个 |
+| `exitlag_pricing.py` | 多竞品定价变动追踪，ExitLag 改用公开 webhook 结账页，LagoFast 保持 Playwright + fallback；所有地区连续失败到阈值才报异常，恢复时提示一次 | ExitLag Global + LagoFast 10 地区 = 11 个 |
 | `competitor_blog_monitor.py` | 竞品博客新文章监控 + Qwen AI 中文摘要 | ExitLag 博客 + LagoFast 博客 |
 | `linkedin_monitor.py` | ExitLag LinkedIn 公司动态监控，发现新动态后并入竞品情报警报；连续失败到阈值才报数据源异常，恢复时提示一次 | ExitLag 公司页 |
 
-**定价抓取降级链**: Playwright headless Chromium (playwright-stealth) → cloudscraper 单例会话复用 → requests。Playwright 403 时销毁整个 browser context（含 cookie/storage）并重建重试；所有层级均尝试后统一判断是否报警（单次 403 仅日志，≥2 次才发 POPO）。
+**定价抓取策略**: ExitLag 使用 `https://webhook.exitlag.com/pricing` 公开结账页解析 Solo/Duo/Squad 套餐；LagoFast 继续使用 Playwright headless Chromium (playwright-stealth) → cloudscraper 单例会话复用 → requests。Playwright 403 时销毁整个 browser context（含 cookie/storage）并重建重试。
 
-**定价健康状态**: 当前启用的 LagoFast 定价监控在所有地区都无法解析到价格时才累计失败；连续 3 次失败进入数据源异常，同一故障期只报一次，恢复后提示一次。
+**定价健康状态**: ExitLag webhook 或 LagoFast 所有地区都无法解析到价格时才累计失败；连续 3 次失败进入数据源异常，同一故障期只报一次，恢复后提示一次。
 
 多竞品架构：`COMPETITORS` 字典配置，新增竞品只需加一条配置。
 
@@ -264,7 +264,7 @@ gearup_monitors/
 1. **手游不监控** — 用户明确要求只监控 PC 端游戏
 2. **detector404 分工** — `monitor.py` 只传游戏名，`platform_status_monitor.py` 只传平台名，不得交叉，否则产生重复报警
 3. **Otzovik 废弃** — `russia_monitor.py` 中 `search_otzovik()` 已替换为 `search_google_ru()`，不要恢复
-4. **竞品定价 Cloudflare** — `exitlag_pricing.py` 必须用 Playwright + stealth 作为首选；403 时销毁整个 browser context 并重建（不是仅新建 page）；cloudscraper 和 requests 作为后续 fallback 全链路尝试
+4. **竞品定价数据源** — ExitLag 定价优先抓 `webhook.exitlag.com/pricing` 公开结账页，不再硬爬被 Cloudflare 保护的主站多地区 pricing；LagoFast 仍用 Playwright + stealth 首选，403 时销毁整个 browser context 并重建，cloudscraper 和 requests 作为后续 fallback
 5. **快照持久化** — 本地运行快照文件不提交（已加入 `.gitignore`）；GitHub Actions 通过 `actions/cache` 持久化，`restore-keys` 保证跨 run 读到历史数据
 6. **报警时间** — 所有报警时间统一 UTC+8，在 `notifier.py` 内处理，下游模块不需要转换时区
 7. **级联失败防护** — `monitor.py` 中每款游戏的检测已被 `try/except` 包裹；新增检测模块时应遵循相同模式
@@ -290,7 +290,7 @@ gearup_monitors/
 | 平台/通讯工具 | **14 个** |
 | detector404 监控条目 | **55 条**（46 游戏 + 9 平台） |
 | 品牌舆情渠道 | **8 个**（Trustpilot 暂时禁用） |
-| 竞品定价地区 | **19 个** |
+| 竞品定价地区 | **11 个**（ExitLag Global + LagoFast 10 地区） |
 | 覆盖地区 | **8 个**（欧美/台湾/日本/韩国/俄罗斯-CIS/中东/东南亚/拉美部分） |
 | 覆盖语言 | **9 种** |
 | AI 接入点 | **7 个**（玩家反馈总结/更新摘要/加速需求/新游介绍/俄罗斯风险评估/竞品公告翻译/竞品博客摘要） |

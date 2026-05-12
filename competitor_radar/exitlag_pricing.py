@@ -18,7 +18,7 @@ from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBH
 # 与上次记录做比对，发现价格或套餐结构变动时发送报警。
 #
 # 当前监控竞品:
-# 1. ExitLag — /en/pricing, /zh/pricing, /kr/pricing 等
+# 1. ExitLag — webhook.exitlag.com/pricing（公开结账页）
 # 2. LagoFast — /en/, /ko/, /ja/ 等（定价信息在首页或子页面）
 #
 # 抓取优先级：Playwright + stealth > cloudscraper > requests
@@ -26,22 +26,13 @@ from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBH
 
 # 竞品配置
 COMPETITORS = {
-    # ExitLag: Cloudflare 封锁所有数据中心 IP，定价监控暂停。
-    # 仍由 Discord 监控覆盖。接入住宅代理后取消注释即可恢复。
-    # 'ExitLag': {
-    #     'regions': {
-    #         'en': 'English (Global)',
-    #         'zh-tw': '繁體中文 (Taiwan/HK)',
-    #         'jp': '日本語 (Japan)',
-    #         'ko': '한국어 (Korea)',
-    #         'pt': 'Português (Brazil)',
-    #         'ru': 'Русский (Russia/CIS)',
-    #         'es': 'Español (LATAM)',
-    #         'ar': 'العربية (Middle East)',
-    #         'de': 'Deutsch (Germany)',
-    #     },
-    #     'url_template': 'https://www.exitlag.com/{region}/pricing',
-    # },
+    'ExitLag': {
+        'regions': {
+            'global': 'Global',
+        },
+        'url_template': 'https://webhook.exitlag.com/pricing',
+        'fetch_mode': 'exitlag_webhook_pricing',
+    },
     'LagoFast': {
         'regions': {
             'en': 'English (Global)',
@@ -83,6 +74,13 @@ HEADERS = {
     'Sec-Fetch-User': '?1',
     'Upgrade-Insecure-Requests': '1',
     'Cache-Control': 'max-age=0',
+}
+
+WEBHOOK_HEADERS = {
+    'User-Agent': HEADERS['User-Agent'],
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Connection': 'keep-alive',
 }
 
 
@@ -284,12 +282,125 @@ def _get_cloudscraper_session():
         return None
 
 
+def _normalize_space(text):
+    return re.sub(r'\s+', ' ', text or '').strip()
+
+
+def _parse_exitlag_webhook_pricing(html_text):
+    """
+    解析 webhook.exitlag.com/pricing 的公开结账页。
+    输出结构化 plan key，避免页面重复渲染导致误报。
+    """
+    soup = BeautifulSoup(html_text, 'html.parser')
+    lines = [_normalize_space(line) for line in soup.get_text('\n').splitlines()]
+    lines = [line for line in lines if line]
+
+    player_context = None
+    plan_context = None
+    plans = {}
+    discounts = []
+
+    for idx, line in enumerate(lines):
+        player_match = re.match(r'^(\d+)\s+Player', line, re.IGNORECASE)
+        if player_match:
+            player_context = player_match.group(1)
+            continue
+
+        if line in ('Monthly', 'Quarterly') or 'Annually' in line:
+            plan_context = 'Annually' if 'Annually' in line else line
+            continue
+
+        discount_match = re.match(r'^(\d+)%\s+OFF$', line, re.IGNORECASE)
+        if discount_match:
+            discounts.append(discount_match.group(1))
+            continue
+
+        price_matches = re.findall(r'US\$\s*[\d,]+\.?\d*', line)
+        if price_matches and player_context and plan_context:
+            key = f"{player_context}p_{plan_context.lower()}"
+            entry = plans.setdefault(key, {
+                'players': player_context,
+                'period': plan_context,
+                'prices': [],
+            })
+            for price in price_matches:
+                normalized_price = _normalize_space(price.replace(' ', ''))
+                if normalized_price not in entry['prices']:
+                    entry['prices'].append(normalized_price)
+
+            # 如果下一行标明 per player，保留语义但不参与 key 判断。
+            if idx + 1 < len(lines) and 'per player' in lines[idx + 1].lower():
+                entry['unit'] = 'per player'
+
+    if not plans:
+        return None
+
+    plan_fingerprints = []
+    prices_raw = []
+    for key in sorted(plans):
+        entry = plans[key]
+        prices = sorted(entry['prices'])
+        prices_raw.extend(prices)
+        plan_fingerprints.append(
+            f"{key}:{entry['players']}:{entry['period']}:{'|'.join(prices)}"
+        )
+
+    discounts = sorted(set(discounts), key=lambda item: int(item))
+    pricing_fingerprint = ';'.join(plan_fingerprints) + '|discounts=' + ','.join(discounts)
+
+    return {
+        'prices_raw': sorted(set(prices_raw)),
+        'discounts': discounts,
+        'plans': plans,
+        'pricing_hash': str(hash(pricing_fingerprint)),
+        'source_mode': 'exitlag_webhook_pricing',
+    }
+
+
+def fetch_exitlag_webhook_pricing():
+    """
+    ExitLag 专用价格源。
+    webhook.exitlag.com/pricing 是公开结账页，比 www.exitlag.com 多地区 pricing 更稳定。
+    """
+    url = COMPETITORS['ExitLag']['url_template']
+    html_text = None
+    last_status = None
+
+    try:
+        time.sleep(random.uniform(1.0, 2.0))
+        response = requests.get(url, headers=WEBHOOK_HEADERS, timeout=20)
+        last_status = response.status_code
+        if response.status_code == 200:
+            html_text = response.text
+        else:
+            print(f"[ExitLag] webhook pricing requests HTTP {response.status_code}")
+    except Exception as e:
+        print(f"[ExitLag] webhook pricing requests 失败: {e}")
+
+    if html_text is None:
+        html_text, status = _fetch_with_playwright(url)
+        last_status = status or last_status
+
+    if html_text is None:
+        _remember_pricing_failure('ExitLag', last_status, 'webhook pricing requests/Playwright 均未获取到页面')
+        return None
+
+    pricing = _parse_exitlag_webhook_pricing(html_text)
+    if not pricing:
+        _remember_pricing_failure('ExitLag', 200, 'webhook pricing 页面可达但未解析到套餐价格')
+        return None
+    return pricing
+
+
 def fetch_pricing_for_region(region_code, competitor_name='ExitLag'):
     """
     抓取指定竞品指定地区的定价页面，解析出价格和折扣信息。
     优先级：Playwright + stealth > cloudscraper (会话复用) > requests
     """
     config = COMPETITORS.get(competitor_name, {})
+    if config.get('fetch_mode') == 'exitlag_webhook_pricing':
+        return fetch_exitlag_webhook_pricing()
+
     url_template = config.get('url_template', '')
     url = url_template.replace('{region}', region_code)
 

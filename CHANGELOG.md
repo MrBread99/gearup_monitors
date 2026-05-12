@@ -16,6 +16,7 @@
 - **LagoFast 博客数据源健康状态** (`competitor_radar/competitor_blog_monitor.py`): 将博客抓取失败、页面可达但解析 0 篇文章纳入跨运行健康状态；连续 3 次失败才发数据源异常，同一故障期只报一次，恢复后提示一次
 - **Discord 情报源健康状态** (`competitor_radar/run_all.py`): 将 Discord 缺少凭证、API 非 200、请求异常纳入跨运行健康状态；连续 3 次失败才发数据源异常，同一故障期只报一次，恢复后提示一次
 - **LagoFast 定价监控健康状态** (`competitor_radar/exitlag_pricing.py`): 当所有地区都无法解析到价格时才累计定价数据源失败；连续 3 次失败才发数据源异常，同一故障期只报一次，恢复后提示一次
+- **ExitLag 定价监控恢复** (`competitor_radar/exitlag_pricing.py`): ExitLag 价格源改为公开结账页 `https://webhook.exitlag.com/pricing`，解析 Solo/Duo/Squad 的月付/季付/年付价格和折扣，绕开主站多地区 pricing 的 Cloudflare 拦截
 - **Steam News API Key 接入** (`game_calendar_monitor.py` + `monitor.yml`): Steam News API 请求附带 `STEAM_API_KEY`，解决无 Key 被限流/封锁的问题；User-Agent 从 `OSINT-Monitor/2.1` 改为标准 Chrome UA
 - **Reddit 无凭证静默跳过** (`utils/reddit_client.py`): 没有 Reddit OAuth 凭证时 `reddit_get()` 直接返回 None，不发请求、不触发熔断、不产生噪音
   - **ExitLag 抓取策略**（WordPress + Cloudflare，四层降级）: RSS Feed 优先（Cloudflare 不拦截 `/feed/` 端点，返回全文）→ WP REST API → Playwright + stealth → requests HTML 解析
@@ -27,7 +28,7 @@
 
 ### 🔴 修复
 
-- **ExitLag Cloudflare 全面封锁** (`competitor_blog_monitor.py` + `exitlag_pricing.py`): ExitLag Cloudflare 封锁所有数据中心 IP（Playwright / RSS / WP API / requests / Google Search / DuckDuckGo 均不可用）。ExitLag **博客监控 + 定价监控均暂停**，仅保留 Discord 覆盖；代码保留完整实现，接入住宅代理后可一行取消注释恢复
+- **ExitLag Cloudflare 全面封锁** (`competitor_blog_monitor.py` + `exitlag_pricing.py`): ExitLag 主站多地区 pricing 与部分博客源仍可能封锁 GitHub Actions IP；定价监控已改抓 `webhook.exitlag.com/pricing` 公开结账页，博客仍待后续恢复
 - **LagoFast `__NEXT_DATA__` 全站 3592 篇爆炸** (`competitor_blog_monitor.py`): `__NEXT_DATA__` JSON 包含全站所有文章，快照清空后 3392 篇被当作新文章逐一抓全文 + 调 AI 导致超时。修复：每分类最多解析 15 篇（总上限 50）；非首次运行单次报警硬上限 5 篇
 - **首次运行静默问题** (`competitor_blog_monitor.py`): 原设计首次运行仅保存基线不报警，导致部署后永远看不到第一批文章。改为首次运行保存基线 + 报最近 2 篇文章，附带快照版本号（`SNAPSHOT_VERSION`），版本升级时自动清空旧快照重建
 - **Qwen API 无超时导致 workflow 卡死 6h** (`competitor_blog_monitor.py` + `run_all.py`): OpenAI SDK 默认超时 600s/请求，DashScope 无响应时可卡数十分钟。所有 Qwen 客户端统一添加 `timeout=120.0`（2 分钟硬限）；workflow job 新增 `timeout-minutes: 20` 兜底
