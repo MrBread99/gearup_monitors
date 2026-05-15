@@ -1,6 +1,6 @@
 # GearUP Monitors - 监控脚本总览 (v4.5.0)
 
-> **当前版本**: v4.5.0 | **最后更新**: 2026-04-22
+> **当前版本**: v4.5.0 | **最后更新**: 2026-05-15
 >
 > 本文档是供 AI Agent 快速上手的**唯一参考**，描述当前代码的真实状态。
 >
@@ -24,6 +24,7 @@ gearup_monitors/
 │   │                                #   DETECTOR404_MAP: 46 游戏 + 9 平台 = 55 条
 │   │                                #   DETECTOR404_PLATFORMS: 平台名称集合（防重复检测用）
 │   │                                #   get_detector404_game_only_names(): 仅返回游戏条目
+│   │                                #   中等投诉仅在低位升至中等时发一次，快照记录等级状态
 │   │                                #   批量请求间隔 4-7s；429 内联重试 + 连续 2 次 429 冷却后提前终止
 │   ├── downdetector_osint.py        # 全球故障聚合（IsTheServiceDown）
 │   ├── platform_status_monitor.py   # 14 个平台/通讯工具状态（独占 detector404 平台检测）
@@ -227,7 +228,7 @@ gearup_monitors/
 | `utils/google_client.py` | 5-8s 随机延迟 + 多语言 Accept-Language（含 ru） | CAPTCHA 三重检测 |
 | `utils/alert_dedup.py` | 🔴 报警合并（保留游戏名+地区）+ 跨运行去重 | 仅作用于 🔴 类型 |
 | `game_monitor/game_registry.py` | 56 款游戏统一配置 | 唯一修改游戏配置的文件 |
-| GitHub Actions cache | **7** 个快照文件持久化（日历/平台事件/无效报警去重/俄罗斯活动/定价/评分/博客） | 去重跨运行生效的前提 |
+| GitHub Actions cache | **8** 个快照文件持久化（日历/平台事件/无效报警去重/detector404 等级/俄罗斯活动/定价/评分/博客） | 去重跨运行生效的前提 |
 | `requirements-ci.txt` | `game_monitor/` 和 `competitor_radar/` 各有独立的 pinned 依赖文件 | workflow 使用 `pip install -r` |
 
 ---
@@ -270,7 +271,7 @@ gearup_monitors/
 7. **级联失败防护** — `monitor.py` 中每款游戏的检测已被 `try/except` 包裹；新增检测模块时应遵循相同模式
 8. **Trustpilot 暂时禁用** — Cloudflare 封锁 GitHub Actions IP，Playwright + stealth 也无法通过。`run_all.py` 中调用已注释，等 Trustpilot Business API key 再恢复
 9. **日历报警去重** — `game_calendar_monitor.py` 通过 snapshot key 跨运行去重，同一更新只报一次；快照丢失（cache miss）时会重新报
-10. **detector404 限流** — 批量请求间隔 4-7s，连续 2 次 429 后冷却并提前终止批次；部分游戏可能在某次运行中未被检查
+10. **detector404 限流与中等报警** — 批量请求间隔 4-7s，连续 2 次 429 后冷却并提前终止批次；`умеренно` 只在从低位升至中等时发一次 🟡 待确认，保持中等不重复报警
 11. **Steam News 403 静默** — 同一 AppID 连续 **5** 次 Steam News 403 后静默 **3** 天
 12. **Reddit listing API** — 日历监控的 Reddit 调用已从 search API 改为 listing API（`/new.json`、`/hot.json`）+ 客户端关键词过滤
 13. **Reddit 匿名模式** — 无法申请 OAuth 凭证（Reddit 政策限制），当前以匿名模式运行（4s 间隔 + 熔断器）；`missing_credentials` 不再发报警
@@ -294,7 +295,7 @@ gearup_monitors/
 | 覆盖地区 | **8 个**（欧美/台湾/日本/韩国/俄罗斯-CIS/中东/东南亚/拉美部分） |
 | 覆盖语言 | **9 种** |
 | AI 接入点 | **7 个**（玩家反馈总结/更新摘要/加速需求/新游介绍/俄罗斯风险评估/竞品公告翻译/竞品博客摘要） |
-| 快照文件 | **7 个**（跨运行持久化） |
+| 快照文件 | **8 个**（跨运行持久化） |
 | 运行频率 | 故障监控每 **2 小时**；品牌舆情/竞品情报每天 **1 次** |
 | 报警标题 | **6 种**（商机雷达/新游上线/热游更新/平台状态/品牌舆情/竞品情报）+ 心跳 + 内部崩溃 |
 

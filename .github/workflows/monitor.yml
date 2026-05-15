@@ -31,6 +31,7 @@ jobs:
             game_monitor/game_calendar_snapshot.json
             game_monitor/platform_incidents_snapshot.json
             game_monitor/ineffective_alerts_snapshot.json
+            game_monitor/detector404_level_snapshot.json
             game_monitor/russia_events_snapshot.json
           key: monitor-snapshots-${{ github.run_id }}
           restore-keys: |

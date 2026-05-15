@@ -6,6 +6,8 @@ import random
 import re
 import os
 import sys
+import json
+from datetime import datetime, timezone
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -107,6 +109,81 @@ DETECTOR404_BATCH_DELAY_RANGE = (4.0, 7.0)
 DETECTOR404_429_RETRY_WAIT_RANGE = (18.0, 26.0)
 DETECTOR404_BATCH_COOLDOWN_RANGE = (45.0, 75.0)
 DETECTOR404_MAX_429_STREAK = 2
+DETECTOR404_LEVEL_SNAPSHOT_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    'detector404_level_snapshot.json'
+)
+
+DETECTOR404_LEVEL_RANK = {
+    'нет': 0,
+    'мало': 1,
+    'минимально': 1,
+    'умеренно': 2,
+    'много': 3,
+    'критично': 4,
+    'массово': 5,
+}
+DETECTOR404_MEDIUM_LEVEL = 'умеренно'
+
+
+def _now_iso():
+    return datetime.now(timezone.utc).isoformat(timespec='seconds')
+
+
+def _load_detector404_level_snapshot():
+    if os.path.exists(DETECTOR404_LEVEL_SNAPSHOT_FILE):
+        try:
+            with open(DETECTOR404_LEVEL_SNAPSHOT_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            pass
+    return {}
+
+
+def _save_detector404_level_snapshot(snapshot):
+    try:
+        with open(DETECTOR404_LEVEL_SNAPSHOT_FILE, 'w', encoding='utf-8') as f:
+            json.dump(snapshot, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[CIS] detector404 等级快照保存失败: {e}")
+
+
+def _rank_detector404_level(level):
+    return DETECTOR404_LEVEL_RANK.get((level or '').lower(), -1)
+
+
+def _record_detector404_level(game_name, complaint_level, complaint_level_zh):
+    """
+    记录 detector404 投诉等级，并判断是否需要发中等等级跃迁报警。
+    只有从低位(нет/мало/минимально)升到 умеренно 时返回 True。
+    首次看到 умеренно 只建基线，避免接入后刷历史状态。
+    """
+    level = (complaint_level or '').lower()
+    current_rank = _rank_detector404_level(level)
+    if current_rank < 0:
+        return False
+
+    snapshot = _load_detector404_level_snapshot()
+    previous = snapshot.get(game_name, {})
+    previous_level = (previous.get('level') or '').lower()
+    previous_rank = _rank_detector404_level(previous_level)
+
+    should_alert_medium = (
+        level == DETECTOR404_MEDIUM_LEVEL
+        and 0 <= previous_rank < DETECTOR404_LEVEL_RANK[DETECTOR404_MEDIUM_LEVEL]
+    )
+
+    snapshot[game_name] = {
+        'level': level,
+        'level_zh': complaint_level_zh,
+        'rank': current_rank,
+        'last_seen_at': _now_iso(),
+        'previous_level': previous_level,
+    }
+    _save_detector404_level_snapshot(snapshot)
+    return should_alert_medium
 
 
 def analyze_russian_text(text_list, threshold=2):
@@ -221,8 +298,12 @@ def check_detector404(game_name, return_status=False):
             complaint_level = level_match.group(1).lower()
             complaint_level_zh = LEVEL_TRANSLATE.get(complaint_level, complaint_level)
 
-        # 只报大量/严重/大规模，过滤掉中等及以下
-        if complaint_level and complaint_level.lower() in ('нет', 'мало', 'минимально', 'умеренно'):
+        should_alert_medium = _record_detector404_level(game_name, complaint_level, complaint_level_zh)
+
+        # 低位只更新快照，不报警；中等只在从低位升上来时报警一次。
+        if complaint_level and complaint_level.lower() in ('нет', 'мало', 'минимально'):
+            return (None, 200) if return_status else None
+        if complaint_level == DETECTOR404_MEDIUM_LEVEL and not should_alert_medium:
             return (None, 200) if return_status else None
 
         # 提取受影响区域 TOP，并翻译俄语地名
@@ -278,6 +359,24 @@ def check_detector404(game_name, return_status=False):
         high_levels = ['много', 'критично', 'массово']  # 大量/严重/大规模
 
         is_high = complaint_level and any(lvl in complaint_level for lvl in high_levels)
+        is_medium_transition = complaint_level == DETECTOR404_MEDIUM_LEVEL and should_alert_medium
+
+        if is_medium_transition:
+            issue_parts = [f"🟡 [待确认] 🇷🇺 俄罗斯区 detector404 投诉升至中等 (投诉量: {complaint_level_zh})"]
+            if regions:
+                issue_parts.append(f"受影响区域: {', '.join(regions[:5])}")
+            if fault_types:
+                issue_parts.append(f"故障类型: {', '.join(fault_types)}")
+
+            result = {
+                'game': game_name,
+                'region': 'CIS / Russia',
+                'country': 'Russia',
+                'issue': '\n    '.join(issue_parts),
+                'source_name': 'detector404.ru',
+                'source_url': url
+            }
+            return (result, 200) if return_status else result
 
         if is_high:
             # 高级别：详细报告（含区域和故障类型）
