@@ -32,6 +32,7 @@ gearup_monitors/
 │   │                                #   跨运行去重（snapshot key，最多 1000 条）
 │   │                                #   每个数据源限 2 条最优结果（PER_SOURCE_ALERT_LIMIT）
 │   │                                #   Steam News 连续 5 次 403 后静默 3 天
+│   ├── workflow_heartbeat.py        # monitor.yml 三段任务成功后的每日一次 POPO 心跳
 │   └── russia_event_monitor.py      # 俄罗斯大型活动日历 + 网络管控预警（AI 不可用时仍报警）
 │
 ├── competitor_radar/
@@ -228,7 +229,7 @@ gearup_monitors/
 | `utils/google_client.py` | 5-8s 随机延迟 + 多语言 Accept-Language（含 ru） | CAPTCHA 三重检测 |
 | `utils/alert_dedup.py` | 🔴 报警合并（保留游戏名+地区）+ 跨运行去重 | 仅作用于 🔴 类型 |
 | `game_monitor/game_registry.py` | 56 款游戏统一配置 | 唯一修改游戏配置的文件 |
-| GitHub Actions cache | **8** 个快照文件持久化（日历/平台事件/无效报警去重/detector404 等级/俄罗斯活动/定价/评分/博客） | 去重跨运行生效的前提 |
+| GitHub Actions cache | **9** 个快照文件持久化（日历/平台事件/无效报警去重/detector404 等级/monitor 心跳/俄罗斯活动/定价/评分/博客） | 去重跨运行生效的前提 |
 | `requirements-ci.txt` | `game_monitor/` 和 `competitor_radar/` 各有独立的 pinned 依赖文件 | workflow 使用 `pip install -r` |
 
 ---
@@ -237,7 +238,7 @@ gearup_monitors/
 
 | 工作流 | 触发时间 | 执行内容 | 特殊步骤 |
 |--------|---------|---------|---------|
-| `monitor.yml` | 每 2 小时 | monitor.py + russia_event_monitor.py + game_calendar_monitor.py | `continue-on-error: true` + step ID + 运行摘要 |
+| `monitor.yml` | 每 2 小时 | monitor.py + russia_event_monitor.py + game_calendar_monitor.py + workflow_heartbeat.py | `continue-on-error: true` + step ID + 运行摘要；三段任务均成功时每日一次心跳 |
 | `brand_monitor.yml` | 每天北京 08:00 | `brand_monitor/run_all.py`，自动 push 舆情报告到 `reports/` | `permissions: contents: write` + 运行摘要 |
 | `competitor_radar.yml` | 每天北京 09:00 | `competitor_radar/run_all.py` | `playwright install chromium` + `requirements-ci.txt` + 运行摘要 |
 |                        |                 | Discord + 定价 + 博客 + LinkedIn 监控 | 博客/LinkedIn/健康状态快照文件加入 cache |
@@ -278,6 +279,7 @@ gearup_monitors/
 14. **品牌舆情搜索窗口** — Reddit `t=week`、YouTube 3 天、Google `tbs=qdr:w`，所有搜索限一周内，避免每日重复报警
 15. **内部崩溃感知** — 所有 try/except 捕获的异常通过 `report_monitor_crash()` 登记，脚本末尾由 `flush_monitor_crash_alerts()` 统一发 POPO。新增模块时应遵循此模式
 16. **品牌报告格式** — `brand_report.py` 只展示 AI 分析 + 引用来源，不展示关键词预分类结果（避免和 AI 分类矛盾）
+17. **游戏监控心跳** — `workflow_heartbeat.py` 只在 `monitor.py`、`russia_event_monitor.py`、`game_calendar_monitor.py` 三段 outcome 均为 `success` 时发送每日一次心跳；若任一步骤非成功，不发送“正常”心跳，避免误导
 
 ---
 
@@ -295,7 +297,7 @@ gearup_monitors/
 | 覆盖地区 | **8 个**（欧美/台湾/日本/韩国/俄罗斯-CIS/中东/东南亚/拉美部分） |
 | 覆盖语言 | **9 种** |
 | AI 接入点 | **7 个**（玩家反馈总结/更新摘要/加速需求/新游介绍/俄罗斯风险评估/竞品公告翻译/竞品博客摘要） |
-| 快照文件 | **8 个**（跨运行持久化） |
+| 快照文件 | **9 个**（跨运行持久化） |
 | 运行频率 | 故障监控每 **2 小时**；品牌舆情/竞品情报每天 **1 次** |
 | 报警标题 | **6 种**（商机雷达/新游上线/热游更新/平台状态/品牌舆情/竞品情报）+ 心跳 + 内部崩溃 |
 
@@ -303,5 +305,5 @@ gearup_monitors/
 
 ## 十二、已知架构约束补充
 
-17. **竞品博客监控反爬策略** — ExitLag 博客优先解析公开博客页，失败时降级 WP REST API、Sitemap、Playwright、搜索索引和 RSS。LagoFast 博客（Next.js SSR）优先通过 requests 抓取 `__NEXT_DATA__` JSON（服务端渲染的结构化数据），失败时尝试 DOM 解析和 Playwright
-18. **博客快照首次运行** — `competitor_blog_monitor.py` 首次运行（快照中无对应竞品 key）仅保存当前文章列表为基线，不生成报警，避免首次部署时产生大量历史文章的误报
+18. **竞品博客监控反爬策略** — ExitLag 博客优先解析公开博客页，失败时降级 WP REST API、Sitemap、Playwright、搜索索引和 RSS。LagoFast 博客（Next.js SSR）优先通过 requests 抓取 `__NEXT_DATA__` JSON（服务端渲染的结构化数据），失败时尝试 DOM 解析和 Playwright
+19. **博客快照首次运行** — `competitor_blog_monitor.py` 首次运行（快照中无对应竞品 key）仅保存当前文章列表为基线，不生成报警，避免首次部署时产生大量历史文章的误报

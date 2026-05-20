@@ -32,6 +32,7 @@ jobs:
             game_monitor/platform_incidents_snapshot.json
             game_monitor/ineffective_alerts_snapshot.json
             game_monitor/detector404_level_snapshot.json
+            game_monitor/monitor_workflow_heartbeat_snapshot.json
             game_monitor/russia_events_snapshot.json
           key: monitor-snapshots-${{ github.run_id }}
           restore-keys: |
@@ -72,6 +73,15 @@ jobs:
           REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
           STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
         run: python game_monitor/game_calendar_monitor.py
+
+      - name: Send monitor workflow heartbeat
+        if: always()
+        env:
+          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
+          GAME_MONITOR_OUTCOME: ${{ steps.game_monitor.outcome }}
+          RUSSIA_EVENT_OUTCOME: ${{ steps.russia_event.outcome }}
+          GAME_CALENDAR_OUTCOME: ${{ steps.game_calendar.outcome }}
+        run: python game_monitor/workflow_heartbeat.py
 
       - name: Append run summary
         if: always()
