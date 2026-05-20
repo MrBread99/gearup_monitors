@@ -1,33 +1,30 @@
 # 品牌舆情监控详细报告
 
-> 生成时间: 2026-05-19 10:00 (UTC+8)
+> 生成时间: 2026-05-20 10:00 (UTC+8)
 > 本报告每 24 小时更新一次
 
 ---
 
 <a id="global-youtube-gearup-booster"></a>
 ## Global (YouTube) - GearUP Booster
-> 共 14 篇讨论
+> 共 10 篇讨论
 
 ### AI 分析
 ```
-正面评价: 多个教程类视频明确使用GearUP Booster解决游戏网络问题（如CS2丢包、eFootball延迟、Roblox高ping），体现用户主动选择其作为解决方案 [2][3][6][7][8][9]  
-负面评价: 暂无  
-中性讨论: 部分视频标题或标签含GearUP Booster关键词，但内容未实际演示或评价产品，仅属话题关联或误标（如LoL集锦、FPS提升、Valorant赠码、Juve阵容等） [1][4][5][10]  
+正面评价: 多数视频以“即时修复高延迟”“零延迟”“流畅游戏”为卖点，突出GearUP Booster的易用性和效果，带有强烈推荐倾向 [1][2][3][4][5]。  
+负面评价: 帖子[6]标题含“Ping 999”并对比新老玩家及“黑客”，隐含对加速效果不稳定或场景适配不足的质疑，但未明确批评产品本身，属弱负面倾向。  
+中性讨论: 帖子[7]聚焦真实数据前后对比测试，强调客观验证而非主观推荐，属中立实测类内容 [7]。  
 涉及竞品: 无  
-商业洞察: 应加强教程视频的标准化引导，在片头/字幕中明确标注“GearUP Booster实测有效”，并主动对比竞品以强化技术信任感。
+商业洞察: 应加强针对COD Mobile、eFootball、PUBG等热门游戏的定制化优化说明，并在短视频中植入简明数据锚点（如“降低延迟XXms”）以强化可信度。
 ```
 ### AI 引用来源（编号对应）
-- [1] CANNA FAIL EN 4K CONTRE MKOI - Best Of LoL #1384 Réactions (https://www.youtube.com/watch?v=MwP9mNxITuo)
+- [1] ✅How To Fix High Ping In COD Mobile Instantly In COD Mobile #shorts #trending #codm (https://www.youtube.com/watch?v=az0x8M6fYaw)
 - [2] CS2 Packet Loss &amp; High Ping Fix That Actually Works 2026 (https://www.youtube.com/watch?v=Vqk5Id4D8dE)
 - [3] How to fix network with gearup booster #efootball2026 #efootball #efootballmobile (https://www.youtube.com/watch?v=aFQ7E4i1L3Q)
-- [4] How to Get More FPS on PC in 2026 🚀 (https://www.youtube.com/watch?v=E4EakwS1Z7E)
-- [5] LỤM FREE NITRO MỌI NGƯỜI ƠI. Code &quot;KiamiChau&quot; #valorant #kiamichau (https://www.youtube.com/watch?v=BR4CNCWge-U)
-- [6] PUBG - Ping 999 - sever AS- GearUp Booster-New Event ( Newbie vs new,old,hacker ) #18 (https://www.youtube.com/watch?v=yxLglphUE1Q)
-- [7] gearup wifi booster #gearupbooster #wifi #games #roblox (https://www.youtube.com/watch?v=kM0NUxIk_zs)
-- [8] Fix Roblox Lag &amp; Lower Ping in 2 Minutes (https://www.youtube.com/watch?v=zQ6duXde78k)
-- [9] Minimum Lag, Maximum Frags (https://www.youtube.com/watch?v=yeq7IoR-u24)
-- [10] HOÀN THIỆN SIÊU ĐỘI HÌNH JUVETUS 37 TRIỆU TỈ TÌM LẠI VỊ THẾ SỐ 1 | Tabi Tuấn Anh (https://www.youtube.com/watch?v=iilNhIrkFww)
+- [4] GearUP Booster: Lag-Free Gaming! (https://www.youtube.com/watch?v=wlcRBDACkZg)
+- [5] ⚡ ZERO LAG TUESDAY: FIX YOUR PING WITH GEARUP BOOSTER! 🎮🏆 #shorts #gearupbooster #deals (https://www.youtube.com/watch?v=rjZbjfVCdn4)
+- [6] PUBG - Ping 999 - sever AS- GearUp Booster-New Event ( Newbie vs new,old,hacker ) #19 (https://www.youtube.com/watch?v=7oKbM-8dK6k)
+- [7] GearUP 加速器數據實測！真的能降低延遲？超真實前後數據對比 (https://www.youtube.com/watch?v=etwkaeG3EQg)
 
 ---
 
@@ -37,11 +34,11 @@
 
 ### AI 分析
 ```
-正面评价: 用户明确推荐GearUP Booster用于Twitch Drops领取，体现其在特定场景下的实用性和用户信任 [12]。  
-负面评价: 用户质疑GearUP Booster退款困难，表达对售后服务的不满 [2]；另有用户成功申请退款并分享经验，隐含对产品或服务的失望 [1]。  
-中性讨论: 多篇帖子在讨论海外服务器游戏（如《Overwatch》《Battlefield 6》《GMS》）的网络解决方案时提及GearUP，但未评价优劣，仅作为可选工具列出 [3][4][5][6][7][8][10][14][15]；另有用户询问GearUP Premium付费是否合理 [13]，及首次接触该工具的困惑性提问 [14]。  
-涉及竞品: LagoFast, wtfast, Mudfish, UU加速器, 迅游, 雷神, ExitLag, NoPing, Hone.gg, Oracle（注：Oracle在[7]中被误写为“오라클”，实指VPN品牌而非数据库厂商，属竞品语境）  
-商业洞察: 应强化韩国社区对GearUP退款政策的透明沟通，并针对Twitch Drops等高关联场景开展精准口碑引导。
+正面评价: 用户明确推荐GearUP Booster用于Twitch Drops场景，认为其是首选工具 [14]。  
+负面评价: 多篇帖子集中投诉退款困难，质疑服务可靠性与售后体验 [1][2]。  
+中性讨论: 多篇帖子在讨论海外服务器游戏（如OW、BF6、GMS）或通用网络工具时提及GearUP Booster，但未评价优劣，仅作为可选方案之一或对比对象 [3][4][5][6][7][8][9][11][12][15]。  
+涉及竞品: LagoFast, DropSmash（“드롭스마이너”为DropSmash韩文音译）[9][11]。  
+商业洞察: 需优先优化韩国本地退款流程并加强售后沟通，同时在Twitch Drops等高关联场景强化GearUP的官方推荐露出。
 ```
 ### AI 引用来源（编号对应）
 - [1] 기어업부스터환불받았다 갰ㅐ기들 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=eft&no=2748014)
@@ -53,12 +50,12 @@
 - [7] VPN은 오라클도 추천함 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=ohhanbyeol&no=676)
 - [8] 무료 이벤 중인 게임 vpn 추천해봄 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=vpn&no=8279)
 - [9] 브픈 중에lagofast< 이거 좋음??? [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=eft&no=2757486)
-- [10] 대충 1년정도씩 써보고 쓰는 VPN 가이드 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=eft&no=2769351)
-- [11] 갑자기 절전모드가 안 되는데 이유 아는 게이 있음?? [DC Inside](https://gall.dcinside.com/board/view/?id=pridepc_new4&no=6560094)
-- [12] 드롭스는GearUP써라 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=marvelsnap&no=636779)
-- [13] gearup프리미엄 유료 쓰는데 이거 맞냐 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=dota&no=92130)
-- [14] 이번에GearUP이라는거 사용하라는 업뎃 떴던데 뭐임? [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=wherewindsmeets&no=93348)
-- [15] 드롭스 받아라 [DC Inside](https://gall.dcinside.com/board/view/?id=worldoftanks&no=4262456)
+- [10] 교환센터 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=deltaforce&no=113061)
+- [11] 기어업 vs 드롭스마이너 [DC Inside](https://gall.dcinside.com/board/view/?id=worldoftanks&no=4291009)
+- [12] 대충 1년정도씩 써보고 쓰는 VPN 가이드 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=eft&no=2769351)
+- [13] 갑자기 절전모드가 안 되는데 이유 아는 게이 있음?? [DC Inside](https://gall.dcinside.com/board/view/?id=pridepc_new4&no=6560094)
+- [14] 드롭스는GearUP써라 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=marvelsnap&no=636779)
+- [15] gearup프리미엄 유료 쓰는데 이거 맞냐 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=dota&no=92130)
 
 ---
 
