@@ -280,6 +280,18 @@ _SCRAPE_ADVICE = {
         'short_term': '优先检查 Actions 日志中是否出现 “OAuth2 认证成功”；若没有，请先修复 Reddit Secrets',
         'long_term': '避免依赖匿名访问 Reddit，在所有日历监控链路中统一强制使用 OAuth 模式',
     },
+    'nager_holiday_api': {
+        'display_name': 'Nager.Date（地区节假日监控）',
+        'reason': 'Nager.Date 公共节假日 API 返回非 200，本次无法获取部分国家/地区的法定假日数据',
+        'short_term': '本次已跳过对应地区；其他地区不受影响',
+        'long_term': '若持续出现，检查目标国家代码是否仍被 Nager.Date 覆盖，必要时为该地区增加 Calendarific 或静态兜底',
+    },
+    'calendarific_holiday_api': {
+        'display_name': 'Calendarific（地区节假日监控）',
+        'reason': 'Calendarific API 返回非 200，可能为 API key 未配置、额度耗尽或目标地区请求异常',
+        'short_term': '本次台湾地区会尝试使用内置静态兜底数据',
+        'long_term': '检查 GitHub Secrets 中 CALENDARIFIC_API_KEY 是否有效，并关注免费额度使用量',
+    },
     'youtube_quota': {
         'display_name': 'YouTube Data API v3（配额耗尽）',
         'reason': 'YouTube API 返回 403 quotaExceeded，当日 10,000 单位免费配额已耗尽（search 操作每次消耗 100 单位）',
@@ -343,8 +355,9 @@ def send_popo_alert(webhook_url, issues_list):
         'game_update': '【热游版本更新预告】',
         'game_calendar': '【新游上线/热游更新预告】',
         'platform_status': '【平台与通讯工具状态警报】',
-        'brand_monitor': '【品牌舆情监控报告】',
+        'brand_monitor': '【品牌舆情监控】',
         'competitor_radar': '【竞品情报警报】',
+        'holiday_monitor': '【地区节假日监控】',
     }
 
     groups = {}
@@ -357,28 +370,44 @@ def send_popo_alert(webhook_url, issues_list):
     # 构造极简纯文本格式
     plain_content = ""
     for alert_type, items in groups.items():
-        title = ALERT_TITLES.get(alert_type, '【监控警报】')
-        plain_content += f"{title}\n时间: {current_time}\n\n"
+        if alert_type == 'brand_monitor':
+            from utils.brand_digest import build_brand_monitor_message
+            plain_content += build_brand_monitor_message(items, update_snapshot=bool(webhook_url)) + "\n\n"
+            continue
 
-        for item in items:
+        title = ALERT_TITLES.get(alert_type, '【监控警报】')
+        if alert_type == 'holiday_monitor':
+            plain_content += f"{title}\n"
+        else:
+            plain_content += f"{title}\n时间: {current_time}\n\n"
+
+        for index, item in enumerate(items):
             # 去掉 issue 中可能包含的粗体和红灯 emoji
             clean_issue = item['issue'].replace('**', '').replace('__', '')
 
-            plain_content += f"[{item['game']}]\n"
+            if alert_type != 'holiday_monitor':
+                plain_content += f"[{item['game']}]\n"
 
             # 新游上线/热游更新不显示"地区: Global"（issue 内已有头部地区信息）
             if alert_type not in ('new_game_release', 'game_update'):
                 region_display = f"{item['region']} ({item['country']})" if item.get('country') else item['region']
                 plain_content += f"地区: {region_display}\n"
 
-            plain_content += f"情报: {clean_issue}\n"
+            if alert_type == 'holiday_monitor':
+                plain_content += f"{clean_issue}\n"
+            else:
+                plain_content += f"情报: {clean_issue}\n"
 
             if item.get('source_url'):
                 plain_content += f"来源: {item['source_name']} ({item['source_url']})\n"
             else:
                 plain_content += f"来源: {item['source_name']}\n"
 
-            plain_content += "-" * 30 + "\n"
+            if alert_type == 'holiday_monitor':
+                if index < len(items) - 1:
+                    plain_content += "-" * 30 + "\n"
+            else:
+                plain_content += "-" * 30 + "\n"
 
         plain_content += "\n"
 

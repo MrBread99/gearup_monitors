@@ -32,6 +32,7 @@ jobs:
         with:
           path: |
             brand_monitor/trustpilot_snapshot.json
+            brand_monitor/brand_digest_snapshot.json
           key: brand-snapshots-${{ github.run_id }}
           restore-keys: |
             brand-snapshots-
