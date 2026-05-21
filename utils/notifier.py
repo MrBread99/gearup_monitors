@@ -409,7 +409,8 @@ def send_popo_alert(webhook_url, issues_list):
             else:
                 plain_content += "-" * 30 + "\n"
 
-        plain_content += "\n"
+        if alert_type != 'holiday_monitor':
+            plain_content += "\n"
 
     headers = {'Content-Type': 'application/json'}
     payload = {
