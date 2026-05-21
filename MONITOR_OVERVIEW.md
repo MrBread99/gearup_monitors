@@ -1,6 +1,6 @@
-# GearUP Monitors - 监控脚本总览 (v4.5.0)
+# GearUP Monitors - 监控脚本总览 (v4.6.0)
 
-> **当前版本**: v4.5.0 | **最后更新**: 2026-05-15
+> **当前版本**: v4.6.0 | **最后更新**: 2026-05-20
 >
 > 本文档是供 AI Agent 快速上手的**唯一参考**，描述当前代码的真实状态。
 >
@@ -33,7 +33,8 @@ gearup_monitors/
 │   │                                #   每个数据源限 2 条最优结果（PER_SOURCE_ALERT_LIMIT）
 │   │                                #   Steam News 连续 5 次 403 后静默 3 天
 │   ├── workflow_heartbeat.py        # monitor.yml 三段任务成功后的每日一次 POPO 心跳
-│   └── russia_event_monitor.py      # 俄罗斯大型活动日历 + 网络管控预警（AI 不可用时仍报警）
+│   ├── russia_event_monitor.py      # 俄罗斯大型活动日历 + 网络管控预警（AI 不可用时仍报警）
+│   └── holiday_monitor.py           # 12 个重点地区法定节假日/长假/特殊假期监控（每天 1 次）
 │
 ├── competitor_radar/
 │   ├── run_all.py                   # ★ 聚合入口（Discord 24h + 定价 + 博客 + LinkedIn），合并为一条消息；含 Discord 健康状态
@@ -61,7 +62,7 @@ gearup_monitors/
 │   └── southeast_asia_monitor.py    # Tinhte / Reddit SEA / Google 多语
 │
 ├── utils/
-│   ├── notifier.py                  # 通知发送（6 种标题分组 + 超 4000 字自动分割 + 3 次重试 + UTC+8）
+│   ├── notifier.py                  # 通知发送（7 种标题分组 + 超 4000 字自动分割 + 3 次重试 + UTC+8）
 │   │                                #   反爬状态码集合: (403, 429, 507)
 │   │                                #   专属 _SCRAPE_ADVICE 优先于泛化状态码逻辑（但 404/5xx 优先于自定义建议）
 │   │                                #   cloudflare_pricing 403 需 ≥2 次才发 POPO（min_notify_count: 2）
@@ -76,6 +77,7 @@ gearup_monitors/
 │   │                                #   Trustpilot / DC Inside(游戏+品牌) / exitlag_pricing 共用
 │   ├── alert_dedup.py               # 🔴 报警合并（游戏名+地区）+ 跨运行去重
 │   ├── brand_report.py              # 品牌报告生成（锚点深链接 + AI 引用来源列表）
+│   ├── brand_digest.py              # 品牌舆情 POPO 精简摘要（重点条目 + 跨运行重复降噪）
 │   └── sentiment_summarizer.py      # AI 情感分析聚合（传引用帖子到报告）
 │
 └── .github/workflows/
@@ -83,9 +85,10 @@ gearup_monitors/
     │                                #   continue-on-error: true + 步骤 ID + 运行摘要
     │                                #   pip install -r game_monitor/requirements-ci.txt
     ├── brand_monitor.yml            # 每天 UTC 00:00（北京 08:00）：品牌舆情聚合 + 运行摘要
-    └── competitor_radar.yml         # 每天 UTC 01:00（北京 09:00）：竞品情报聚合 + 运行摘要
-                                     #   pip install -r competitor_radar/requirements-ci.txt
-                                     #   包含 playwright install chromium 步骤
+    ├── competitor_radar.yml         # 每天 UTC 01:00（北京 09:00）：竞品情报聚合 + 运行摘要
+    │                                #   pip install -r competitor_radar/requirements-ci.txt
+    │                                #   包含 playwright install chromium 步骤
+    └── holiday_monitor.yml          # 每天 UTC 01:30（北京 09:30）：地区节假日监控 + 运行摘要
 ```
 
 ---
@@ -177,7 +180,24 @@ gearup_monitors/
 
 ---
 
-## 五、竞品情报 (`competitor_radar/`)
+## 五、地区节假日监控 (`holiday_monitor.py`)
+
+| 维度 | 数据 |
+|------|------|
+| 覆盖地区 | 俄罗斯、越南、台湾、美国、印度尼西亚、韩国、菲律宾、巴西、日本、澳大利亚、加拿大、墨西哥 |
+| 主数据源 | Nager.Date 公共节假日 API |
+| 台湾兜底 | Calendarific（需 `CALENDARIFIC_API_KEY`）；未配置时使用 2026 年静态兜底 |
+| 预警阶段 | T-7 / T-3 / T-1 / 当天 |
+| 长假识别 | 法定假日 + 周末连续 ≥3 天，自动标记“长假/长周末” |
+| 范围识别 | 根据数据源字段标记全国性公共假期、地区性假期、银行/学校/政府机构/可选假期 |
+| 特殊假期 | 春节/Tet、黄金周、Chuseok、Thanksgiving、Carnival、Holy Week 等关键词标记 |
+| 去重 | `holiday_monitor_snapshot.json`，同一地区同一假期同一阶段只报一次 |
+| 运行频率 | 每天北京时间 09:30 |
+| 报警标题 | 【地区节假日监控】 |
+
+---
+
+## 六、竞品情报 (`competitor_radar/`)
 
 | 模块 | 功能 | 覆盖 |
 |------|------|------|
@@ -202,7 +222,7 @@ gearup_monitors/
 
 ---
 
-## 六、品牌舆情 (`brand_monitor/`)
+## 七、品牌舆情 (`brand_monitor/`)
 
 | 渠道 | 模块 | 覆盖地区 | 语言 | 备注 |
 |------|------|---------|------|------|
@@ -220,7 +240,7 @@ gearup_monitors/
 
 ---
 
-## 七、基础设施
+## 八、基础设施
 
 | 组件 | 功能 | 关键细节 |
 |------|------|---------|
@@ -229,12 +249,12 @@ gearup_monitors/
 | `utils/google_client.py` | 5-8s 随机延迟 + 多语言 Accept-Language（含 ru） | CAPTCHA 三重检测 |
 | `utils/alert_dedup.py` | 🔴 报警合并（保留游戏名+地区）+ 跨运行去重 | 仅作用于 🔴 类型 |
 | `game_monitor/game_registry.py` | 56 款游戏统一配置 | 唯一修改游戏配置的文件 |
-| GitHub Actions cache | **9** 个快照文件持久化（日历/平台事件/无效报警去重/detector404 等级/monitor 心跳/俄罗斯活动/定价/评分/博客） | 去重跨运行生效的前提 |
+| GitHub Actions cache | **11** 个快照文件持久化（日历/平台事件/无效报警去重/detector404 等级/monitor 心跳/俄罗斯活动/节假日/品牌摘要/定价/评分/博客） | 去重跨运行生效的前提 |
 | `requirements-ci.txt` | `game_monitor/` 和 `competitor_radar/` 各有独立的 pinned 依赖文件 | workflow 使用 `pip install -r` |
 
 ---
 
-## 八、GitHub Actions 工作流
+## 九、GitHub Actions 工作流
 
 | 工作流 | 触发时间 | 执行内容 | 特殊步骤 |
 |--------|---------|---------|---------|
@@ -242,10 +262,11 @@ gearup_monitors/
 | `brand_monitor.yml` | 每天北京 08:00 | `brand_monitor/run_all.py`，自动 push 舆情报告到 `reports/` | `permissions: contents: write` + 运行摘要 |
 | `competitor_radar.yml` | 每天北京 09:00 | `competitor_radar/run_all.py` | `playwright install chromium` + `requirements-ci.txt` + 运行摘要 |
 |                        |                 | Discord + 定价 + 博客 + LinkedIn 监控 | 博客/LinkedIn/健康状态快照文件加入 cache |
+| `holiday_monitor.yml` | 每天北京 09:30 | `game_monitor/holiday_monitor.py` | `holiday_monitor_snapshot.json` 加入 cache；`CALENDARIFIC_API_KEY` 为台湾兜底可选 Secret |
 
 ---
 
-## 九、GitHub Secrets 配置
+## 十、GitHub Secrets 配置
 
 | Secret | 必填 | 用途 |
 |--------|------|------|
@@ -256,12 +277,13 @@ gearup_monitors/
 | `YOUTUBE_API_KEY` | ✅ | YouTube Data API v3（YouTube 舆情，未配置时跳过） |
 | `DISCORD_BOT_TOKEN` | ✅ | 竞品 Discord 公告监听 |
 | `TARGET_CHANNEL_ID` | ✅ | 竞品 Discord 目标频道 ID |
+| `CALENDARIFIC_API_KEY` | 推荐 | 台湾节假日数据源兜底；未配置时仅使用 2026 年静态兜底 |
 | `NAVER_CLIENT_ID` | 推荐 | Naver Search Open API（未配置时跳过韩国 Naver 检测） |
 | `NAVER_CLIENT_SECRET` | 推荐 | Naver Search Open API |
 
 ---
 
-## 十、已知架构约束 & 注意事项
+## 十一、已知架构约束 & 注意事项
 
 1. **手游不监控** — 用户明确要求只监控 PC 端游戏
 2. **detector404 分工** — `monitor.py` 只传游戏名，`platform_status_monitor.py` 只传平台名，不得交叉，否则产生重复报警
@@ -278,16 +300,17 @@ gearup_monitors/
 13. **Reddit 匿名模式** — 无法申请 OAuth 凭证（Reddit 政策限制），当前以匿名模式运行（4s 间隔 + 熔断器）；`missing_credentials` 不再发报警
 14. **品牌舆情搜索窗口** — Reddit `t=week`、YouTube 3 天、Google `tbs=qdr:w`，所有搜索限一周内，避免每日重复报警
 15. **内部崩溃感知** — 所有 try/except 捕获的异常通过 `report_monitor_crash()` 登记，脚本末尾由 `flush_monitor_crash_alerts()` 统一发 POPO。新增模块时应遵循此模式
-16. **品牌报告格式** — `brand_report.py` 只展示 AI 分析 + 引用来源，不展示关键词预分类结果（避免和 AI 分类矛盾）
+16. **品牌报告格式** — `brand_report.py` 只展示 AI 分析 + 引用来源，不展示关键词预分类结果（避免和 AI 分类矛盾）；POPO 只由 `brand_digest.py` 输出重点条目和详细报告链接
 17. **游戏监控心跳** — `workflow_heartbeat.py` 只在 `monitor.py`、`russia_event_monitor.py`、`game_calendar_monitor.py` 三段 outcome 均为 `success` 时发送每日一次心跳；若任一步骤非成功，不发送“正常”心跳，避免误导
+18. **地区节假日监控独立运行** — `holiday_monitor.yml` 每天 09:30 单独运行，不接入每 2 小时的 `monitor.yml`，避免节假日数据刷频
 
 ---
 
-## 十一、数字总结
+## 十二、数字总结
 
 | 维度 | 数量 |
 |------|------|
-| Python 脚本 | **30 个**（含 `playwright_client.py` + 2 个 `requirements-ci.txt`） |
+| Python 脚本 | **32 个**（含 `playwright_client.py` + 2 个 `requirements-ci.txt`） |
 | 监控游戏 | **56 款** |
 | 游戏故障渠道 | **8 个** |
 | 平台/通讯工具 | **14 个** |
@@ -297,13 +320,13 @@ gearup_monitors/
 | 覆盖地区 | **8 个**（欧美/台湾/日本/韩国/俄罗斯-CIS/中东/东南亚/拉美部分） |
 | 覆盖语言 | **9 种** |
 | AI 接入点 | **7 个**（玩家反馈总结/更新摘要/加速需求/新游介绍/俄罗斯风险评估/竞品公告翻译/竞品博客摘要） |
-| 快照文件 | **9 个**（跨运行持久化） |
-| 运行频率 | 故障监控每 **2 小时**；品牌舆情/竞品情报每天 **1 次** |
-| 报警标题 | **6 种**（商机雷达/新游上线/热游更新/平台状态/品牌舆情/竞品情报）+ 心跳 + 内部崩溃 |
+| 快照文件 | **11 个**（跨运行持久化） |
+| 运行频率 | 故障监控每 **2 小时**；品牌舆情/竞品情报/地区节假日每天 **1 次** |
+| 报警标题 | **7 种**（商机雷达/新游上线/热游更新/平台状态/品牌舆情/竞品情报/地区节假日监控）+ 心跳 + 内部崩溃 |
 
 ---
 
-## 十二、已知架构约束补充
+## 十三、已知架构约束补充
 
-18. **竞品博客监控反爬策略** — ExitLag 博客优先解析公开博客页，失败时降级 WP REST API、Sitemap、Playwright、搜索索引和 RSS。LagoFast 博客（Next.js SSR）优先通过 requests 抓取 `__NEXT_DATA__` JSON（服务端渲染的结构化数据），失败时尝试 DOM 解析和 Playwright
-19. **博客快照首次运行** — `competitor_blog_monitor.py` 首次运行（快照中无对应竞品 key）仅保存当前文章列表为基线，不生成报警，避免首次部署时产生大量历史文章的误报
+19. **竞品博客监控反爬策略** — ExitLag 博客优先解析公开博客页，失败时降级 WP REST API、Sitemap、Playwright、搜索索引和 RSS。LagoFast 博客（Next.js SSR）优先通过 requests 抓取 `__NEXT_DATA__` JSON（服务端渲染的结构化数据），失败时尝试 DOM 解析和 Playwright
+20. **博客快照首次运行** — `competitor_blog_monitor.py` 首次运行（快照中无对应竞品 key）仅保存当前文章列表为基线，不生成报警，避免首次部署时产生大量历史文章的误报
