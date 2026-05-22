@@ -24,7 +24,7 @@ gearup_monitors/
 │   │                                #   DETECTOR404_MAP: 46 游戏 + 9 平台 = 55 条
 │   │                                #   DETECTOR404_PLATFORMS: 平台名称集合（防重复检测用）
 │   │                                #   get_detector404_game_only_names(): 仅返回游戏条目
-│   │                                #   中等投诉仅在低位升至中等时发一次，快照记录等级状态
+│   │                                #   中等投诉每次检测到都发 🟡 待确认，快照记录等级状态
 │   │                                #   批量请求间隔 4-7s；429 内联重试 + 连续 2 次 429 冷却后提前终止
 │   ├── downdetector_osint.py        # 全球故障聚合（IsTheServiceDown）
 │   ├── platform_status_monitor.py   # 14 个平台/通讯工具状态（独占 detector404 平台检测）
@@ -294,7 +294,7 @@ gearup_monitors/
 7. **级联失败防护** — `monitor.py` 中每款游戏的检测已被 `try/except` 包裹；新增检测模块时应遵循相同模式
 8. **Trustpilot 暂时禁用** — Cloudflare 封锁 GitHub Actions IP，Playwright + stealth 也无法通过。`run_all.py` 中调用已注释，等 Trustpilot Business API key 再恢复
 9. **日历报警去重** — `game_calendar_monitor.py` 通过 snapshot key 跨运行去重，同一更新只报一次；快照丢失（cache miss）时会重新报
-10. **detector404 限流与中等报警** — 批量请求间隔 4-7s，连续 2 次 429 后冷却并提前终止批次；`умеренно` 只在从低位升至中等时发一次 🟡 待确认，保持中等不重复报警
+10. **detector404 限流与中等报警** — 批量请求间隔 4-7s，连续 2 次 429 后冷却并提前终止批次；`умеренно` 中等投诉每次检测到都发 🟡 待确认
 11. **Steam News 403 静默** — 同一 AppID 连续 **5** 次 Steam News 403 后静默 **3** 天
 12. **Reddit listing API** — 日历监控的 Reddit 调用已从 search API 改为 listing API（`/new.json`、`/hot.json`）+ 客户端关键词过滤
 13. **Reddit 匿名模式** — 无法申请 OAuth 凭证（Reddit 政策限制），当前以匿名模式运行（4s 间隔 + 熔断器）；`missing_credentials` 不再发报警

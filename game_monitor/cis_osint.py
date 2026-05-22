@@ -156,24 +156,17 @@ def _rank_detector404_level(level):
 
 def _record_detector404_level(game_name, complaint_level, complaint_level_zh):
     """
-    记录 detector404 投诉等级，并判断是否需要发中等等级跃迁报警。
-    只有从低位(нет/мало/минимально)升到 умеренно 时返回 True。
-    首次看到 умеренно 只建基线，避免接入后刷历史状态。
+    记录 detector404 投诉等级，便于后续排查页面状态变化。
+    报警是否发送由 check_detector404() 的等级判断决定。
     """
     level = (complaint_level or '').lower()
     current_rank = _rank_detector404_level(level)
     if current_rank < 0:
-        return False
+        return
 
     snapshot = _load_detector404_level_snapshot()
     previous = snapshot.get(game_name, {})
     previous_level = (previous.get('level') or '').lower()
-    previous_rank = _rank_detector404_level(previous_level)
-
-    should_alert_medium = (
-        level == DETECTOR404_MEDIUM_LEVEL
-        and 0 <= previous_rank < DETECTOR404_LEVEL_RANK[DETECTOR404_MEDIUM_LEVEL]
-    )
 
     snapshot[game_name] = {
         'level': level,
@@ -183,7 +176,6 @@ def _record_detector404_level(game_name, complaint_level, complaint_level_zh):
         'previous_level': previous_level,
     }
     _save_detector404_level_snapshot(snapshot)
-    return should_alert_medium
 
 
 def analyze_russian_text(text_list, threshold=2):
@@ -298,12 +290,10 @@ def check_detector404(game_name, return_status=False):
             complaint_level = level_match.group(1).lower()
             complaint_level_zh = LEVEL_TRANSLATE.get(complaint_level, complaint_level)
 
-        should_alert_medium = _record_detector404_level(game_name, complaint_level, complaint_level_zh)
+        _record_detector404_level(game_name, complaint_level, complaint_level_zh)
 
-        # 低位只更新快照，不报警；中等只在从低位升上来时报警一次。
+        # 低位只更新快照，不报警；中等及以上都进入报警逻辑。
         if complaint_level and complaint_level.lower() in ('нет', 'мало', 'минимально'):
-            return (None, 200) if return_status else None
-        if complaint_level == DETECTOR404_MEDIUM_LEVEL and not should_alert_medium:
             return (None, 200) if return_status else None
 
         # 提取受影响区域 TOP，并翻译俄语地名
@@ -359,10 +349,10 @@ def check_detector404(game_name, return_status=False):
         high_levels = ['много', 'критично', 'массово']  # 大量/严重/大规模
 
         is_high = complaint_level and any(lvl in complaint_level for lvl in high_levels)
-        is_medium_transition = complaint_level == DETECTOR404_MEDIUM_LEVEL and should_alert_medium
+        is_medium = complaint_level == DETECTOR404_MEDIUM_LEVEL
 
-        if is_medium_transition:
-            issue_parts = [f"🟡 [待确认] 🇷🇺 俄罗斯区 detector404 投诉升至中等 (投诉量: {complaint_level_zh})"]
+        if is_medium:
+            issue_parts = [f"🟡 [待确认] 🇷🇺 俄罗斯区 detector404 中等投诉 (投诉量: {complaint_level_zh})"]
             if regions:
                 issue_parts.append(f"受影响区域: {', '.join(regions[:5])}")
             if fault_types:
@@ -404,7 +394,7 @@ def check_detector404(game_name, return_status=False):
 
 def check_detector404_batch(game_names=None):
     """
-    批量检测 detector404，只报大量/严重/大规模级别。
+    批量检测 detector404，报告中等/大量/严重/大规模级别。
     game_names: 指定要检测的名称列表；为 None 时遍历 DETECTOR404_MAP 中所有条目
                （含不在 GAME_REGISTRY 中的俄区热门游戏）。
     每次请求之间加入 4-7 秒随机延迟；若命中 429，会额外冷却后重试一次。
