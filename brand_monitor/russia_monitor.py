@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 import os
 import sys
 import urllib.parse
+import re
+from datetime import datetime, timedelta
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBHOOK_URL
@@ -38,6 +40,71 @@ HEADERS_VK = {
     'Accept-Language': 'ru-RU,ru;q=0.9'
 }
 
+RECENT_DAYS = 7
+RU_MONTHS = {
+    "янв": 1, "фев": 2, "мар": 3, "апр": 4, "мая": 5, "май": 5, "июн": 6,
+    "июл": 7, "авг": 8, "сен": 9, "сент": 9, "окт": 10, "ноя": 11, "дек": 12,
+}
+
+
+def _recent_cutoff_date():
+    return (datetime.utcnow() - timedelta(days=RECENT_DAYS)).date()
+
+
+def _parse_vk_date(text):
+    if not text:
+        return None
+
+    normalized = text.lower()
+    now = datetime.utcnow()
+    if "только что" in normalized or "сегодня" in normalized:
+        return now.date()
+    if "вчера" in normalized:
+        return (now - timedelta(days=1)).date()
+
+    match = re.search(r"(20\d{2})[./-](\d{1,2})[./-](\d{1,2})", normalized)
+    if match:
+        year, month, day = map(int, match.groups())
+        return datetime(year, month, day).date()
+
+    match = re.search(r"(?<!\d)(\d{1,2})[./-](\d{1,2})(?:[./-](\d{2,4}))?(?!\d)", normalized)
+    if match:
+        day, month, year = match.groups()
+        year = int(year) if year else now.year
+        if year < 100:
+            year += 2000
+        try:
+            parsed = datetime(year, int(month), int(day)).date()
+            if not match.group(3) and parsed > now.date() + timedelta(days=1):
+                parsed = datetime(now.year - 1, int(month), int(day)).date()
+            return parsed
+        except ValueError:
+            return None
+
+    match = re.search(r"(?<!\d)(\d{1,2})\s+([а-яё]+)(?:\s+(20\d{2}))?", normalized)
+    if match:
+        day, month_text, year = match.groups()
+        month = None
+        for prefix, value in RU_MONTHS.items():
+            if month_text.startswith(prefix):
+                month = value
+                break
+        if month:
+            year_value = int(year) if year else now.year
+            try:
+                parsed = datetime(year_value, month, int(day)).date()
+                if not year and parsed > now.date() + timedelta(days=1):
+                    parsed = datetime(now.year - 1, month, int(day)).date()
+                return parsed
+            except ValueError:
+                return None
+
+    return None
+
+
+def _is_recent(post_date):
+    return post_date is not None and post_date >= _recent_cutoff_date()
+
 
 def search_vk(query):
     """
@@ -64,12 +131,18 @@ def search_vk(query):
 
         for i, post in enumerate(soup.find_all('div', class_='pi_text')):
             text = post.get_text(strip=True)
+            container = post.find_parent(['div', 'article']) or post.parent
+            date_text = container.get_text(" ", strip=True) if container else text
+            post_date = _parse_vk_date(date_text)
+            if not _is_recent(post_date):
+                continue
             if text and len(text) > 20:
                 results.append({
                     'title': text[:150],
                     # 用 query+index 组成唯一 anchor，避免所有条目 URL 完全相同
                     'url': f"{search_url}#result-{i}",
-                    'source': 'VK'
+                    'source': 'VK',
+                    'published_date': post_date.isoformat(),
                 })
 
         return results[:15]

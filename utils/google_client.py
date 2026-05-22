@@ -118,7 +118,8 @@ def _search_duckduckgo(query, lang_code=None, site=None, max_results=10):
     search_query = f"site:{site} {query}" if site else query
     encoded = urllib.parse.quote(search_query)
 
-    params = f"q={encoded}"
+    # df=w limits DuckDuckGo HTML results to the past week, matching Google qdr:w.
+    params = f"q={encoded}&df=w"
     if lang_code and lang_code in DDG_REGION_MAP:
         params += f"&kl={DDG_REGION_MAP[lang_code]}"
 

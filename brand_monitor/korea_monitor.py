@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 import os
 import sys
 import urllib.parse
+import re
+from datetime import datetime, timedelta
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBHOOK_URL
@@ -39,6 +41,55 @@ HEADERS = {
                   '(KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
     'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8'
 }
+
+RECENT_DAYS = 7
+
+
+def _recent_cutoff_date():
+    return (datetime.utcnow() - timedelta(days=RECENT_DAYS)).date()
+
+
+def _parse_naver_postdate(value):
+    if not value:
+        return None
+    try:
+        return datetime.strptime(str(value), "%Y%m%d").date()
+    except ValueError:
+        return None
+
+
+def _parse_dcinside_date(text):
+    if not text:
+        return None
+
+    now = datetime.utcnow()
+    if "방금" in text or "오늘" in text:
+        return now.date()
+    if "어제" in text:
+        return (now - timedelta(days=1)).date()
+
+    match = re.search(r"(20\d{2})[./-](\d{1,2})[./-](\d{1,2})", text)
+    if match:
+        year, month, day = map(int, match.groups())
+        return datetime(year, month, day).date()
+
+    match = re.search(r"(?<!\d)(\d{1,2})[./-](\d{1,2})(?!\d)", text)
+    if match:
+        month, day = map(int, match.groups())
+        try:
+            parsed = datetime(now.year, month, day).date()
+            # Search pages around New Year can show last year's posts without a year.
+            if parsed > now.date() + timedelta(days=1):
+                parsed = datetime(now.year - 1, month, day).date()
+            return parsed
+        except ValueError:
+            return None
+
+    return None
+
+
+def _is_recent(post_date):
+    return post_date is not None and post_date >= _recent_cutoff_date()
 
 
 def search_naver_blog(query):
@@ -85,6 +136,10 @@ def search_naver_blog(query):
 
             data = response.json()
             for item in data.get('items', []):
+                post_date = _parse_naver_postdate(item.get('postdate'))
+                if not _is_recent(post_date):
+                    continue
+
                 # 移除 HTML 标签（API 返回带 <b> 标签的标题）
                 from html.parser import HTMLParser
 
@@ -104,7 +159,8 @@ def search_naver_blog(query):
                 results.append({
                     'title': clean_title,
                     'url': item.get('link', item.get('bloggername', '')),
-                    'source': f'Naver ({search_type})'
+                    'source': f'Naver ({search_type})',
+                    'published_date': post_date.isoformat(),
                 })
         except Exception as e:
             print(f"[KR] 搜索 Naver ({search_type}) '{query}' 失败: {e}")
@@ -155,11 +211,17 @@ def search_dcinside_search(query):
         for item in soup.select('.result_tit a, .tit_txt'):
             title = item.get_text(strip=True)
             link = item.get('href', '')
+            container = item.find_parent(['li', 'div', 'section']) or item.parent
+            date_text = container.get_text(" ", strip=True) if container else ""
+            post_date = _parse_dcinside_date(date_text)
+            if not _is_recent(post_date):
+                continue
             if title:
                 results.append({
                     'title': title,
                     'url': str(link) if str(link).startswith('http') else f"https://search.dcinside.com{link}",
-                    'source': 'DC Inside'
+                    'source': 'DC Inside',
+                    'published_date': post_date.isoformat(),
                 })
 
         return results[:15]

@@ -14,6 +14,49 @@ qwen_client = OpenAI(
     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
 ) if QWEN_API_KEY else None
 
+COMPETITOR_KEYWORDS = [
+    "ExitLag", "LagoFast", "NoPing", "Hone.gg", "wtfast", "Mudfish",
+    "UU加速器", "迅游", "雷神", "엑싯랙", "드롭스마이너",
+]
+HIGH_RISK_KEYWORDS = [
+    "refund", "scam", "fraud", "virus", "malware", "doesn't work", "doesnt work",
+    "환불", "사기", "안됨", "退費", "退款", "騙錢", "诈骗", "обман", "возврат",
+]
+
+
+def _combined_text(posts):
+    return "\n".join(str(p.get("title", "")) for p in posts)
+
+
+def _has_keyword(text, keywords):
+    text_lower = text.lower()
+    return any(keyword.lower() in text_lower for keyword in keywords)
+
+
+def _should_call_qwen(region_name, positive_posts, negative_posts, neutral_posts):
+    all_posts = positive_posts + negative_posts + neutral_posts
+    if not all_posts:
+        return False
+
+    text = _combined_text(all_posts)
+    if negative_posts or _has_keyword(text, HIGH_RISK_KEYWORDS):
+        return True
+    if _has_keyword(text, COMPETITOR_KEYWORDS):
+        return True
+
+    if "youtube" in region_name.lower():
+        total_views = sum(int(p.get("views", 0) or 0) for p in all_posts)
+        return len(all_posts) >= 10 or total_views >= 1000
+
+    return False
+
+
+def _fallback_summary(unique_posts):
+    links = [f"{p.get('title', '')[:40]} ({p.get('url', '')})" for p in unique_posts[:3] if p.get('url')]
+    if links:
+        return f"共 {len(unique_posts)} 篇讨论。代表帖子: {'; '.join(links)}"
+    return f"共 {len(unique_posts)} 篇讨论。"
+
 
 def summarize_sentiment(brand_name, region_name, positive_posts, negative_posts, neutral_posts):
     """
@@ -43,10 +86,27 @@ def summarize_sentiment(brand_name, region_name, positive_posts, negative_posts,
 
     reference_posts = unique_posts[:15]
 
-    if not qwen_client:
-        # AI 不可用，只返回帖子数量和链接
-        links = [f"{p.get('title', '')[:40]} ({p.get('url', '')})" for p in reference_posts[:3] if p.get('url')]
-        return f"共 {len(unique_posts)} 篇讨论。代表帖子: {'; '.join(links)}" if links else ""
+    should_call_qwen = qwen_client and _should_call_qwen(
+        region_name, positive_posts, negative_posts, neutral_posts
+    )
+
+    if not should_call_qwen:
+        from utils.brand_report import add_report_section, get_report_url
+        fallback_text = _fallback_summary(unique_posts)
+        if qwen_client:
+            fallback_text += "\nAI总结: 未命中重点阈值，已跳过 Qwen 调用。"
+        else:
+            fallback_text += "\nAI总结: QWEN_API_KEY 未配置，使用基础摘要。"
+        add_report_section(
+            region_name,
+            brand_name,
+            positive_posts,
+            negative_posts,
+            neutral_posts,
+            fallback_text,
+            reference_posts=reference_posts,
+        )
+        return f"{fallback_text}\n详细来源: {get_report_url(region_name, brand_name)}"
 
     # 构建带编号和链接的帖子列表（最多 15 条给 AI）
     post_lines = []
