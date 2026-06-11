@@ -312,9 +312,21 @@ def check_detector404(game_name, return_status=False, return_meta=False):
             complaint_level = level_match.group(1).lower()
             complaint_level_zh = LEVEL_TRANSLATE.get(complaint_level, complaint_level)
 
+        recent_hour_count = None
+        recent_day_count = None
+        access_count_match = re.search(
+            r'Проблемы\s+с\s+доступом:\s*час:\s*(\d+)\s*сутки:\s*(\d+)',
+            text
+        )
+        if access_count_match:
+            recent_hour_count = int(access_count_match.group(1))
+            recent_day_count = int(access_count_match.group(2))
+
         meta['parsed'] = bool(complaint_level)
         meta['level'] = complaint_level or ''
         meta['level_zh'] = complaint_level_zh or ''
+        meta['recent_hour_count'] = recent_hour_count
+        meta['recent_day_count'] = recent_day_count
 
         if not complaint_level:
             meta['outcome'] = 'parse_failed'
@@ -381,9 +393,29 @@ def check_detector404(game_name, return_status=False, return_meta=False):
 
         is_high = complaint_level and any(lvl in complaint_level for lvl in high_levels)
         is_medium = complaint_level == DETECTOR404_MEDIUM_LEVEL
+        has_recent_complaints = (
+            (recent_hour_count is not None and recent_hour_count > 0)
+            or (recent_day_count is not None and recent_day_count > 0)
+        )
+        count_label = (
+            f"近1小时: {recent_hour_count}, 近24小时: {recent_day_count}"
+            if recent_hour_count is not None and recent_day_count is not None
+            else "近1小时/24小时投诉数: 未解析"
+        )
 
         if is_medium:
-            issue_parts = [f"🟡 [待确认] 🇷🇺 俄罗斯区 detector404 中等投诉 (投诉量: {complaint_level_zh})"]
+            if not has_recent_complaints:
+                meta['outcome'] = 'low'
+                print(
+                    f"[detector404 SKIP] {game_name}: {complaint_level} but no recent complaints "
+                    f"({count_label})"
+                )
+                return finish(None, 200)
+
+            issue_parts = [
+                f"🟡 [待确认] 🇷🇺 俄罗斯区 detector404 中等投诉 "
+                f"(投诉量: {complaint_level_zh}; {count_label})"
+            ]
             if regions:
                 issue_parts.append(f"受影响区域: {', '.join(regions[:5])}")
             if fault_types:
@@ -398,12 +430,12 @@ def check_detector404(game_name, return_status=False, return_meta=False):
                 'source_url': url
             }
             meta['outcome'] = 'alert'
-            print(f"[detector404 ALERT] {game_name}: {complaint_level} / {complaint_level_zh}")
+            print(f"[detector404 ALERT] {game_name}: {complaint_level} / {complaint_level_zh}; {count_label}")
             return finish(result, 200)
 
         if is_high:
             # 高级别：详细报告（含区域和故障类型）
-            issue_parts = [f"🇷🇺 俄罗斯区故障检测 (投诉量: {complaint_level_zh})"]
+            issue_parts = [f"🇷🇺 俄罗斯区故障检测 (投诉量: {complaint_level_zh}; {count_label})"]
             if regions:
                 issue_parts.append(f"受影响区域: {', '.join(regions[:5])}")
             if fault_types:
@@ -418,7 +450,7 @@ def check_detector404(game_name, return_status=False, return_meta=False):
                 'source_url': url
             }
             meta['outcome'] = 'alert'
-            print(f"[detector404 ALERT] {game_name}: {complaint_level} / {complaint_level_zh}")
+            print(f"[detector404 ALERT] {game_name}: {complaint_level} / {complaint_level_zh}; {count_label}")
             return finish(result, 200)
 
         meta['outcome'] = 'unknown_level'
