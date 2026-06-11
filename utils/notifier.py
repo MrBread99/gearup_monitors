@@ -342,6 +342,164 @@ _SCRAPE_ADVICE = {
     },
 }
 
+
+DETECTOR404_PLATFORM_NAMES = {
+    'Steam', 'Discord', 'Telegram', 'Epic Games',
+    'Battle.net', 'PlayStation', 'Xbox Live', 'FACEIT', 'Ubisoft Connect',
+}
+
+
+# 用户确认过的重点监控对象清单；仅用于 detector404 摘要中突出已命中的对象。
+DETECTOR404_PRIORITY_NAMES = [
+    'ARC Raiders',
+    'Delta Force',
+    'Marvel Rivals',
+    'Valorant',
+    'APEX Legends',
+    'Fortnite',
+    'PUBG',
+    'Call of Duty',
+    'Battlefield 2042',
+    'Escape from Tarkov',
+    'Rainbow Six Siege',
+    'CS2',
+    'League of Legends',
+    'Dota 2',
+    'Overwatch 2',
+    'Roblox',
+    'Minecraft',
+    'Rust',
+    'Dead by Daylight',
+    'Hunt Showdown',
+    'World of Warcraft',
+    'Warframe',
+    'Dark and Darker',
+    'Warface',
+    'Fallout 76',
+    'Rocket League',
+    'Warhammer 40K: Darktide',
+    'Deadlock',
+    'Arma Reforger',
+    'FragPunk',
+    'The Outlast Trials',
+    'EA FC',
+    'NBA 2K26',
+    'Steam',
+    'Discord',
+    'Telegram',
+]
+
+
+def _join_limited(names, limit=10):
+    if not names:
+        return '无'
+    visible = names[:limit]
+    suffix = f" 等{len(names)}项" if len(names) > limit else ''
+    return ', '.join(visible) + suffix
+
+
+def _compact_detector404_issues(issues_list):
+    """
+    detector404 在中等投诉泛滥时会一次生成几十条报警。
+    POPO 对大消息会返回 200 但不展示，因此这里压缩为单条摘要。
+    """
+    detector_items = []
+    other_items = []
+
+    for item in issues_list:
+        if item.get('source_name') == 'detector404.ru' and item.get('alert_type', 'game_monitor') == 'game_monitor':
+            detector_items.append(item)
+        else:
+            other_items.append(item)
+
+    if len(detector_items) <= 3:
+        return issues_list
+
+    item_by_name = {item.get('game', ''): item for item in detector_items}
+    names = [item.get('game', '?') for item in detector_items]
+    platforms = [name for name in names if name in DETECTOR404_PLATFORM_NAMES]
+    games = [name for name in names if name not in DETECTOR404_PLATFORM_NAMES]
+    priority_hits = [name for name in DETECTOR404_PRIORITY_NAMES if name in item_by_name]
+    high_items = [
+        item for item in detector_items
+        if any(level in item.get('issue', '') for level in ('大量', '严重', '大规模'))
+    ]
+
+    issue_lines = [
+        f"🟡 [待确认] detector404.ru 俄罗斯区中等及以上投诉摘要：共 {len(detector_items)} 项",
+        f"重点清单命中: {_join_limited(priority_hits, 12)}",
+        f"游戏: {_join_limited(games, 12)}",
+        f"平台/通讯: {_join_limited(platforms, 8)}",
+    ]
+
+    if high_items:
+        issue_lines.append(
+            "高等级: " + _join_limited([item.get('game', '?') for item in high_items], 10)
+        )
+
+    issue_lines.append("完整 detector404 列表见本次 GitHub Actions 日志的 [detector404 ALERT] / [POPO待发送]。")
+
+    compact_item = {
+        'game': 'detector404.ru 摘要',
+        'region': 'CIS / Russia',
+        'country': 'Russia',
+        'issue': '\n    '.join(issue_lines),
+        'source_name': 'detector404.ru',
+        'source_url': 'https://detector404.ru',
+        'alert_type': 'game_monitor',
+    }
+
+    print(
+        f"[detector404 COMPACT] {len(detector_items)} 条 detector404 报警已压缩为 1 条摘要；"
+        f"重点命中 {len(priority_hits)}，平台 {len(platforms)}，游戏 {len(games)}。"
+    )
+
+    return other_items + [compact_item]
+
+
+def _split_text_by_utf8_bytes(text, max_bytes):
+    chunks = []
+    current_lines = []
+    current_bytes = 0
+
+    for line in text.splitlines(keepends=True):
+        line_bytes = len(line.encode('utf-8'))
+
+        if line_bytes > max_bytes:
+            if current_lines:
+                chunks.append(''.join(current_lines))
+                current_lines = []
+                current_bytes = 0
+
+            piece = ''
+            piece_bytes = 0
+            for char in line:
+                char_bytes = len(char.encode('utf-8'))
+                if piece and piece_bytes + char_bytes > max_bytes:
+                    chunks.append(piece)
+                    piece = char
+                    piece_bytes = char_bytes
+                else:
+                    piece += char
+                    piece_bytes += char_bytes
+            if piece:
+                chunks.append(piece)
+            continue
+
+        if current_lines and current_bytes + line_bytes > max_bytes:
+            chunks.append(''.join(current_lines))
+            current_lines = [line]
+            current_bytes = line_bytes
+        else:
+            current_lines.append(line)
+            current_bytes += line_bytes
+
+    if current_lines:
+        chunks.append(''.join(current_lines))
+
+    return chunks or ['']
+
+
 def send_popo_alert(webhook_url, issues_list):
     """
     将问题列表格式化为纯文本，并发送至 NetEase POPO Webhook。
@@ -351,6 +509,11 @@ def send_popo_alert(webhook_url, issues_list):
     if not issues_list:
         print("未检测到异常或情报，静默退出，不发送打扰信息。")
         return
+
+    original_count = len(issues_list)
+    issues_list = _compact_detector404_issues(issues_list)
+    if len(issues_list) != original_count:
+        print(f"[POPO待发送] 报警压缩: {original_count} -> {len(issues_list)}")
 
     current_time = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -439,24 +602,14 @@ def send_popo_alert(webhook_url, issues_list):
         print(plain_content)
         return
 
-    # 消息长度限制：超过 4000 字符自动分割发送
-    MAX_LEN = 4000
-    if len(plain_content) <= MAX_LEN:
-        chunks = [plain_content]
-    else:
-        chunks = []
-        lines = plain_content.split('\n')
-        current = ""
-        for line in lines:
-            if len(current) + len(line) + 1 > MAX_LEN:
-                chunks.append(current)
-                current = line + "\n"
-            else:
-                current += line + "\n"
-        if current:
-            chunks.append(current)
+    # POPO 对中文/emoji 按字节计限更安全；保守控制单片 UTF-8 字节数。
+    MAX_BYTES = 2500
+    chunks = _split_text_by_utf8_bytes(plain_content, MAX_BYTES)
 
-    print(f"[POPO待发送] 正文长度 {len(plain_content)} 字符，分片 {len(chunks)} 个。")
+    print(
+        f"[POPO待发送] 正文长度 {len(plain_content)} 字符 / "
+        f"{len(plain_content.encode('utf-8'))} bytes，分片 {len(chunks)} 个。"
+    )
     for chunk_index, chunk in enumerate(chunks, start=1):
         chunk_items = []
         for item in issues_list:
@@ -466,7 +619,10 @@ def send_popo_alert(webhook_url, issues_list):
                 chunk_items.append(f"{item.get('game', '?')}|{source_name or '?'}")
         preview = ', '.join(chunk_items[:20])
         suffix = ' ...' if len(chunk_items) > 20 else ''
-        print(f"[POPO分片 {chunk_index}/{len(chunks)}] {len(chunk)} 字符: {preview}{suffix}")
+        print(
+            f"[POPO分片 {chunk_index}/{len(chunks)}] "
+            f"{len(chunk)} 字符 / {len(chunk.encode('utf-8'))} bytes: {preview}{suffix}"
+        )
 
     headers = {'Content-Type': 'application/json'}
 
@@ -484,6 +640,8 @@ def send_popo_alert(webhook_url, issues_list):
                     data=json.dumps(payload), timeout=10
                 )
                 print(f"POPO 接口返回 HTTP 状态码: {response.status_code}")
+                if response.text:
+                    print(f"POPO 接口返回内容: {response.text[:500]}")
                 response.raise_for_status()
                 print(f"代码执行：成功发送请求至 POPO Webhook{f' (分片 {i+1}/{len(chunks)})' if len(chunks) > 1 else ''}。")
                 break
