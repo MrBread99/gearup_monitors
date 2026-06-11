@@ -163,6 +163,12 @@ _SCRAPE_ADVICE = {
         'short_term': '当前批量请求间已有 1-3s 随机延迟；可将延迟上调至 5-10s 进一步降低触发率',
         'long_term': '注册 detector404.ru 官方账号并获取 API Token，接入官方 REST API（数据质量更高、无频控风险）',
     },
+    'detector404_parse': {
+        'display_name': 'detector404.ru（页面解析异常）',
+        'reason': 'detector404 页面可访问但未解析到投诉等级，可能是页面结构变更、空页面、地区化内容变化或上游异常页',
+        'short_term': '本次 detector404 报警可能缺失；需查看 Actions 中的 detector404 summary 和失败样例',
+        'long_term': '为 detector404 接入稳定 API 或增加页面结构探针，避免 HTML 结构变化导致静默无报警',
+    },
     'vk_game': {
         'display_name': 'VK 移动版（游戏网络监控）',
         'reason': 'VK 移动版对未登录爬虫有严格频控，返回非 200',
@@ -367,6 +373,17 @@ def send_popo_alert(webhook_url, issues_list):
             groups[alert_type] = []
         groups[alert_type].append(item)
 
+    print(f"[POPO待发送] 本次共 {len(issues_list)} 条报警，分为 {len(groups)} 组。")
+    for alert_type, items in groups.items():
+        title = ALERT_TITLES.get(alert_type, '【监控警报】')
+        print(f"[POPO待发送] {title} {len(items)} 条")
+        for index, item in enumerate(items, start=1):
+            issue_first_line = str(item.get('issue', '')).splitlines()[0][:160]
+            print(
+                f"[POPO待发送]   {index}. "
+                f"{item.get('game', '?')} | {item.get('source_name', '?')} | {issue_first_line}"
+            )
+
     # 构造极简纯文本格式
     plain_content = ""
     for alert_type, items in groups.items():
@@ -438,6 +455,18 @@ def send_popo_alert(webhook_url, issues_list):
                 current += line + "\n"
         if current:
             chunks.append(current)
+
+    print(f"[POPO待发送] 正文长度 {len(plain_content)} 字符，分片 {len(chunks)} 个。")
+    for chunk_index, chunk in enumerate(chunks, start=1):
+        chunk_items = []
+        for item in issues_list:
+            game_token = f"[{item.get('game', '')}]"
+            source_name = str(item.get('source_name', ''))
+            if game_token in chunk or (source_name and source_name in chunk):
+                chunk_items.append(f"{item.get('game', '?')}|{source_name or '?'}")
+        preview = ', '.join(chunk_items[:20])
+        suffix = ' ...' if len(chunk_items) > 20 else ''
+        print(f"[POPO分片 {chunk_index}/{len(chunks)}] {len(chunk)} 字符: {preview}{suffix}")
 
     headers = {'Content-Type': 'application/json'}
 

@@ -237,16 +237,37 @@ def check_cis_vk(game_name):
     return None
 
 
-def check_detector404(game_name, return_status=False):
+def check_detector404(game_name, return_status=False, return_meta=False):
     """
     检查 detector404.ru（俄罗斯版 Downdetector）上的故障报告。
     提取：投诉量级、受影响区域 TOP5、故障类型占比。
     """
     slug = DETECTOR404_MAP.get(game_name)
+    meta = {
+        'game': game_name,
+        'url': '',
+        'status_code': None,
+        'outcome': 'unknown',
+        'parsed': False,
+        'level': '',
+        'level_zh': '',
+        'error': '',
+    }
+
+    def finish(result=None, status_code=None):
+        meta['status_code'] = status_code
+        if return_meta:
+            return result, status_code, meta
+        if return_status:
+            return result, status_code
+        return result
+
     if not slug:
-        return (None, None) if return_status else None
+        meta['outcome'] = 'no_slug'
+        return finish(None, None)
 
     url = f"https://detector404.ru/{slug}"
+    meta['url'] = url
 
     try:
         response = requests.get(url, headers=HEADERS_WEB, timeout=15)
@@ -261,12 +282,13 @@ def check_detector404(game_name, return_status=False):
 
         if response.status_code != 200:
             print(f"[CIS] detector404 {game_name}: HTTP {response.status_code}")
+            meta['outcome'] = 'http_error'
             try:
                 from utils.notifier import report_scrape_block
                 report_scrape_block('detector404', url=url, status_code=response.status_code)
             except Exception:
                 pass
-            return (None, response.status_code) if return_status else None
+            return finish(None, response.status_code)
 
         soup = BeautifulSoup(response.text, 'html.parser')
         text = soup.get_text()
@@ -290,11 +312,20 @@ def check_detector404(game_name, return_status=False):
             complaint_level = level_match.group(1).lower()
             complaint_level_zh = LEVEL_TRANSLATE.get(complaint_level, complaint_level)
 
+        meta['parsed'] = bool(complaint_level)
+        meta['level'] = complaint_level or ''
+        meta['level_zh'] = complaint_level_zh or ''
+
+        if not complaint_level:
+            meta['outcome'] = 'parse_failed'
+            return finish(None, 200)
+
         _record_detector404_level(game_name, complaint_level, complaint_level_zh)
 
         # 低位只更新快照，不报警；中等及以上都进入报警逻辑。
         if complaint_level and complaint_level.lower() in ('нет', 'мало', 'минимально'):
-            return (None, 200) if return_status else None
+            meta['outcome'] = 'low'
+            return finish(None, 200)
 
         # 提取受影响区域 TOP，并翻译俄语地名
         REGION_TRANSLATE = {
@@ -366,7 +397,9 @@ def check_detector404(game_name, return_status=False):
                 'source_name': 'detector404.ru',
                 'source_url': url
             }
-            return (result, 200) if return_status else result
+            meta['outcome'] = 'alert'
+            print(f"[detector404 ALERT] {game_name}: {complaint_level} / {complaint_level_zh}")
+            return finish(result, 200)
 
         if is_high:
             # 高级别：详细报告（含区域和故障类型）
@@ -384,12 +417,19 @@ def check_detector404(game_name, return_status=False):
                 'source_name': 'detector404.ru',
                 'source_url': url
             }
-            return (result, 200) if return_status else result
+            meta['outcome'] = 'alert'
+            print(f"[detector404 ALERT] {game_name}: {complaint_level} / {complaint_level_zh}")
+            return finish(result, 200)
+
+        meta['outcome'] = 'unknown_level'
+        print(f"[CIS] detector404 {game_name}: unknown complaint level '{complaint_level}'")
 
     except Exception as e:
+        meta['outcome'] = 'exception'
+        meta['error'] = str(e)
         print(f"[CIS] detector404 检测 {game_name} 失败: {e}")
 
-    return (None, None) if return_status else None
+    return finish(None, None)
 
 
 def check_detector404_batch(game_names=None):
@@ -404,13 +444,62 @@ def check_detector404_batch(game_names=None):
     issues = []
     names = game_names if game_names is not None else list(DETECTOR404_MAP.keys())
     consecutive_429 = 0
+    summary = {
+        'checked': 0,
+        'parsed': 0,
+        'low': 0,
+        'alert': 0,
+        'parse_failed': 0,
+        'http_error': 0,
+        'exception': 0,
+        'no_slug': 0,
+        'unknown_level': 0,
+        'ended_early': False,
+        'status_counts': {},
+        'alert_names': [],
+        'parse_failed_names': [],
+        'http_error_names': [],
+        'exception_names': [],
+        'unknown_level_names': [],
+    }
+
+    def remember_status(status_code):
+        key = str(status_code) if status_code is not None else 'None'
+        summary['status_counts'][key] = summary['status_counts'].get(key, 0) + 1
+
+    def preview(names_list, limit=8):
+        if not names_list:
+            return ''
+        visible = ', '.join(names_list[:limit])
+        return visible + (' ...' if len(names_list) > limit else '')
 
     for i, name in enumerate(names):
         # 放慢批量抓取节奏，减少固定 CI IP 被频控的概率
         if i > 0:
             time.sleep(random.uniform(*DETECTOR404_BATCH_DELAY_RANGE))
 
-        result, status_code = check_detector404(name, return_status=True)
+        result, status_code, meta = check_detector404(name, return_status=True, return_meta=True)
+        summary['checked'] += 1
+        remember_status(status_code)
+
+        if meta.get('parsed'):
+            summary['parsed'] += 1
+
+        outcome = meta.get('outcome', 'unknown')
+        if outcome in summary and isinstance(summary[outcome], int):
+            summary[outcome] += 1
+
+        if outcome == 'alert':
+            summary['alert_names'].append(name)
+        elif outcome == 'parse_failed':
+            summary['parse_failed_names'].append(name)
+        elif outcome == 'http_error':
+            summary['http_error_names'].append(f"{name}:{status_code}")
+        elif outcome == 'exception':
+            summary['exception_names'].append(f"{name}:{meta.get('error', '')[:80]}")
+        elif outcome == 'unknown_level':
+            summary['unknown_level_names'].append(f"{name}:{meta.get('level', '')}")
+
         if status_code == 429:
             consecutive_429 += 1
             if consecutive_429 >= DETECTOR404_MAX_429_STREAK:
@@ -419,6 +508,7 @@ def check_detector404_batch(game_names=None):
                     f"[CIS] detector404 consecutive 429 streak reached {consecutive_429}; "
                     f"cooling down {cooldown:.1f}s and ending this batch early."
                 )
+                summary['ended_early'] = True
                 time.sleep(cooldown)
                 break
         else:
@@ -426,6 +516,45 @@ def check_detector404_batch(game_names=None):
 
         if result:
             issues.append(result)
+
+    print(
+        "[detector404 SUMMARY] "
+        f"checked={summary['checked']}/{len(names)}, "
+        f"parsed={summary['parsed']}, "
+        f"alerts={summary['alert']}, "
+        f"low={summary['low']}, "
+        f"parse_failed={summary['parse_failed']}, "
+        f"http_error={summary['http_error']}, "
+        f"exception={summary['exception']}, "
+        f"unknown_level={summary['unknown_level']}, "
+        f"ended_early={summary['ended_early']}, "
+        f"statuses={summary['status_counts']}"
+    )
+    if summary['alert_names']:
+        print(f"[detector404 SUMMARY] alert games: {preview(summary['alert_names'])}")
+    if summary['parse_failed_names']:
+        print(f"[detector404 SUMMARY] parse failed: {preview(summary['parse_failed_names'])}")
+    if summary['http_error_names']:
+        print(f"[detector404 SUMMARY] http errors: {preview(summary['http_error_names'])}")
+    if summary['exception_names']:
+        print(f"[detector404 SUMMARY] exceptions: {preview(summary['exception_names'])}")
+    if summary['unknown_level_names']:
+        print(f"[detector404 SUMMARY] unknown levels: {preview(summary['unknown_level_names'])}")
+
+    failure_threshold = max(5, summary['checked'] // 2)
+    should_report_parse_anomaly = (
+        summary['checked'] > 0 and (
+            summary['parsed'] == 0
+            or summary['parse_failed'] >= failure_threshold
+            or summary['exception'] >= failure_threshold
+        )
+    )
+    if should_report_parse_anomaly:
+        try:
+            from utils.notifier import report_scrape_block
+            report_scrape_block('detector404_parse', url='https://detector404.ru')
+        except Exception:
+            pass
 
     return issues
 
