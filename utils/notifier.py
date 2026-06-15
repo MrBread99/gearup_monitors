@@ -30,6 +30,75 @@ _scrape_block_registry: dict = {}
 # 格式: [{'step': str, 'error': str, 'traceback': str}]
 _crash_registry: list = []
 
+SCRAPE_BLOCK_SNAPSHOT_FILE = os.environ.get(
+    "SCRAPE_BLOCK_ALERT_SNAPSHOT",
+    os.path.normpath(
+        os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "..",
+            "game_monitor",
+            "scrape_block_alerts_snapshot.json",
+        )
+    ),
+)
+
+
+def _raise_for_popo_business_error(response):
+    """POPO may return HTTP 200 while rejecting the message in the JSON body."""
+    response.raise_for_status()
+    try:
+        payload = response.json()
+    except ValueError:
+        return
+
+    if not isinstance(payload, dict) or "errcode" not in payload:
+        return
+
+    errcode = payload.get("errcode")
+    if errcode in (0, "0", None):
+        return
+
+    errmsg = payload.get("errmsg", "")
+    raise RuntimeError(f"POPO business error: errcode={errcode}, errmsg={errmsg}")
+
+
+def _load_scrape_block_snapshot() -> dict:
+    if os.path.exists(SCRAPE_BLOCK_SNAPSHOT_FILE):
+        try:
+            with open(SCRAPE_BLOCK_SNAPSHOT_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            pass
+    return {}
+
+
+def _save_scrape_block_snapshot(snapshot: dict) -> None:
+    os.makedirs(os.path.dirname(SCRAPE_BLOCK_SNAPSHOT_FILE), exist_ok=True)
+    with open(SCRAPE_BLOCK_SNAPSHOT_FILE, "w", encoding="utf-8") as f:
+        json.dump(snapshot, f, ensure_ascii=False, indent=2)
+
+
+def _should_notify_scrape_block(source_key: str, cooldown_hours: int) -> bool:
+    if cooldown_hours <= 0:
+        return True
+
+    snapshot = _load_scrape_block_snapshot()
+    now = datetime.now(timezone.utc)
+    last_sent_raw = snapshot.get(source_key)
+    if last_sent_raw:
+        try:
+            last_sent = datetime.fromisoformat(last_sent_raw)
+            if now - last_sent < timedelta(hours=cooldown_hours):
+                return False
+        except Exception:
+            pass
+
+    snapshot[source_key] = now.isoformat(timespec="seconds")
+    _save_scrape_block_snapshot(snapshot)
+    return True
+
 
 def report_monitor_crash(step_name: str, error: Exception):
     """
@@ -89,7 +158,7 @@ def flush_monitor_crash_alerts(webhook_url=None):
     )
     content = '\n'.join(lines)
 
-    print(f"\n[内部崩溃汇总] 本次运行共 {len(_crash_registry)} 个步骤崩溃，正在发送 POPO 警告...")
+    print(f"\n[内部崩溃汇总] 本次运行共 {len(_crash_registry)} 个步骤崩溃，正在发送 POPO 监控...")
 
     if not effective_url:
         print("未配置 POPO_WEBHOOK_URL，崩溃警告内容如下：\n")
@@ -124,7 +193,7 @@ def flush_monitor_crash_alerts(webhook_url=None):
             try:
                 resp = requests.post(effective_url, headers=headers,
                                      data=json.dumps(payload), timeout=10)
-                resp.raise_for_status()
+                _raise_for_popo_business_error(resp)
                 print(f"[内部崩溃] POPO 崩溃警告发送成功。")
                 break
             except Exception as e:
@@ -225,6 +294,14 @@ _SCRAPE_ADVICE = {
         'reason': 'IsTheServiceDown 返回非 200，可能为 CI 固定 IP 被限速（429）或网站暂时不可用',
         'short_term': '本次已跳过该游戏的 ITSD 故障聚合数据；等待下次运行自动重试',
         'long_term': '暂无官方 API；若频繁出现可考虑增加请求间隔或切换至备用故障聚合源',
+        'cooldown_hours': 24,
+    },
+    'steam_status_api': {
+        'display_name': 'Steam 状态源（steamstat.us）',
+        'reason': 'steamstat.us 状态 API 请求失败，可能为 DNS、网络或上游 API 临时不可用',
+        'short_term': '本次已跳过 Steam 平台状态检测；其他 Steam 新闻/商店数据源不受影响',
+        'long_term': '若持续失败，替换为更稳定的 Steam 状态源或增加备用官方/社区状态源',
+        'cooldown_hours': 24,
     },
     'steam_news_api': {
         'display_name': 'Steam News API（热游更新监控）',
@@ -267,6 +344,7 @@ _SCRAPE_ADVICE = {
         'reason': 'GitHub Actions 未提供 REDDIT_CLIENT_ID 或 REDDIT_CLIENT_SECRET，当前只能匿名访问 Reddit，容易被 403 拒绝',
         'short_term': '请立即检查 GitHub Secrets 中 REDDIT_CLIENT_ID 和 REDDIT_CLIENT_SECRET 是否已配置且名称正确',
         'long_term': '保持 Reddit OAuth 凭证长期有效，并在关键 workflow 中统一复用共享客户端',
+        'cooldown_hours': 24,
     },
     'reddit_game_calendar_token_failure': {
         'display_name': 'Reddit（新游/热游日历监控，OAuth 取 token 失败）',
@@ -503,7 +581,7 @@ def _split_text_by_utf8_bytes(text, max_bytes):
 def send_popo_alert(webhook_url, issues_list):
     """
     将问题列表格式化为纯文本，并发送至 NetEase POPO Webhook。
-    支持按 alert_type 分组输出不同标题的报警。
+    支持按 alert_type 分组输出不同标题的监控消息。
     为了减少打扰，如果 issues_list 为空，直接静默退出。
     """
     if not issues_list:
@@ -513,19 +591,19 @@ def send_popo_alert(webhook_url, issues_list):
     original_count = len(issues_list)
     issues_list = _compact_detector404_issues(issues_list)
     if len(issues_list) != original_count:
-        print(f"[POPO待发送] 报警压缩: {original_count} -> {len(issues_list)}")
+        print(f"[POPO待发送] 监控压缩: {original_count} -> {len(issues_list)}")
 
     current_time = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
 
     # 按 alert_type 分组
     ALERT_TITLES = {
-        'game_monitor': '【全球监控商机雷达警报】',
-        'new_game_release': '【新游上线预告】',
-        'game_update': '【热游版本更新预告】',
-        'game_calendar': '【新游上线/热游更新预告】',
-        'platform_status': '【平台与通讯工具状态警报】',
+        'game_monitor': '【全球监控商机雷达监控】',
+        'new_game_release': '【新游上线监控】',
+        'game_update': '【热游版本更新监控】',
+        'game_calendar': '【新游上线/热游更新监控】',
+        'platform_status': '【平台与通讯工具状态监控】',
         'brand_monitor': '【品牌舆情监控】',
-        'competitor_radar': '【竞品情报警报】',
+        'competitor_radar': '【竞品情报监控】',
         'holiday_monitor': '【地区节假日监控】',
     }
 
@@ -538,7 +616,7 @@ def send_popo_alert(webhook_url, issues_list):
 
     print(f"[POPO待发送] 本次共 {len(issues_list)} 条报警，分为 {len(groups)} 组。")
     for alert_type, items in groups.items():
-        title = ALERT_TITLES.get(alert_type, '【监控警报】')
+        title = ALERT_TITLES.get(alert_type, '【监控】')
         print(f"[POPO待发送] {title} {len(items)} 条")
         for index, item in enumerate(items, start=1):
             issue_first_line = str(item.get('issue', '')).splitlines()[0][:160]
@@ -555,7 +633,7 @@ def send_popo_alert(webhook_url, issues_list):
             plain_content += build_brand_monitor_message(items, update_snapshot=bool(webhook_url)) + "\n\n"
             continue
 
-        title = ALERT_TITLES.get(alert_type, '【监控警报】')
+        title = ALERT_TITLES.get(alert_type, '【监控】')
         if alert_type == 'holiday_monitor':
             plain_content += f"{title}\n"
         else:
@@ -642,7 +720,7 @@ def send_popo_alert(webhook_url, issues_list):
                 print(f"POPO 接口返回 HTTP 状态码: {response.status_code}")
                 if response.text:
                     print(f"POPO 接口返回内容: {response.text[:500]}")
-                response.raise_for_status()
+                _raise_for_popo_business_error(response)
                 print(f"代码执行：成功发送请求至 POPO Webhook{f' (分片 {i+1}/{len(chunks)})' if len(chunks) > 1 else ''}。")
                 break
             except Exception as e:
@@ -656,7 +734,7 @@ def send_popo_alert(webhook_url, issues_list):
 
 
 def has_scrape_block_alerts() -> bool:
-    """返回本次运行中是否登记过数据源异常。"""
+    """返回本次运行中是否登记过数据源监控事件。"""
     return bool(_scrape_block_registry)
 
 
@@ -689,7 +767,7 @@ def send_system_heartbeat(webhook_url: str, task_name: str, summary: str):
                 webhook_url, headers=headers,
                 data=json.dumps(payload), timeout=10
             )
-            response.raise_for_status()
+            _raise_for_popo_business_error(response)
             print(f"[系统心跳] {task_name} 心跳发送成功。")
             break
         except Exception as e:
@@ -703,7 +781,7 @@ def send_system_heartbeat(webhook_url: str, task_name: str, summary: str):
 
 def report_scrape_block(source_key: str, url: str = '', status_code: int = None):
     """
-    登记一次反爬拦截事件。同一 source_key 在一次运行内会被合并。
+    登记一次数据源监控事件。同一 source_key 在一次运行内会被合并。
     在脚本末尾调用 flush_scrape_block_alerts() 统一发送。
 
     :param source_key: 数据源标识，对应 _SCRAPE_ADVICE 中的 key
@@ -745,7 +823,7 @@ def flush_scrape_block_alerts(webhook_url: str = None):
     effective_url = webhook_url or POPO_WEBHOOK_URL
     current_time = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
 
-    lines = [f"【数据源异常】{current_time} (UTC+8)\n"]
+    lines = [f"【数据源监控】{current_time} (UTC+8)\n"]
 
     for source_key, entry in _scrape_block_registry.items():
         advice = _SCRAPE_ADVICE.get(source_key, {})
@@ -754,6 +832,7 @@ def flush_scrape_block_alerts(webhook_url: str = None):
         short_term  = advice.get('short_term', '暂无建议')
         long_term   = advice.get('long_term', '暂无建议')
         min_notify_count = int(advice.get('min_notify_count', 1) or 1)
+        cooldown_hours = int(advice.get('cooldown_hours', 0) or 0)
 
         # 根据实际 HTTP 状态码动态覆盖原因描述和建议
         # 仅对没有专属建议的数据源做泛化覆盖（有专属条目的优先用人工维护的描述）
@@ -792,6 +871,9 @@ def flush_scrape_block_alerts(webhook_url: str = None):
         if count < min_notify_count:
             print(f"[数据源异常] {display_name} 本次仅触发 {count} 次，低于通知阈值 {min_notify_count}，仅保留日志不发 POPO。")
             continue
+        if not _should_notify_scrape_block(source_key, cooldown_hours):
+            print(f"[数据源异常] {display_name} 仍在 {cooldown_hours} 小时通知冷却期内，仅保留日志不发 POPO。")
+            continue
 
         codes = ', '.join(str(c) for c in sorted(entry['codes'])) if entry['codes'] else '未知'
         # URL 只显示域名部分，精简展示
@@ -817,10 +899,10 @@ def flush_scrape_block_alerts(webhook_url: str = None):
 
     content = '\n'.join(lines)
 
-    print(f"\n[数据源异常汇总] 本次运行共检测到 {len(_scrape_block_registry)} 个数据源异常，正在发送 POPO 警告...")
+    print(f"\n[数据源监控汇总] 本次运行共检测到 {len(_scrape_block_registry)} 个数据源事件，正在发送 POPO 监控...")
 
     if not effective_url:
-        print("未配置 POPO_WEBHOOK_URL，反爬警告内容如下：\n")
+        print("未配置 POPO_WEBHOOK_URL，数据源监控内容如下：\n")
         print(content)
         _scrape_block_registry.clear()
         return
@@ -851,8 +933,8 @@ def flush_scrape_block_alerts(webhook_url: str = None):
             try:
                 resp = requests.post(effective_url, headers=headers,
                                      data=json.dumps(payload), timeout=10)
-                resp.raise_for_status()
-                print(f"[反爬汇总] POPO 反爬警告发送成功{f' (分片 {i+1}/{len(chunks)})' if len(chunks) > 1 else ''}。")
+                _raise_for_popo_business_error(resp)
+                print(f"[数据源监控] POPO 数据源监控发送成功{f' (分片 {i+1}/{len(chunks)})' if len(chunks) > 1 else ''}。")
                 break
             except Exception as e:
                 if attempt < 2:

@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -25,7 +25,7 @@ jobs:
 
       # ===== 快照持久化 =====
       - name: Restore snapshot cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             game_monitor/game_calendar_snapshot.json
@@ -34,6 +34,7 @@ jobs:
             game_monitor/detector404_level_snapshot.json
             game_monitor/monitor_workflow_heartbeat_snapshot.json
             game_monitor/russia_events_snapshot.json
+            game_monitor/scrape_block_alerts_snapshot.json
           key: monitor-snapshots-${{ github.run_id }}
           restore-keys: |
             monitor-snapshots-

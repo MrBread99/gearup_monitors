@@ -4,7 +4,7 @@ import os
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.notifier import send_popo_alert, POPO_WEBHOOK_URL
+from utils.notifier import report_scrape_block, send_popo_alert, POPO_WEBHOOK_URL
 from utils.istheservicedown_client import check_service_status
 
 # ==========================================
@@ -195,8 +195,12 @@ def check_steam_status():
                     'source_name': 'steamstat.us',
                     'source_url': 'https://steamstat.us/'
                 })
+        else:
+            print(f"[Steam] steamstat.us HTTP {response.status_code}")
+            report_scrape_block('steam_status_api', url, response.status_code)
     except Exception as e:
         print(f"[Steam] steamstat.us 检测失败: {e}")
+        report_scrape_block('steam_status_api', 'https://crowbar.steamstat.us/gravity.json')
 
     return issues
 

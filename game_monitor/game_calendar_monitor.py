@@ -565,6 +565,9 @@ def fetch_reddit_posts(subreddit, sort='new', limit=25):
     url = f"https://www.reddit.com/r/{subreddit}/{sort}.json?limit={limit}&raw_json=1"
     response = reddit_get(url)
     if response is None:
+        request_meta = get_last_reddit_request_meta()
+        if request_meta.get('token_state') == 'missing_credentials':
+            report_scrape_block('reddit_game_calendar_missing_credentials', url)
         return []
     if response.status_code != 200:
         request_meta = get_last_reddit_request_meta()

@@ -14,6 +14,7 @@ import time
 import random
 import re
 from bs4 import BeautifulSoup
+from utils.notifier import report_scrape_block
 
 _BASE_URL = "https://istheservicedown.com/problems"
 
@@ -66,9 +67,11 @@ def check_service_status(slug: str) -> dict | None:
         resp = requests.get(url, headers=_HEADERS, timeout=15)
         if resp.status_code != 200:
             print(f"[ITSD] {slug} HTTP {resp.status_code}")
+            report_scrape_block("itsd", url, resp.status_code)
             return None
     except Exception as e:
         print(f"[ITSD] {slug} 请求失败: {e}")
+        report_scrape_block("itsd", url)
         return None
 
     soup = BeautifulSoup(resp.text, "html.parser")
