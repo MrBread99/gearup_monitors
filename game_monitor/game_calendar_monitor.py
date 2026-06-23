@@ -129,6 +129,9 @@ SNAPSHOT_FILE = os.path.join(
 
 CALENDAR_SEEN_KEY_LIMIT = 1000
 CALENDAR_HEARTBEAT_STATE_KEY = 'game_calendar_heartbeat_date'
+CALENDAR_DIGEST_STATE_KEY = 'game_calendar_digest_date'
+CALENDAR_PENDING_ISSUES_KEY = 'pending_calendar_issues'
+CALENDAR_PENDING_ISSUE_LIMIT = 200
 PER_SOURCE_ALERT_LIMIT = 2
 STEAM_NEWS_403_FAIL_THRESHOLD = 5   # 连续 5 次 403 才静默（原 2 次太激进）
 STEAM_NEWS_403_BACKOFF_DAYS = 3     # 静默 3 天（原 7 天太久）
@@ -506,6 +509,121 @@ def save_snapshot(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
+def _today_bj():
+    return datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d')
+
+
+def _truncate_text(text, max_len=120):
+    text = re.sub(r'\s+', ' ', str(text or '')).strip()
+    if len(text) <= max_len:
+        return text
+    return text[:max_len - 1].rstrip() + '…'
+
+
+def _strip_leading_symbols(text):
+    return re.sub(r'^[^\w\u4e00-\u9fff\[]+\s*', '', text or '').strip()
+
+
+def _split_issue_tag_and_title(issue_text):
+    first_line = _strip_leading_symbols((issue_text or '').splitlines()[0] if issue_text else '')
+    match = re.match(r'\[([^\]]+)\]\s*(.*)', first_line)
+    if match:
+        tag = match.group(1).strip()
+        title = match.group(2).strip()
+    else:
+        tag = ''
+        title = first_line
+
+    title = re.sub(r'\s*\(↑\d+\)\s*$', '', title).strip()
+    return tag, title
+
+
+def _extract_issue_field(issue_text, field_names):
+    for line in (issue_text or '').splitlines():
+        clean = line.strip()
+        for field_name in field_names:
+            pattern = rf'^{re.escape(field_name)}\s*[:：]\s*(.+)$'
+            match = re.search(pattern, clean)
+            if match:
+                return match.group(1).strip()
+    return ''
+
+
+def _extract_issue_score(issue_text):
+    match = re.search(r'↑\s*(\d+)', issue_text or '')
+    return f"↑{match.group(1)}" if match else ''
+
+
+def _compact_accel_need(value):
+    value = re.sub(r'^加速需求\s*[:：]\s*', '', str(value or '')).strip()
+    return _truncate_text(value, 46) if value else ''
+
+
+def _compact_hype(value):
+    value = str(value or '').strip()
+    match = re.search(r'(热度[^（(]*[（(]\d+分[）)]|热度[^（(]+)', value)
+    return _truncate_text(match.group(1), 24) if match else _truncate_text(value, 24)
+
+
+def _compact_calendar_issue(issue):
+    alert_type = issue.get('alert_type', 'game_calendar')
+    issue_text = issue.get('issue', '')
+    tag, title = _split_issue_tag_and_title(issue_text)
+    source_name = issue.get('source_name', '')
+    compact = dict(issue)
+
+    if alert_type == 'game_update':
+        kind = '预告/即将更新' if '预告' in tag or '即将' in tag else '版本更新'
+        accel = _compact_accel_need(_extract_issue_field(issue_text, ['加速需求']))
+        score = _extract_issue_score(issue_text)
+        title = _truncate_text(title or issue.get('game', ''), 110)
+        details = []
+        if accel:
+            details.append(f"加速需求: {accel}")
+        if score:
+            details.append(f"热度: {score}")
+
+        compact['issue'] = f"🎮 {kind}: {title}"
+        if details:
+            compact['issue'] += f"\n    {' | '.join(details)}"
+        return compact
+
+    if alert_type == 'new_game_release':
+        source_label = tag or source_name or '新游/上新'
+        release_date = _extract_issue_field(issue_text, ['上线时间'])
+        if not release_date:
+            match = re.search(r'预计发售\s*[:：]\s*([^|，,]+)', title)
+            if match:
+                release_date = match.group(1).strip()
+                title = re.sub(r'\s*预计发售\s*[:：]\s*[^|，,]+', '', title).strip()
+
+        hype = _compact_hype(_extract_issue_field(issue_text, ['热度预估']))
+        if not hype:
+            hype = _extract_issue_score(issue_text)
+        accel = _compact_accel_need(_extract_issue_field(issue_text, ['加速需求']))
+
+        if issue.get('game') in ('Epic Games Store', 'Xbox Game Pass') or issue.get('game', '').startswith(('PlayStation', 'Xbox')):
+            headline = _truncate_text(title or issue.get('game', ''), 110)
+        else:
+            headline = _truncate_text(issue.get('game') or title, 80)
+
+        details = []
+        if release_date:
+            details.append(f"上线: {release_date}")
+        if hype:
+            details.append(f"热度: {hype}")
+        if accel:
+            details.append(f"加速需求: {accel}")
+
+        compact['issue'] = f"🆕 {source_label}: {headline}"
+        if details:
+            compact['issue'] += f"\n    {' | '.join(details)}"
+        return compact
+
+    compact['issue'] = _truncate_text(issue_text, 140)
+    return compact
+
+
 def build_calendar_issue_key(issue):
     """Build a stable cross-run dedup key for calendar alerts."""
     alert_type = issue.get('alert_type', '')
@@ -549,9 +667,82 @@ def filter_new_calendar_issues(all_issues):
     return filtered
 
 
+def queue_calendar_issues_for_daily_digest(issues):
+    if not issues:
+        return 0, len(load_snapshot().get(CALENDAR_PENDING_ISSUES_KEY, []))
+
+    snapshot = load_snapshot()
+    pending = snapshot.get(CALENDAR_PENDING_ISSUES_KEY, [])
+    if not isinstance(pending, list):
+        pending = []
+
+    pending_keys = set()
+    for item in pending:
+        if not isinstance(item, dict):
+            continue
+        key = item.get('_calendar_issue_key') or build_calendar_issue_key(item)
+        if key:
+            pending_keys.add(key)
+
+    added = 0
+    now_iso = datetime.now(timezone.utc).isoformat(timespec='seconds')
+    for issue in issues:
+        issue_key = build_calendar_issue_key(issue)
+        if issue_key in pending_keys:
+            continue
+        stored = dict(issue)
+        stored['_calendar_issue_key'] = issue_key
+        stored['_queued_at'] = now_iso
+        pending.append(stored)
+        pending_keys.add(issue_key)
+        added += 1
+
+    snapshot[CALENDAR_PENDING_ISSUES_KEY] = pending[-CALENDAR_PENDING_ISSUE_LIMIT:]
+    snapshot['last_calendar_pending_update_at'] = now_iso
+    save_snapshot(snapshot)
+    return added, len(snapshot[CALENDAR_PENDING_ISSUES_KEY])
+
+
+def get_pending_calendar_issue_count():
+    pending = load_snapshot().get(CALENDAR_PENDING_ISSUES_KEY, [])
+    return len(pending) if isinstance(pending, list) else 0
+
+
+def pop_calendar_digest_if_due():
+    snapshot = load_snapshot()
+    today_bj = _today_bj()
+    if snapshot.get(CALENDAR_DIGEST_STATE_KEY) == today_bj:
+        return []
+
+    pending = snapshot.get(CALENDAR_PENDING_ISSUES_KEY, [])
+    if not isinstance(pending, list) or not pending:
+        return []
+
+    updates = [i for i in pending if i.get('alert_type') == 'game_update']
+    new_releases = [i for i in pending if i.get('alert_type') == 'new_game_release']
+    others = [i for i in pending if i.get('alert_type') not in ('new_game_release', 'game_update')]
+    updates.sort(key=lambda x: x.get('update_priority', 0), reverse=True)
+    new_releases.sort(key=lambda x: x.get('hype_score', 0), reverse=True)
+    ordered = updates + new_releases + others
+
+    digest_issues = [_compact_calendar_issue(issue) for issue in ordered]
+
+    snapshot[CALENDAR_PENDING_ISSUES_KEY] = []
+    snapshot[CALENDAR_DIGEST_STATE_KEY] = today_bj
+    snapshot['last_calendar_digest_sent_at'] = datetime.now(timezone.utc).isoformat(timespec='seconds')
+    snapshot['last_calendar_digest_item_count'] = len(digest_issues)
+    save_snapshot(snapshot)
+
+    print(
+        f"[Calendar DIGEST] prepared {len(digest_issues)} item(s) for {today_bj}; "
+        f"updates={len(updates)}, new_releases={len(new_releases)}, others={len(others)}"
+    )
+    return digest_issues
+
+
 def should_send_calendar_heartbeat():
     snapshot = load_snapshot()
-    today_bj = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d')
+    today_bj = _today_bj()
     last_sent = snapshot.get(CALENDAR_HEARTBEAT_STATE_KEY)
     if last_sent == today_bj:
         return False
@@ -1594,11 +1785,29 @@ if __name__ == "__main__":
         if results:
             for r in results:
                 print(f"[{r['game']}] {r['issue']}")
+            added, pending_total = queue_calendar_issues_for_daily_digest(results)
+            print(
+                f"[Calendar QUEUE] new={len(results)}, added={added}, "
+                f"pending_total={pending_total}"
+            )
+
+        digest_results = pop_calendar_digest_if_due()
+        if digest_results:
+            for r in digest_results:
+                print(f"[Calendar DIGEST ITEM] [{r['game']}] {r['issue']}")
             if POPO_WEBHOOK_URL:
-                send_popo_alert(POPO_WEBHOOK_URL, results)
+                send_popo_alert(POPO_WEBHOOK_URL, digest_results)
         else:
-            print("No new hot-game updates or high-value releases detected.")
-            if not has_scrape_block_alerts() and should_send_calendar_heartbeat():
+            pending_total = get_pending_calendar_issue_count()
+            if pending_total:
+                print(
+                    f"Calendar digest already sent today; "
+                    f"{pending_total} item(s) queued for next daily digest."
+                )
+            else:
+                print("No new hot-game updates or high-value releases detected.")
+
+            if pending_total == 0 and not has_scrape_block_alerts() and should_send_calendar_heartbeat():
                 send_system_heartbeat(
                     POPO_WEBHOOK_URL,
                     "Game Calendar Monitor",

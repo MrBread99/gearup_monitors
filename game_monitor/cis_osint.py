@@ -126,6 +126,95 @@ DETECTOR404_LEVEL_RANK = {
 DETECTOR404_MEDIUM_LEVEL = 'умеренно'
 
 
+def _parse_detector404_count(value):
+    """解析 detector404 渲染后的数量，如 241、2.4k、2,4k、2.4 тыс."""
+    if value is None:
+        return None
+
+    text = str(value).strip().lower().replace('\xa0', ' ')
+    if not text:
+        return None
+
+    match = re.search(r'(\d+(?:[.,]\d+)?)\s*(k|к|тыс\.?|m|млн\.?)?', text)
+    if not match:
+        return None
+
+    number = float(match.group(1).replace(',', '.'))
+    suffix = match.group(2) or ''
+    if suffix in ('k', 'к') or suffix.startswith('тыс'):
+        number *= 1000
+    elif suffix == 'm' or suffix.startswith('млн'):
+        number *= 1000000
+
+    return int(round(number))
+
+
+def _extract_detector404_count_text(container, labels):
+    if not container:
+        return None
+
+    for item in container.find_all('span', recursive=False):
+        text = item.get_text(' ', strip=True)
+        text_lower = text.lower()
+        if not any(label in text_lower for label in labels):
+            continue
+
+        nested_spans = item.find_all('span')
+        if nested_spans:
+            value = nested_spans[-1].get_text(' ', strip=True)
+            if value:
+                return value
+
+        label_pattern = '|'.join(re.escape(label) for label in labels)
+        match = re.search(
+            rf'(?:{label_pattern})\s*:?\s*(\d+(?:[.,]\d+)?\s*(?:k|к|тыс\.?|m|млн\.?)?)',
+            text_lower
+        )
+        if match:
+            return match.group(1).strip()
+
+    return None
+
+
+def _extract_detector404_counts_from_soup(soup):
+    extra = soup.select_one('div.extra')
+    hour_text = _extract_detector404_count_text(extra, ('час', 'hour'))
+    day_text = _extract_detector404_count_text(extra, ('сутки', 'день', 'day'))
+
+    return {
+        'hour_count': _parse_detector404_count(hour_text),
+        'day_count': _parse_detector404_count(day_text),
+        'hour_label': hour_text,
+        'day_label': day_text,
+    }
+
+
+def _fetch_detector404_rendered_counts(url, game_name):
+    try:
+        from utils.playwright_client import pw_fetch
+
+        html_text, status = pw_fetch(
+            url,
+            wait_until='networkidle',
+            timeout=45000,
+            wait_selector='.extra span span'
+        )
+        if html_text is None:
+            print(f"[CIS] detector404 {game_name}: rendered count fetch failed, HTTP {status}")
+            return None
+
+        rendered_soup = BeautifulSoup(html_text, 'html.parser')
+        counts = _extract_detector404_counts_from_soup(rendered_soup)
+        if counts['hour_count'] is None and counts['day_count'] is None:
+            print(f"[CIS] detector404 {game_name}: rendered counts not found")
+            return None
+
+        return counts
+    except Exception as e:
+        print(f"[CIS] detector404 {game_name}: rendered count fetch failed: {e}")
+        return None
+
+
 def _now_iso():
     return datetime.now(timezone.utc).isoformat(timespec='seconds')
 
@@ -314,6 +403,8 @@ def check_detector404(game_name, return_status=False, return_meta=False):
 
         recent_hour_count = None
         recent_day_count = None
+        recent_hour_label = None
+        recent_day_label = None
         access_count_match = re.search(
             r'Проблемы\s+с\s+доступом:\s*час:\s*(\d+)\s*сутки:\s*(\d+)',
             text
@@ -321,12 +412,17 @@ def check_detector404(game_name, return_status=False, return_meta=False):
         if access_count_match:
             recent_hour_count = int(access_count_match.group(1))
             recent_day_count = int(access_count_match.group(2))
+            recent_hour_label = str(recent_hour_count)
+            recent_day_label = str(recent_day_count)
 
         meta['parsed'] = bool(complaint_level)
         meta['level'] = complaint_level or ''
         meta['level_zh'] = complaint_level_zh or ''
         meta['recent_hour_count'] = recent_hour_count
         meta['recent_day_count'] = recent_day_count
+        meta['recent_hour_label'] = recent_hour_label
+        meta['recent_day_label'] = recent_day_label
+        meta['recent_count_source'] = 'static_html' if access_count_match else ''
 
         if not complaint_level:
             meta['outcome'] = 'parse_failed'
@@ -393,12 +489,38 @@ def check_detector404(game_name, return_status=False, return_meta=False):
 
         is_high = complaint_level and any(lvl in complaint_level for lvl in high_levels)
         is_medium = complaint_level == DETECTOR404_MEDIUM_LEVEL
+
+        if (is_medium or is_high) and (
+            recent_hour_count is None
+            or recent_day_count is None
+            or (recent_hour_count == 0 and recent_day_count == 0)
+        ):
+            rendered_counts = _fetch_detector404_rendered_counts(url, game_name)
+            if rendered_counts:
+                if rendered_counts['hour_count'] is not None:
+                    recent_hour_count = rendered_counts['hour_count']
+                    recent_hour_label = rendered_counts['hour_label'] or str(recent_hour_count)
+                if rendered_counts['day_count'] is not None:
+                    recent_day_count = rendered_counts['day_count']
+                    recent_day_label = rendered_counts['day_label'] or str(recent_day_count)
+
+                meta['recent_hour_count'] = recent_hour_count
+                meta['recent_day_count'] = recent_day_count
+                meta['recent_hour_label'] = recent_hour_label
+                meta['recent_day_label'] = recent_day_label
+                meta['recent_count_source'] = 'rendered_html'
+                print(
+                    f"[CIS] detector404 {game_name}: rendered counts "
+                    f"hour={recent_hour_label or recent_hour_count}, "
+                    f"day={recent_day_label or recent_day_count}"
+                )
+
         has_recent_complaints = (
             (recent_hour_count is not None and recent_hour_count > 0)
             or (recent_day_count is not None and recent_day_count > 0)
         )
         count_label = (
-            f"近1小时: {recent_hour_count}, 近24小时: {recent_day_count}"
+            f"近1小时: {recent_hour_label or recent_hour_count}, 近24小时: {recent_day_label or recent_day_count}"
             if recent_hour_count is not None and recent_day_count is not None
             else "近1小时/24小时投诉数: 未解析"
         )
