@@ -1,48 +1,50 @@
 # 品牌舆情监控详细报告
 
-> 生成时间: 2026-06-24 09:59 (UTC+8)
+> 生成时间: 2026-06-25 10:01 (UTC+8)
 > 本报告每 24 小时更新一次
 
 ---
 
 <a id="global-youtube-gearup-booster"></a>
 ## Global (YouTube) - GearUP Booster
-> 共 12 篇讨论
+> 共 14 篇讨论
 
 ### AI 分析
 ```
-正面评价: 多篇视频强调GearUP Booster显著降低延迟、提升游戏体验，部分用户称其为“唯一有效的ping减少工具”或“解决高ping问题”，语气积极肯定 [2][3][4][11]  
-负面评价: 有视频标题直指“被骗”，表达对产品效果的强烈质疑和失望情绪，暗示可能存在营销夸大或实际无效 [1]  
-中性讨论: 包含对比评测（如ExitLag vs GearUP、UU加速器 vs GearUP）、直播实测（PUBG亚洲服）、优惠信息及趣味性内容（如Jujutsu主题），未明确褒贬，侧重客观呈现或场景化使用 [5][6][7][8][9][10]  
-涉及竞品: ExitLag, UU Game Booster, UU加速器  
-商业洞察: 应强化真实场景下的延迟改善数据可视化（如前后ping对比图/曲线），在对比类视频中主动提供第三方测速证据以应对竞品质疑。
+正面评价: 多数视频以实测效果为导向，强调GearUP Booster显著降低延迟、提升FPS或优化游戏体验，部分标题使用“INSANE”“Best”等强正向词汇，体现用户认可度 [2][3][4][7][8][12]  
+负面评价: 有视频标题直指产品为骗局（“No Way I Fell For This”），暗示信任危机或体验落差；另有一条含“newbie vs hacker”对比，隐含对加速器防作弊能力的质疑 [1][6][13]  
+中性讨论: 包含教程类、开箱类、对比评测类内容，聚焦功能演示或客观参数比较，无明显情感倾向，如Step-by-step教学、赞助声明、双产品横向评测等 [5][9][10][11]  
+涉及竞品: ExitLag, UU Game Booster, LagoFast, NoPing, Hone.gg, wtfast, Mudfish, 迅游, 雷神, UU加速器  
+商业洞察: 应强化真实场景下的低延迟稳定性验证，并针对YouTube高流量对比类视频（如ExitLag/UU）主动提供第三方可复现的测试数据以增强可信度。
 ```
 ### AI 引用来源（编号对应）
 - [1] There IS No Way I Fell For This 😭🙏 (https://www.youtube.com/watch?v=6WOC35VVGGc)
 - [2] Most Ping Reducers Are a Scam... Except One (https://www.youtube.com/watch?v=FiUwGU6G8D8)
-- [3] Thank Me Later 🤝 (https://www.youtube.com/watch?v=TsV-zr2lq9w)
-- [4] GearUP  Lower Lag Game Booster (https://www.youtube.com/watch?v=L4z687ccYvU)
-- [5] ExitLag vs GearUp Booster: Genuine Ping Reduction or Marketing? (2026) (https://www.youtube.com/watch?v=o9Hv3sHC_xQ)
-- [6] PUBG LIVE 🔴 |  One Day in AsiaServer | GearUp Booster- ( Newbie vs new,old,hacker ) #222 (https://www.youtube.com/watch?v=d_JYqvNyIAM)
-- [7] GearUP Booster vs UU Game Booster: What They&#39;re NOT Telling You (2026) (https://www.youtube.com/watch?v=pdck6JGMH6c)
-- [8] GearUP Booster vs UU Game Booster: What Nobody Tells You (2026) (https://www.youtube.com/watch?v=FSVElzB2-p4)
-- [9] GearUp Coupon Code 2026 – Up To 50% Off Game Booster (https://www.youtube.com/watch?v=DmgnAkEJbPU)
-- [10] Yuji + 7 PING Makes You CRUSH PRO PLAYERS 😭🙏 Jujutsu Shenanigans (https://www.youtube.com/watch?v=_PMqxRNM8Rs)
-- [11] Your High Ping Ruins Your Pentakill (FIXED with GearUP Booster) | Low Ping Gaming Fix (https://www.youtube.com/watch?v=p1COc09AIuc)
+- [3] HYPEREV PRO WiFi6 Gaming Router GearUP Booster Best Low-Latency Gaming Router (https://www.youtube.com/watch?v=q_K2USf7whw)
+- [4] HOW TO USE GEARUP BOOSTER IN 2026 (STEP BY STEP) (https://www.youtube.com/watch?v=vaPRY3FF9oU)
+- [5] Sponsor By GEARUP VPN! For the best experience and you can use code: CODEFLXCCOFN  #gearupbooster (https://www.youtube.com/watch?v=U2e0esl_NDg)
+- [6] PUBG LIVE 🔴 |  One Day in AsiaServer | GearUp Booster- ( Newbie vs new,old,hacker ) #24 (https://www.youtube.com/watch?v=lgWuxRvZ42E)
+- [7] INSANE Valorant FPS BOOST Guide 😱 | +300 FPS Increase on ANY PC (No GPU Upgrade) (https://www.youtube.com/watch?v=UWE3NRM5kCM)
+- [8] Thank Me Later 🤝 (https://www.youtube.com/watch?v=TsV-zr2lq9w)
+- [9] ExitLag vs GearUp Booster: Genuine Ping Reduction or Marketing? (2026) (https://www.youtube.com/watch?v=o9Hv3sHC_xQ)
+- [10] GearUP Booster vs UU Game Booster: What They&#39;re NOT Telling You (2026) (https://www.youtube.com/watch?v=pdck6JGMH6c)
+- [11] GearUP Booster vs UU Game Booster: What Nobody Tells You (2026) (https://www.youtube.com/watch?v=FSVElzB2-p4)
+- [12] GearUp Coupon Code 2026 – Up To 50% Off Game Booster (https://www.youtube.com/watch?v=DmgnAkEJbPU)
+- [13] Yuji + 7 PING Makes You CRUSH PRO PLAYERS 😭🙏 Jujutsu Shenanigans (https://www.youtube.com/watch?v=_PMqxRNM8Rs)
 
 ---
 
 <a id="south-korea-gearup-booster"></a>
 ## South Korea - GearUP Booster
-> 共 25 篇讨论
+> 共 23 篇讨论
 
 ### AI 分析
 ```
-正面评价: 用户提及 GearUP Booster 能改善匹配体验，暗示其加速效果被部分用户认可 [4]。  
-负面评价: 多篇帖子集中反映退款困难、服务异常（如临时停用、服务器跳转至欧洲）、功能失效（如DropS联动失败）等问题，引发用户不满 [1][2][7][8][9]。  
-中性讨论: 用户询问 GearUP Booster 是否仍在使用、与其他工具（如VPN）的共存情况，属常规使用咨询或对比探讨，无明确情感倾向 [3][6][10]。  
-涉及竞品: ExitLag  
-商业洞察: 需优先优化退款流程与服务器稳定性，并在社区主动澄清区域连接异常原因，以降低信任损耗。
+正面评价: 用户成功获得GearUP Booster退款，体现售后流程有效 [1]。  
+负面评价: 用户质疑GearUP Booster服务质量，称其“跟垃圾一样”并询问是否无法退款 [2]；另有用户怀疑服务被临时停用 [9]。  
+中性讨论: 多篇帖子提及GearUP Booster作为VPN/加速器选项之一，但未评价优劣，仅询问使用情况或与其他工具并列讨论 [3][4][6][10]。  
+涉及竞品: ExitLag, LagoFast, NoPing, Hone.gg, wtfast, Mudfish, UU加速器, 迅游, 雷神  
+商业洞察: 韩国用户对退款体验敏感，需强化售后响应与服务稳定性沟通以降低负面舆情风险。
 ```
 ### AI 引用来源（编号对应）
 - [1] 기어업부스터환불받았다 갰ㅐ기들 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=eft&no=2748014)
@@ -52,7 +54,7 @@
 - [5] 야 이빌드 졸라 멋지다 .. [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=poe2&no=388474)
 - [6] VPN 기어업 쓰는애들은 없음? [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=wsm2&no=184615)
 - [7] 드롭스 연동 안되는애들은 봐라 어제오늘 8개 받아야 정상임 [DC Inside](https://gall.dcinside.com/board/view/?id=worldoftanks&no=4177067)
-- [8] 기어업부스터유럽 끌려가는애들 참고 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=cod&no=977238)
+- [8] 이번주 중카 상점, 퀘스트, 이벤트 업데이트 정리 [DC Inside](https://gall.dcinside.com/board/view/?id=kart&no=3774461)
 - [9] 이거 임시 정지 당한거임? [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=arenabreakout_inf&no=53416)
 - [10] 통신사 문제인건가 VPN문제인건가 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=battlefield&no=226792)
 - [11] exitlag앱 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=heroic&no=344658)
