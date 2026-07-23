@@ -490,50 +490,64 @@ def _compact_detector404_issues(issues_list):
         else:
             other_items.append(item)
 
-    if len(detector_items) <= 3:
+    if not detector_items:
         return issues_list
 
-    item_by_name = {item.get('game', ''): item for item in detector_items}
-    names = [item.get('game', '?') for item in detector_items]
-    platforms = [name for name in names if name in DETECTOR404_PLATFORM_NAMES]
-    games = [name for name in names if name not in DETECTOR404_PLATFORM_NAMES]
-    priority_hits = [name for name in DETECTOR404_PRIORITY_NAMES if name in item_by_name]
     high_items = [
         item for item in detector_items
         if any(level in item.get('issue', '') for level in ('大量', '严重', '大规模'))
     ]
-
-    issue_lines = [
-        f"🟡 [待确认] detector404.ru 俄罗斯区中等及以上投诉摘要：共 {len(detector_items)} 项",
-        f"重点清单命中: {_join_limited(priority_hits, 12)}",
-        f"游戏: {_join_limited(games, 12)}",
-        f"平台/通讯: {_join_limited(platforms, 8)}",
-    ]
+    medium_items = [item for item in detector_items if item not in high_items]
+    compact_items = []
 
     if high_items:
-        issue_lines.append(
-            "高等级: " + _join_limited([item.get('game', '?') for item in high_items], 10)
-        )
+        high_lines = [f"🚨 detector404.ru 高等级故障：共 {len(high_items)} 项"]
+        for item in high_items[:10]:
+            issue_first_line = str(item.get('issue', '')).splitlines()[0]
+            high_lines.append(f"{item.get('game', '?')}: {issue_first_line}")
+        if len(high_items) > 10:
+            high_lines.append(f"其余 {len(high_items) - 10} 项见 GitHub Actions 日志。")
 
-    issue_lines.append("完整 detector404 列表见本次 GitHub Actions 日志的 [detector404 ALERT] / [POPO待发送]。")
+        compact_items.append({
+            'game': 'detector404.ru 高等级故障',
+            'region': 'CIS / Russia',
+            'country': 'Russia',
+            'issue': '\n    '.join(high_lines),
+            'source_name': 'detector404.ru',
+            'source_url': 'https://detector404.ru',
+            'alert_type': 'game_monitor',
+        })
 
-    compact_item = {
-        'game': 'detector404.ru 摘要',
-        'region': 'CIS / Russia',
-        'country': 'Russia',
-        'issue': '\n    '.join(issue_lines),
-        'source_name': 'detector404.ru',
-        'source_url': 'https://detector404.ru',
-        'alert_type': 'game_monitor',
-    }
+    if medium_items:
+        item_by_name = {item.get('game', ''): item for item in medium_items}
+        names = [item.get('game', '?') for item in medium_items]
+        platforms = [name for name in names if name in DETECTOR404_PLATFORM_NAMES]
+        games = [name for name in names if name not in DETECTOR404_PLATFORM_NAMES]
+        priority_hits = [name for name in DETECTOR404_PRIORITY_NAMES if name in item_by_name]
+        medium_lines = [
+            f"🟡 [待确认] detector404.ru 俄罗斯区中等投诉：共 {len(medium_items)} 项",
+            f"重点清单命中: {_join_limited(priority_hits, 12)}",
+            f"游戏: {_join_limited(games, 12)}",
+            f"平台/通讯: {_join_limited(platforms, 8)}",
+            "完整 detector404 列表见本次 GitHub Actions 日志的 [detector404 ALERT] / [POPO待发送]。",
+        ]
+
+        compact_items.append({
+            'game': 'detector404.ru 中等投诉摘要',
+            'region': 'CIS / Russia',
+            'country': 'Russia',
+            'issue': '\n    '.join(medium_lines),
+            'source_name': 'detector404.ru',
+            'source_url': 'https://detector404.ru',
+            'alert_type': 'game_monitor',
+        })
 
     print(
-        f"[detector404 COMPACT] {len(detector_items)} 条 detector404 报警已压缩为 1 条摘要；"
-        f"重点命中 {len(priority_hits)}，平台 {len(platforms)}，游戏 {len(games)}。"
+        f"[detector404 COMPACT] {len(detector_items)} 条 detector404 报警已压缩为 {len(compact_items)} 条；"
+        f"高等级 {len(high_items)}，中等 {len(medium_items)}。"
     )
 
-    return other_items + [compact_item]
-
+    return compact_items + other_items
 
 def _split_text_by_utf8_bytes(text, max_bytes):
     chunks = []
