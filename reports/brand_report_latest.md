@@ -1,69 +1,69 @@
 # 品牌舆情监控详细报告
 
-> 生成时间: 2026-08-17 08:30 (UTC+8)
+> 生成时间: 2026-08-18 08:30 (UTC+8)
 > 本报告每 24 小时更新一次
 
 ---
 
 <a id="global-youtube-gearup-booster"></a>
 ## Global (YouTube) - GearUP Booster
-> 共 30 篇讨论
+> 共 32 篇讨论
 
 ### AI 分析
 ```
-正面评价: 多数帖子以促销导向为主，强调GearUP Booster降低Ping、提升游戏稳定性及流畅度，并提供优惠码“RAIYA”免费试用和6折购买福利，覆盖CS2、PUBG、eFootball、Brawl Stars等多款热门游戏 [1][2][3][4][5][6][8][9][12][13][14][15]。  
-负面评价: 暂无。  
-中性讨论: 个别视频标题仅提及GearUP Booster作为直播/实测工具（如PUBG亚洲服直播、巴西操作技巧演示、新优惠码提示），未明确表达体验评价或效果验证，属中性使用场景或信息提示 [7][10][11]。  
-涉及竞品: 无。  
-商业洞察: 当前海外YouTube舆情高度集中于促销驱动型内容，建议加强真实用户延迟对比测试（如Before/After Ping数据）和多语种玩家证言，以提升可信度并抵御竞品潜在口碑渗透。
+正面评价: 宣传GearUP Booster能显著降低Ping、消除延迟、提升游戏稳定性和速度，多篇使用阿拉伯语、中文等多语言强调免费试用和折扣优惠 [1][3][4][7][8][9][10][11][12][13][15]  
+负面评价: 仅1篇含隐晦负面暗示，“my connexion with gearup 💀”以死亡符号表达连接失败或体验极差，无具体说明但情绪明确为负面 [14]  
+中性讨论: 帖子标题未提及GearUP功能或效果，仅将GearUP Booster作为直播/视频背景标签或场景配置项（如服务器选择、对战环境），无主观评价 [2][5][6]  
+涉及竞品: ExitLag  
+商业洞察: 需加强非促销类内容建设，减少重复优惠码视频，增加真实延迟对比、多地区实测等可信度高的技术向内容以对冲负面情绪并区隔竞品。
 ```
 ### AI 引用来源（编号对应）
 - [1] 🚀🔥 ودّع الـPing العالي مع GearUP Booster! استمتع بسرعة وثبات أفضل أثناء اللعب 🎮⚡ | جرّب الكود 🔥 (https://www.youtube.com/watch?v=rWY5cgIofCc)
-- [2] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 4 #csgo #cs2overpass #fps #csgoclips #gaming #games (https://www.youtube.com/watch?v=HbiVvQOLTjo)
-- [3] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 5 #csgo #cs2overpass #fps #csgoclips #gaming #games (https://www.youtube.com/watch?v=2yYItvVE6QM)
-- [4] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 2 #csgo #cs2overpass #fps #csgoclips #gaming #games (https://www.youtube.com/watch?v=KOIqACyNjRc)
-- [5] :🎮 GearUP Booster 🚀🇸🇦 العربية:حسّن تجربة الألعاب مع GearUP Booster! 🎮⚡استمتع باتصال أكثر استقرارًا (https://www.youtube.com/watch?v=w8F-kfP__wg)
-- [6] 🚀 العب أسرع واربح أكثر | GearUP Booster 🎮 (https://www.youtube.com/watch?v=gUKXE6uS4JE)
-- [7] PUBG LIVE 🔴 | One Day in AsiaServer | GearUp Booster- ( Newbie vs new,old,hacker ) # (https://www.youtube.com/watch?v=RXhS5x4Oy78)
-- [8] eFootball&#39;da Ping ve Lag Problemine KESİN ÇÖZÜM! 🚀 (https://www.youtube.com/watch?v=VzndOOA5HxQ)
-- [9] Gearup Booster İle Oyunu Doya Doya Yaşa! #gearupbooster #brawlstars (https://www.youtube.com/watch?v=4Iv_GOOeXrY)
-- [10] Gearup booster code new (https://www.youtube.com/watch?v=RGy4hl_WA1k)
-- [11] Brazil movement trick sensitivity 0 recallGearUP: Lower Lag Game Booster (https://www.youtube.com/watch?v=UwTA4BkD1Kg)
-- [12] كود لتفعيل برنامج gearup booster مجانا لتحسين البنج في ببجي موبايل #pubgmobile #ببجي #vpn (https://www.youtube.com/watch?v=SIlpJ3GpBJw)
-- [13] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 3 #csgo #cs2overpass #fps #csgoclips #gaming #games (https://www.youtube.com/watch?v=v-0K3v_QPUw)
-- [14] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 1 #cs2 #csgo #cs2overpass #counterstrike2 #fps #cs2影片 (https://www.youtube.com/watch?v=ovYYL2rIe3Y)
-- [15] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 6 #csgo #cs2overpass #fps #csgoclips #gaming #games (https://www.youtube.com/watch?v=NOxwMJrXNuo)
+- [2] QUASE NÃO SAI VIVO DA GROUND ZERO, OS BLACK DIVISION ESTAVAM LOUCO DE M60 😱| ESCAPE FROM TARKOV (https://www.youtube.com/watch?v=_ZVie3WLJm4)
+- [3] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠  #csgo #cs2overpass #fps #csgoclips #gaming #games (https://www.youtube.com/watch?v=sllf7SaqcEs)
+- [4] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 1 #csgo #cs2overpass #fps #csgoclips #gaming #games (https://www.youtube.com/watch?v=zZTASRvtf44)
+- [5] Water X-ray #shorts #minecraft #xray #hacker #buildhacks #gaming #trending #gearupbooster (https://www.youtube.com/watch?v=X0QT1cqgkFw)
+- [6] PUBG LIVE 🔴 | One Day in AsiaServer | GearUp Booster- ( Newbie vs new,old,hacker ) # 17 (https://www.youtube.com/watch?v=vEnmWiHLyuM)
+- [7] Need To Eliminate Lag Or Play Games In Other Regions? You Need GearUp #gearupbooster #exitlag (https://www.youtube.com/watch?v=b_LHVAPkO8U)
+- [8] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 4 #csgo #cs2overpass #fps #csgoclips #gaming #games (https://www.youtube.com/watch?v=HbiVvQOLTjo)
+- [9] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 5 #csgo #cs2overpass #fps #csgoclips #gaming #games (https://www.youtube.com/watch?v=2yYItvVE6QM)
+- [10] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 3 #csgo #cs2overpass #fps #csgoclips #gaming #games (https://www.youtube.com/watch?v=0LDSp4kJyuA)
+- [11] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 2 #csgo #cs2overpass #fps #csgoclips #gaming #games (https://www.youtube.com/watch?v=KOIqACyNjRc)
+- [12] :🎮 GearUP Booster 🚀🇸🇦 العربية:حسّن تجربة الألعاب مع GearUP Booster! 🎮⚡استمتع باتصال أكثر استقرارًا (https://www.youtube.com/watch?v=w8F-kfP__wg)
+- [13] 🚀 العب أسرع واربح أكثر | GearUP Booster 🎮 (https://www.youtube.com/watch?v=gUKXE6uS4JE)
+- [14] my connexion with gearup 💀#brawlstars #gearupbooster #cyberpunkjaeyongpin (https://www.youtube.com/watch?v=HYwVSYq5kjs)
+- [15] eFootball&#39;da Ping ve Lag Problemine KESİN ÇÖZÜM! 🚀 (https://www.youtube.com/watch?v=VzndOOA5HxQ)
 
 ---
 
 <a id="south-korea-gearup-booster"></a>
 ## South Korea - GearUP Booster
-> 共 23 篇讨论
+> 共 25 篇讨论
 
 ### AI 分析
 ```
 正面评价: 暂无  
-负面评价: 用户报告 GearUP Booster 导致游戏频繁闪退（如 EFT）、登录/加载异常，且存在与 DropS 账户联动失败问题；另有用户以侮辱性语言批评其广告策略 [4][3][7]  
-中性讨论: 多篇帖子为无关内容（如游戏代币/卡牌销售、其他加速器 ExitLag 的使用反馈、通用技术求助），仅提及 GearUP 名称但无实质评价 [1][2][5][6][8][9][10][11][12][13][14][15]  
+负面评价: 用户报告 GearUP Booster 安装后出现游戏频繁闪退、无法启动（如 MapleStory）、与 DropS 账号系统连动异常等问题，质疑其稳定性与兼容性 [6][11][3]；另有用户以侮辱性语言批评其广告策略，称其“病态”“IQ两位数” [8]。  
+中性讨论: 多篇帖子仅提及 GearUP Booster 名称或品牌关键词，无实质评价，属搜索行为、商品转卖帖或无关上下文中的偶然提及 [1][2][4][5][7][9][10][12][13][14][15]。  
 涉及竞品: ExitLag  
-商业洞察: 需紧急排查 EFT 闪退及 DropS 联动故障，并监控竞品 ExitLag 在韩社区的舆情波动以制定针对性应对策略。
+商业洞察: 需紧急排查与 DropS 账号体系及主流游戏（EFT、Heroic、MapleStory）的集成故障，并在社区主动澄清 ExitLag 对比场景中的性能差异，避免负面联想扩散。
 ```
 ### AI 引用来源（编号对应）
 - [1] vpn으로 250핑 유럽서버 150핑에서 하는 방법 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=hng&no=15092)
 - [2] 내가 보려고 적은 리딤코드 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=oncehumankor&no=295640)
 - [3] 드롭스 연동 안되는애들은 봐라 어제오늘 8개 받아야 정상임 [DC Inside](https://gall.dcinside.com/board/view/?id=worldoftanks&no=4177067)
-- [4] 기어업부스터깔고나서 로딩끝날때마다 튕김 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=eft&no=2861957)
-- [5] 탈콥기어업부스터질문 급함요 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=eft&no=2859894)
-- [6] [덱소스 판매] 서포트,RR,아이템,스타디움,SR,노고치들 팝니다 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=pokemoncardgame&no=120497)
-- [7] 기어업광고라는 병.신새끼들은 아이큐두자리냐 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=mistfallhunter&no=2886)
-- [8] 그래 가장젊고 좋은시간에 쌀팔겠다는데 맘대로해라ㅋㅋ [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=mistfallhunter&no=2870)
-- [9] 그래도 병신같은 쌀먹들말고 진성게이머들이 남아있다는거 봐서 감동이다. [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=mistfallhunter&no=2840)
-- [10] [덱소스 판매] 서포트,아이템,RR,SR,노고치 등 판매합니다 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=pokemoncardgame&no=120238)
+- [4] 기어업부스터 G마켓 [DC Inside](https://search.dcinside.com)
+- [5] [덱소스 판매] 서포트,RR,아이템,스타디움,SR,노고치들 팝니다 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=pokemoncardgame&no=120684)
+- [6] 기어업부스터깔고나서 로딩끝날때마다 튕김 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=eft&no=2861957)
+- [7] 탈콥기어업부스터질문 급함요 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=eft&no=2859894)
+- [8] 기어업광고라는 병.신새끼들은 아이큐두자리냐 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=mistfallhunter&no=2886)
+- [9] 그래 가장젊고 좋은시간에 쌀팔겠다는데 맘대로해라ㅋㅋ [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=mistfallhunter&no=2870)
+- [10] 그래도 병신같은 쌀먹들말고 진성게이머들이 남아있다는거 봐서 감동이다. [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=mistfallhunter&no=2840)
 - [11] 메이플 안켜짐 도움좀요 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=heroic&no=371954)
 - [12] 지금exitlag문제있나 미꾸라지로 하니까 되는데 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=heroic&no=368241)
 - [13] 사냥만이라도 하게 해달라고exitlag병신아 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=heroic&no=367939)
 - [14] exitlag오늘따라 핑이 왤케 높냐 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=heroic&no=367229)
-- [15] 엑싯랙너무 핑이튀어요 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=heroic&no=380169)
+- [15] 갤러리 뒤지다가 추억돋는 짤 발견 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=eft&no=2863053)
 
 ---
 
