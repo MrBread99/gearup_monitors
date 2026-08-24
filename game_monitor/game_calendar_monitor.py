@@ -137,46 +137,83 @@ STEAM_NEWS_403_FAIL_THRESHOLD = 5   # 连续 5 次 403 才静默（原 2 次太�
 STEAM_NEWS_403_BACKOFF_DAYS = 3     # 静默 3 天（原 7 天太久）
 
 
+def fetch_current_players(app_id):
+    """获取 Steam 游戏当前在线人数（免费公开 API，无需 key）。失败返回 0。"""
+    if not app_id:
+        return 0
+    try:
+        resp = requests.get(
+            f"https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid={app_id}",
+            headers=HEADERS, timeout=10
+        )
+        if resp.status_code == 200:
+            return resp.json().get('response', {}).get('player_count', 0) or 0
+    except Exception:
+        pass
+    return 0
+
+
 def estimate_game_hype(app_data, rank=None, category_label=''):
     """
     预估新游热度（0-100 分），基于多维度打分。
+    在线人数是最硬的热度信号；Top Sellers 是销量榜，排名权重高于 New Releases。
     """
     score = 0
 
     if not app_data:
         return 50  # 无数据默认中等
 
-    # 1. 榜单排名 (最高 30 分)
-    if rank:
-        score += max(0, 30 - (rank - 1) * 3)  # #1=30, #2=27, ..., #10=3
+    # 1. 当前在线人数 (最高 30 分；未发售游戏恒为 0)
+    players = fetch_current_players(app_data.get('steam_appid'))
+    if players > 100000:
+        score += 30
+    elif players > 50000:
+        score += 25
+    elif players > 20000:
+        score += 20
+    elif players > 10000:
+        score += 15
+    elif players > 5000:
+        score += 10
+    elif players > 1000:
+        score += 6
+    elif players > 100:
+        score += 3
 
-    # 2. 评论数/关注度 (最高 25 分)
+    # 2. 榜单排名 (New Releases 最高 20 分；Top Sellers 为销量榜，权重 1.5x)
+    if rank:
+        rank_score = max(0, 20 - (rank - 1) * 2)  # #1=20, #2=18, ..., #10=2
+        if category_label == 'Top Sellers':
+            rank_score = int(rank_score * 1.5)
+        score += rank_score
+
+    # 3. 评论数/关注度 (最高 15 分)
     recommendations = app_data.get('recommendations', {}).get('total', 0)
     if recommendations > 50000:
-        score += 25
-    elif recommendations > 10000:
-        score += 20
-    elif recommendations > 5000:
         score += 15
+    elif recommendations > 10000:
+        score += 12
+    elif recommendations > 5000:
+        score += 9
     elif recommendations > 1000:
-        score += 10
+        score += 6
     elif recommendations > 100:
-        score += 5
+        score += 3
 
-    # 3. 免费游戏加成 (最高 15 分)
+    # 4. 免费游戏加成 (最高 10 分)
     is_free = app_data.get('is_free', False)
     if is_free:
-        score += 15
+        score += 10
 
-    # 4. 热门游戏类型加成 (最高 15 分)
+    # 5. 热门游戏类型加成 (最高 10 分)
     genres = [g.get('description', '') for g in app_data.get('genres', [])]
     hot_genres = {'Action': 5, 'FPS': 8, 'RPG': 5, 'Adventure': 3,
                   'Massively Multiplayer': 8, 'Strategy': 3, 'Sports': 4,
                   'Racing': 3, 'Simulation': 2}
     genre_bonus = sum(hot_genres.get(g, 0) for g in genres)
-    score += min(15, genre_bonus)
+    score += min(10, genre_bonus)
 
-    # 5. 联机类型加成 (最高 15 分)
+    # 6. 联机类型加成 (最高 15 分)
     categories = [c.get('description', '') for c in app_data.get('categories', [])]
     if 'Online PvP' in categories:
         score += 10
@@ -314,6 +351,9 @@ def analyze_acceleration_need(game_name, app_data=None, update_content=''):
 3. 是否有跨区服务器（全球服/亚服/欧服分区 = 跨区加速需求）
 4. 是否有地区封锁或限制风险（如某些游戏在特定国家不可用）
 5. 本次更新是否会带来玩家涌入（新赛季/大版本/免费活动）
+6. 联机稳定性需求（合作/社交联机、房主制 P2P 联机在部分地区存在连接失败、掉线、NAT 问题，加速器可改善）
+
+评级规则：纯单机=1星；有联机模式最低 3 星（休闲合作/社交联机也不例外，其痛点是连接稳定性而非低延迟）；MMO/跨区组队=4星起；竞技 FPS/格斗/MOBA=5星。
 
 请严格按以下格式输出一行（禁止换行，禁止 Markdown）:
 ⭐评级(1-5星) 需求等级(极高/高/中/低/无) - 一句话分析理由(30字以内)"""
@@ -330,7 +370,12 @@ def analyze_acceleration_need(game_name, app_data=None, update_content=''):
         )
         result = str(response.choices[0].message.content).strip()
         # 确保只返回一行
-        return result.split('\n')[0]
+        result = result.split('\n')[0]
+        # 联机游戏保底 3 星：休闲合作/社交联机常被 AI 低估，
+        # 其真实痛点是联机建立失败、掉线、NAT 问题（部分地区加速需求）
+        if features['is_online'] and 0 < result.count('⭐') < 3:
+            result = "⭐⭐⭐ 中 - 联机游戏，部分地区存在联机稳定性/跨区连接需求"
+        return result
     except Exception as e:
         print(f"[Calendar] AI 加速需求分析失败: {e}")
         if not features['is_online']:
@@ -634,7 +679,8 @@ def build_calendar_issue_key(issue):
     first_line = re.sub(r'\s+', ' ', first_line)
 
     if source_url.startswith('https://store.steampowered.com/app/'):
-        return f"{alert_type}|steam_app|{source_name}|{source_url}"
+        # 同一游戏可能被多个 Steam 数据源抓到，按 app URL 统一去重（不含 source_name）
+        return f"{alert_type}|steam_app|{source_url}"
 
     if (
         'reddit.com' in source_url
@@ -687,6 +733,9 @@ def queue_calendar_issues_for_daily_digest(issues):
     added = 0
     now_iso = datetime.now(timezone.utc).isoformat(timespec='seconds')
     for issue in issues:
+        # 低热度新游不入队，保持每日摘要简洁
+        if issue.get('alert_type') == 'new_game_release' and issue.get('hype_score', 0) < 25:
+            continue
         issue_key = build_calendar_issue_key(issue)
         if issue_key in pending_keys:
             continue
@@ -1289,6 +1338,10 @@ def check_hot_new_releases():
                         detail_data = detail_resp.json()
                         app_data = detail_data.get(str(app_id), {}).get('data', {})
 
+                        # 只关心游戏本体，过滤 DLC / Demo / 硬件等
+                        if app_data.get('type', 'game') != 'game':
+                            continue
+
                         # 检查类别是否包含联机标签
                         categories = app_data.get('categories', [])
                         category_names = [c.get('description', '') for c in categories]
@@ -1618,7 +1671,7 @@ def check_steam_coming_soon():
         data = response.json()
         coming_soon = data.get('coming_soon', {}).get('items', [])
 
-        for item in coming_soon[:10]:
+        for rank, item in enumerate(coming_soon[:10], 1):
             name = item.get('name', '')
             app_id = item.get('id', 0)
 
@@ -1631,6 +1684,10 @@ def check_steam_coming_soon():
 
                 detail_data = detail_resp.json()
                 app_data = detail_data.get(str(app_id), {}).get('data', {})
+
+                # 只关心游戏本体，过滤 DLC / Demo / 硬件等
+                if app_data.get('type', 'game') != 'game':
+                    continue
 
                 categories = app_data.get('categories', [])
                 category_names = [c.get('description', '') for c in categories]
@@ -1653,7 +1710,12 @@ def check_steam_coming_soon():
                     # AI 加速需求分析
                     accel_need = analyze_acceleration_need(name, app_data)
 
+                    # 热度预估
+                    hype_score = estimate_game_hype(app_data, rank, 'Coming Soon')
+                    hype_label = format_hype_label(hype_score)
+
                     issue_text = f"📢 [即将发售] {name} ({genre_str}) 预计发售: {date_str}"
+                    issue_text += f"\n    热度预估: {hype_label}"
                     issue_text += f"\n    加速需求: {accel_need}"
 
                     issues.append({
@@ -1662,6 +1724,7 @@ def check_steam_coming_soon():
                         'country': '',
                         'issue': issue_text,
                         'alert_type': 'new_game_release',
+                        'hype_score': hype_score,
                         'source_name': 'Steam Coming Soon',
                         'source_url': f'https://store.steampowered.com/app/{app_id}'
                     })
@@ -1680,6 +1743,107 @@ def check_steam_coming_soon():
 
     except Exception as e:
         print(f"[Calendar] Steam Coming Soon 检测失败: {e}")
+        return []
+
+
+def check_popular_coming_soon():
+    """
+    检查 Steam 热门即将发售榜（popularcomingsoon，按愿望单热度排序，取前 30）。
+    Featured coming_soon 仅前 10 且为编辑精选，会漏掉发售前测试期爆火的新游
+    （如 WARDOGS 封闭测试期间愿望单 100 万但未进 featured 榜），本榜单覆盖该盲区。
+    """
+    issues = []
+    url = ("https://store.steampowered.com/search/results/?query&start=0&count=30"
+           "&dynamic_data=&sort_by=_ASC&filter=popularcomingsoon&ignore_preferences=1"
+           "&snr=1_7_7_230_7&infinite=1&json=1")
+
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=15)
+        if response.status_code != 200:
+            report_scrape_block('steam_popular_coming', url, response.status_code)
+            return issues
+
+        data = response.json()
+        results_html = data.get('results_html', '') or ''
+        # 每行 <a data-ds-appid=... class="search_result_row"> 内部紧跟本行 <span class="title">
+        entries = re.findall(
+            r'data-ds-appid="(\d+)"[\s\S]{0,2000}?<span class="title">([^<]+)</span>',
+            results_html
+        )[:30]
+
+        for rank, (app_id_str, raw_name) in enumerate(entries, 1):
+            app_id = int(app_id_str)
+            name = html.unescape(raw_name).strip()
+
+            try:
+                detail_url = f"https://store.steampowered.com/api/appdetails?appids={app_id}"
+                detail_resp = requests.get(detail_url, headers=HEADERS, timeout=10)
+                if detail_resp.status_code != 200:
+                    report_scrape_block('steam_appdetails', detail_url, detail_resp.status_code)
+                    continue
+
+                app_data = detail_resp.json().get(str(app_id), {}).get('data', {})
+
+                # 只关心游戏本体，过滤 DLC / Demo / 硬件等
+                if app_data.get('type', 'game') != 'game':
+                    continue
+
+                # 榜单理论上只含未发售游戏，已发售的交给 check_hot_new_releases
+                release_date = app_data.get('release_date', {})
+                if not release_date.get('coming_soon', False):
+                    continue
+
+                categories = app_data.get('categories', [])
+                category_names = [c.get('description', '') for c in categories]
+
+                is_online = any(
+                    tag in category_names
+                    for tag in ['Multi-player', 'Online PvP', 'Online Co-op',
+                               'MMO', 'Massively Multiplayer', 'Co-op']
+                )
+
+                if is_online:
+                    date_str = release_date.get('date', 'TBD')
+
+                    genres = app_data.get('genres', [])
+                    genre_names = [g.get('description', '') for g in genres]
+                    genre_str = ', '.join(genre_names[:3]) if genre_names else '未知类型'
+
+                    accel_need = analyze_acceleration_need(name, app_data)
+
+                    # 热度预估
+                    hype_score = estimate_game_hype(app_data, rank, 'Popular Coming Soon')
+                    hype_label = format_hype_label(hype_score)
+
+                    issue_text = f"📢 [热门即将发售 #{rank}] {name} ({genre_str}) 预计发售: {date_str}"
+                    issue_text += f"\n    热度预估: {hype_label}"
+                    issue_text += f"\n    加速需求: {accel_need}"
+
+                    issues.append({
+                        'game': name,
+                        'region': 'Global',
+                        'country': '',
+                        'issue': issue_text,
+                        'alert_type': 'new_game_release',
+                        'hype_score': hype_score,
+                        'source_name': 'Steam Popular Coming Soon',
+                        'source_url': f'https://store.steampowered.com/app/{app_id}'
+                    })
+
+            except Exception:
+                pass
+
+        # 去重，最多 3 条
+        seen = set()
+        unique = []
+        for issue in issues:
+            if issue['game'] not in seen:
+                seen.add(issue['game'])
+                unique.append(issue)
+        return unique[:3]
+
+    except Exception as e:
+        print(f"[Calendar] Steam Popular Coming Soon 检测失败: {e}")
         return []
 
 
@@ -1742,6 +1906,9 @@ def check_game_calendar():
 
     print("正在检测 Steam 即将发售的联机热门...")
     all_issues.extend(check_steam_coming_soon())
+
+    print("正在检测 Steam 热门即将发售榜 (popularcomingsoon)...")
+    all_issues.extend(check_popular_coming_soon())
 
     print("正在检测 Epic Games Store 新游/免费游戏...")
     all_issues.extend(check_epic_new_releases())

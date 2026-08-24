@@ -580,6 +580,18 @@ GAME_REGISTRY = {
         'kr_dc': None,  # DC Inside 无对应画廊
         'kr_dc_type': None,
     },
+
+    # === 2026-08-24 新增 ===
+    'WARDOGS': {
+        'steam_appid': 1867240,
+        'subreddit': 'WarDogs',
+        'vk_group': None,  # 未找到官方 VK 群组
+        'itsd_slug': None,  # ITSD 上不存在
+        'tw_bsn': '84714',  # 戰犬行動 哈啦板
+        'jp_search': 'WARDOGS',
+        'kr_dc': None,  # DC Inside 无对应画廊
+        'kr_dc_type': None,
+    },
 }
 
 

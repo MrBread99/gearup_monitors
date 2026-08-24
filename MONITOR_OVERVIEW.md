@@ -4,7 +4,7 @@
 >
 > 本文档是供 AI Agent 快速上手的**唯一参考**，描述当前代码的真实状态。
 >
-> **修改游戏配置的唯一入口**: `game_monitor/game_registry.py`（56 款游戏，新增/修改/删除游戏只改这一个文件）
+> **修改游戏配置的唯一入口**: `game_monitor/game_registry.py`（57 款游戏，新增/修改/删除游戏只改这一个文件）
 
 ---
 
@@ -14,10 +14,10 @@
 gearup_monitors/
 │
 ├── game_monitor/
-│   ├── game_registry.py             # ★ 唯一游戏配置源（56 款游戏）
+│   ├── game_registry.py             # ★ 唯一游戏配置源（57 款游戏）
 │   │                                #   字段：steam_appid / subreddit / vk_group / itsd_slug /
 │   │                                #         tw_bsn / jp_search / kr_dc / kr_dc_type
-│   ├── monitor.py                   # 主入口：56 款游戏 × 8 渠道，逐游戏 try/except 防级联失败
+│   ├── monitor.py                   # 主入口：57 款游戏 × 8 渠道，逐游戏 try/except 防级联失败
 │   ├── steam_osint.py               # Steam 近期差评（9 语种关键词）
 │   ├── apac_osint.py                # 亚太社区（巴哈姆特 / DC Inside Playwright+requests 双层降级）
 │   ├── cis_osint.py                 # 俄罗斯/CIS（VK + detector404.ru）
@@ -29,7 +29,7 @@ gearup_monitors/
 │   ├── downdetector_osint.py        # 全球故障聚合（IsTheServiceDown）
 │   ├── platform_status_monitor.py   # 14 个平台/通讯工具状态（独占 detector404 平台检测）
 │   ├── game_calendar_monitor.py     # 新游上线 + 热游更新（官方 API + Reddit listing 兜底 + AI 摘要）
-│   │                                #   跨运行去重（snapshot key，最多 1000 条）
+│   │                                #   跨运行去重（snapshot key，最多 1000 条，Steam app 跨数据源统一去重）
 │   │                                #   每个数据源限 2 条最优结果（PER_SOURCE_ALERT_LIMIT）
 │   │                                #   Steam News 连续 5 次 403 后静默 3 天
 │   ├── workflow_heartbeat.py        # monitor.yml 三段任务成功后的每日一次 POPO 心跳
@@ -97,7 +97,7 @@ gearup_monitors/
 
 | 维度 | 数据 |
 |------|------|
-| 监控游戏 | **56 款**（见 `game_registry.py` 完整列表） |
+| 监控游戏 | **57 款**（见 `game_registry.py` 完整列表） |
 | 监控渠道 | **8 个**：Reddit OSINT、Steam 差评、巴哈姆特、DC Inside、VK、detector404.ru、IsTheServiceDown、Epic 官方 API（Fortnite 专用） |
 | 关键词语种 | **9 种**：英/繁中/日/韩/俄/阿拉伯/越南/菲律宾/印尼 |
 | 报警标签 | 🟢 加速器可解决 / 🔴 加速器无效 / 🟡 待确认 |
@@ -156,6 +156,7 @@ gearup_monitors/
 | 已追踪游戏大版本更新/预告 | Steam News API（有 AppID 的游戏） | 【热游版本更新预告】 |
 | Steam 热门新游上线 | Steam Featured API（Top Sellers + New Releases） | 【新游上线预告】 |
 | Steam 即将发售联机热门 | Steam Coming Soon API | 【新游上线预告】 |
+| Steam 热门即将发售（愿望单热度榜，覆盖 featured 榜外爆火新游，如 WARDOGS 测试期） | popularcomingsoon Search API（前 30） | 【新游上线预告】 |
 | Epic 新游/免费游戏赠送 | Reddit（3 个子版块） | 【新游上线预告】 |
 | PlayStation 新游 | Reddit（PS5/PS4） | 【新游上线预告】 |
 | Xbox / Game Pass 上新 | Reddit | 【新游上线预告】 |
@@ -248,7 +249,7 @@ gearup_monitors/
 | `utils/reddit_client.py` | OAuth2 可选（600 req/min）+ 2s 限流 + 429 自动重试 + 请求元数据追踪 | `get_last_reddit_request_meta()` 返回 mode/token_state/status_code |
 | `utils/google_client.py` | 5-8s 随机延迟 + 多语言 Accept-Language（含 ru） | CAPTCHA 三重检测 |
 | `utils/alert_dedup.py` | 🔴 报警合并（保留游戏名+地区）+ 跨运行去重 | 仅作用于 🔴 类型 |
-| `game_monitor/game_registry.py` | 56 款游戏统一配置 | 唯一修改游戏配置的文件 |
+| `game_monitor/game_registry.py` | 57 款游戏统一配置 | 唯一修改游戏配置的文件 |
 | GitHub Actions cache | **11** 个快照文件持久化（日历/平台事件/无效报警去重/detector404 等级/monitor 心跳/俄罗斯活动/节假日/品牌摘要/定价/评分/博客） | 去重跨运行生效的前提 |
 | `requirements-ci.txt` | `game_monitor/` 和 `competitor_radar/` 各有独立的 pinned 依赖文件 | workflow 使用 `pip install -r` |
 
@@ -311,7 +312,7 @@ gearup_monitors/
 | 维度 | 数量 |
 |------|------|
 | Python 脚本 | **32 个**（含 `playwright_client.py` + 2 个 `requirements-ci.txt`） |
-| 监控游戏 | **56 款** |
+| 监控游戏 | **57 款** |
 | 游戏故障渠道 | **8 个** |
 | 平台/通讯工具 | **14 个** |
 | detector404 监控条目 | **55 条**（46 游戏 + 9 平台） |
@@ -330,3 +331,6 @@ gearup_monitors/
 
 19. **竞品博客监控反爬策略** — ExitLag 博客优先解析公开博客页，失败时降级 WP REST API、Sitemap、Playwright、搜索索引和 RSS。LagoFast 博客（Next.js SSR）优先通过 requests 抓取 `__NEXT_DATA__` JSON（服务端渲染的结构化数据），失败时尝试 DOM 解析和 Playwright
 20. **博客快照首次运行** — `competitor_blog_monitor.py` 首次运行（快照中无对应竞品 key）仅保存当前文章列表为基线，不生成报警，避免首次部署时产生大量历史文章的误报
+
+21. **新游跨数据源去重** — `build_calendar_issue_key()` 对 Steam app 按 URL 统一去重（不含数据源名），同一游戏被 Featured / Coming Soon / 热门即将发售多源抓到只报一次；首次切换会有一次性重报
+22. **新游热度与降噪规则** — 热度分（0-100）以当前在线人数为最高权重（30 分），Top Sellers 排名权重 1.5x；新游检测过滤 `type != game`（DLC/Demo/硬件）；`hype_score < 25` 的新游不入每日摘要；加速需求联机游戏保底 3 星（休闲 Co-op 的痛点是联机稳定性而非低延迟）
