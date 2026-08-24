@@ -498,6 +498,31 @@ def summarize_new_game(game_name, description):
         return clean_desc[:200].strip() + "..."
 
 
+def summarize_reddit_title(title):
+    """Reddit 新游/上新帖英文标题 → AI 一句话中文摘要。无 AI 或失败返回空。"""
+    if not qwen_client or not title:
+        return ''
+    try:
+        response = qwen_client.chat.completions.create(
+            model="qwen-plus",
+            messages=[
+                {"role": "system", "content": "你是游戏行业编辑，输出简洁一行中文。"},
+                {"role": "user", "content": f"把这条游戏相关英文帖子标题翻译并概括为一句中文（30字以内，说明什么游戏、什么事）：{title[:300]}"}
+            ],
+            temperature=0.2,
+            max_tokens=80
+        )
+        return str(response.choices[0].message.content).strip().split('\n')[0]
+    except Exception:
+        return ''
+
+
+def _summary_suffix(title):
+    """生成报警文本的摘要后缀行；无摘要时返回空串。"""
+    s = summarize_reddit_title(title)
+    return f"\n    摘要: {s}" if s else ''
+
+
 def summarize_update(game_name, title, content):
     """
     调用通义千问对游戏更新内容做中文摘要，提取：
@@ -627,6 +652,9 @@ def _compact_calendar_issue(issue):
             details.append(f"加速需求: {accel}")
         if score:
             details.append(f"热度: {score}")
+        summary = _truncate_text(_extract_issue_field(issue_text, ['摘要']), 40)
+        if summary:
+            details.append(f"摘要: {summary}")
 
         compact['issue'] = f"🎮 {kind}: {title}"
         if details:
@@ -659,6 +687,9 @@ def _compact_calendar_issue(issue):
             details.append(f"热度: {hype}")
         if accel:
             details.append(f"加速需求: {accel}")
+        summary = _truncate_text(_extract_issue_field(issue_text, ['摘要']), 40)
+        if summary:
+            details.append(f"摘要: {summary}")
 
         compact['issue'] = f"🆕 {source_label}: {headline}"
         if details:
@@ -1475,7 +1506,7 @@ def check_epic_new_releases():
                             'game': 'Epic Games Store',
                             'region': 'Global',
                             'country': '',
-                            'issue': f"🆕 [{source['label']}] {title} (↑{score})",
+                            'issue': f"🆕 [{source['label']}] {title} (↑{score})" + _summary_suffix(title),
                             'alert_type': 'new_game_release',
                             'hype_score': score,
                             'source_name': f"r/{source['subreddit']}",
@@ -1529,7 +1560,7 @@ def check_playstation_releases():
                         'game': f'PlayStation ({config["label"]})',
                         'region': 'Global',
                         'country': '',
-                        'issue': f"🎮 [PS 新游/更新] {title} (↑{score})",
+                        'issue': f"🎮 [PS 新游/更新] {title} (↑{score})" + _summary_suffix(title),
                         'alert_type': 'new_game_release',
                         'hype_score': score,
                         'source_name': f"r/{config['sub']}",
@@ -1582,7 +1613,7 @@ def check_xbox_gamepass_releases():
                         'game': f'Xbox ({config["label"]})',
                         'region': 'Global',
                         'country': '',
-                        'issue': f"🎮 [{config['label']}] {title} (↑{score})",
+                        'issue': f"🎮 [{config['label']}] {title} (↑{score})" + _summary_suffix(title),
                         'alert_type': 'new_game_release',
                         'hype_score': score,
                         'source_name': f"r/{config['sub']}",
@@ -1638,7 +1669,7 @@ def check_battlenet_updates():
                         'game': game['name'],
                         'region': 'Global',
                         'country': '',
-                        'issue': f"🎮 [Battle.net 更新] {title} (↑{score})",
+                        'issue': f"🎮 [Battle.net 更新] {title} (↑{score})" + _summary_suffix(title),
                         'alert_type': 'game_update',
                         'update_priority': score,
                         'source_name': f"r/{game['sub']}",
@@ -1876,7 +1907,7 @@ def check_gamepass_upcoming():
                     'game': 'Xbox Game Pass',
                     'region': 'Global',
                     'country': '',
-                    'issue': f"📢 [Game Pass 即将上新] {title} (↑{score})",
+                    'issue': f"📢 [Game Pass 即将上新] {title} (↑{score})" + _summary_suffix(title),
                     'alert_type': 'new_game_release',
                     'hype_score': score,
                     'source_name': 'r/XboxGamePass',

@@ -75,7 +75,7 @@ gearup_monitors/
 │   ├── playwright_client.py         # ★ 共享 Playwright 无头浏览器（懒初始化/context 轮换/stealth）
 │   │                                #   pw_fetch(url) → (html, status); pw_close() 清理
 │   │                                #   Trustpilot / DC Inside(游戏+品牌) / exitlag_pricing 共用
-│   ├── alert_dedup.py               # 🔴 报警合并（游戏名+地区）+ 跨运行去重
+│   ├── alert_dedup.py               # 报警分级去重：🔴 最高等级每次报+合并；🟢🟡 24h 去重、升级重报
 │   ├── brand_report.py              # 品牌报告生成（锚点深链接 + AI 引用来源列表）
 │   ├── brand_digest.py              # 品牌舆情 POPO 精简摘要（重点条目 + 跨运行重复降噪）
 │   └── sentiment_summarizer.py      # AI 情感分析聚合（传引用帖子到报告）
@@ -102,7 +102,7 @@ gearup_monitors/
 | 关键词语种 | **9 种**：英/繁中/日/韩/俄/阿拉伯/越南/菲律宾/印尼 |
 | 报警标签 | 🟢 加速器可解决 / 🔴 加速器无效 / 🟡 待确认 |
 | AI 能力 | Qwen 总结玩家反馈核心内容 |
-| 🔴 报警处理 | 合并为一条摘要（保留游戏名+地区），跨运行去重（报过不再报） |
+| 🔴 报警处理 | 最高等级每次必报，多条合并为一条摘要；🟢🟡 同游戏同渠道 24h 内只报一次、等级升级重报 |
 | detector404.ru | **仅检测游戏**（不含平台），46 个游戏条目；平台由 `platform_status_monitor.py` 独占负责 |
 | 运行频率 | 每 2 小时 |
 | 容错机制 | 逐游戏 `try/except`（单游戏异常不中断整体）+ 顶层 `try/except` + `continue-on-error: true` |
@@ -248,9 +248,9 @@ gearup_monitors/
 | `utils/notifier.py` | 6 种报警标题分组 + 超 4000 字自动分割 + 3 次重试指数退避 + UTC+8 + 心跳 | 反爬码 (403/429/507)；404/5xx 优先于自定义建议；`min_notify_count` 降噪 |
 | `utils/reddit_client.py` | OAuth2 可选（600 req/min）+ 2s 限流 + 429 自动重试 + 请求元数据追踪 | `get_last_reddit_request_meta()` 返回 mode/token_state/status_code |
 | `utils/google_client.py` | 5-8s 随机延迟 + 多语言 Accept-Language（含 ru） | CAPTCHA 三重检测 |
-| `utils/alert_dedup.py` | 🔴 报警合并（保留游戏名+地区）+ 跨运行去重 | 仅作用于 🔴 类型 |
+| `utils/alert_dedup.py` | 报警分级去重（🔴 每次报+合并；🟢🟡 24h 去重+升级重报） | 覆盖故障/平台/detector404 全部通道 |
 | `game_monitor/game_registry.py` | 57 款游戏统一配置 | 唯一修改游戏配置的文件 |
-| GitHub Actions cache | **11** 个快照文件持久化（日历/平台事件/无效报警去重/detector404 等级/monitor 心跳/俄罗斯活动/节假日/品牌摘要/定价/评分/博客） | 去重跨运行生效的前提 |
+| GitHub Actions cache | **12** 个快照文件持久化（日历/平台事件/报警分级去重/detector404 等级/monitor 心跳/俄罗斯活动/节假日/品牌摘要/定价/评分/博客/反爬拦截） | 去重跨运行生效的前提 |
 | `requirements-ci.txt` | `game_monitor/` 和 `competitor_radar/` 各有独立的 pinned 依赖文件 | workflow 使用 `pip install -r` |
 
 ---
@@ -311,7 +311,7 @@ gearup_monitors/
 
 | 维度 | 数量 |
 |------|------|
-| Python 脚本 | **32 个**（含 `playwright_client.py` + 2 个 `requirements-ci.txt`） |
+| Python 脚本 | **30 个**（含 `playwright_client.py` + 2 个 `requirements-ci.txt`） |
 | 监控游戏 | **57 款** |
 | 游戏故障渠道 | **8 个** |
 | 平台/通讯工具 | **14 个** |
@@ -320,7 +320,7 @@ gearup_monitors/
 | 竞品定价地区 | **11 个**（ExitLag Global + LagoFast 10 地区） |
 | 覆盖地区 | **8 个**（欧美/台湾/日本/韩国/俄罗斯-CIS/中东/东南亚/拉美部分） |
 | 覆盖语言 | **9 种** |
-| AI 接入点 | **7 个**（玩家反馈总结/更新摘要/加速需求/新游介绍/俄罗斯风险评估/竞品公告翻译/竞品博客摘要） |
+| AI 接入点 | **8 个**（玩家反馈总结/更新摘要/加速需求/新游介绍/Reddit 标题摘要/俄罗斯风险评估/竞品公告翻译/竞品博客摘要） |
 | 快照文件 | **11 个**（跨运行持久化） |
 | 运行频率 | 故障监控每 **2 小时**；品牌舆情/竞品情报/地区节假日每天 **1 次** |
 | 报警标题 | **7 种**（商机雷达/新游上线/热游更新/平台状态/品牌舆情/竞品情报/地区节假日监控）+ 心跳 + 内部崩溃 |

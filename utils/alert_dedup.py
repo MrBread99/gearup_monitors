@@ -1,94 +1,126 @@
 import json
 import os
-import hashlib
+from datetime import datetime, timezone, timedelta
 
 # ==========================================
-# 加速器无效（🔴）报警去重与合并
+# 报警分级去重与合并
 # ==========================================
-# - 🔴 加速器无效的报警：合并成一条摘要 + 跨运行去重（报过不再报）
-# - 🟢 加速器可解决的报警：每次都报，不去重
-# - 🟡 待确认的报警：每次都报，不去重
+# 等级定义：
+# - L3 最高等级：🔴 加速器无效 / detector404 严重·大规模投诉
+#   → 每次都报（持续故障保持可见）；🔴 多条合并为一条摘要
+# - L2 🟢 加速器可解决 / 🔶 detector404 大量投诉
+# - L1 🟡 待确认 及其他
+#   → L2/L1 同一（游戏+渠道）24h 内只报一次；等级升级（如 🟡→🟢）时再报一次
 # ==========================================
 
-INEFFECTIVE_SNAPSHOT_FILE = os.path.join(
+ALERT_LEVELS_SNAPSHOT_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
-    '..', 'game_monitor', 'ineffective_alerts_snapshot.json'
+    '..', 'game_monitor', 'alert_levels_snapshot.json'
 )
 
+DEDUP_WINDOW = timedelta(hours=24)
 
-def _load_seen_ineffective():
-    path = os.path.normpath(INEFFECTIVE_SNAPSHOT_FILE)
+
+def _load_alert_levels():
+    path = os.path.normpath(ALERT_LEVELS_SNAPSHOT_FILE)
     if os.path.exists(path):
         try:
-            with open(path, 'r') as f:
-                return set(json.load(f))
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data if isinstance(data, dict) else {}
         except Exception:
             pass
-    return set()
+    return {}
 
 
-def _save_seen_ineffective(seen):
-    path = os.path.normpath(INEFFECTIVE_SNAPSHOT_FILE)
+def _save_alert_levels(seen):
+    path = os.path.normpath(ALERT_LEVELS_SNAPSHOT_FILE)
     # 只保留最近 300 条，防止无限增长
-    recent = list(seen)[-300:]
+    if len(seen) > 300:
+        seen = dict(list(seen.items())[-300:])
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, 'w') as f:
-        json.dump(recent, f)
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(seen, f, ensure_ascii=False)
 
 
-def _issue_hash(issue):
-    """生成报警的唯一标识（基于游戏名+来源+问题前50字符）"""
-    key = f"{issue.get('game', '')}|{issue.get('source_name', '')}|{issue.get('issue', '')[:50]}"
-    return hashlib.md5(key.encode()).hexdigest()
+def _alert_level(issue):
+    """报警等级：3=最高（🔴），2=🟢/🔶，1=🟡及其他。"""
+    text = issue.get('issue', '')
+    if '🔴' in text:
+        return 3
+    if '🟢' in text or '🔶' in text:
+        return 2
+    return 1
+
+
+def _issue_key(issue):
+    """去重键：同一游戏同一渠道的报警 24h 内只报一次。"""
+    return f"{issue.get('game', '')}|{issue.get('source_name', '')}"
+
+
+def _parse_ts(value):
+    try:
+        return datetime.fromisoformat(value)
+    except Exception:
+        return None
 
 
 def process_alerts(issues):
     """
-    对报警列表进行处理：
-    1. 🔴 加速器无效的报警：去重（报过不再报）+ 合并成一条摘要
-    2. 🟢/🟡 其他报警：原样保留
-    
+    1. L3 最高等级报警：每次都报；🔴 多条合并为一条摘要
+    2. L2/L1 报警：同一（游戏+渠道）24h 内只报一次，等级升级时再报一次
+
     返回处理后的 issues 列表。
     """
-    seen = _load_seen_ineffective()
+    seen = _load_alert_levels()
+    now = datetime.now(timezone.utc)
 
-    effective_issues = []       # 🟢🟡 正常输出
-    ineffective_items = []      # 🔴 待合并
+    output = []
+    critical_items = []  # 🔴 待合并
 
     for issue in issues:
-        issue_text = issue.get('issue', '')
+        text = issue.get('issue', '')
+        level = _alert_level(issue)
 
-        if '🔴 [加速器无效]' in issue_text:
-            # 去重：检查是否已报过
-            h = _issue_hash(issue)
-            if h in seen:
-                continue  # 已报过，跳过
-            seen.add(h)
-            ineffective_items.append(issue)
-        else:
-            # 🟢 和 🟡 正常输出，不去重
-            effective_issues.append(issue)
+        if level == 3:
+            if '🔴 [加速器无效]' in text:
+                critical_items.append(issue)
+            else:
+                # 无「加速器无效」前缀的最高等级（如 detector404 严重/大规模投诉）：
+                # 直接放行每次都报，不参与「加速器无效」合并（避免文案语义失真）
+                output.append(issue)
+            continue
 
-    # 处理 🔴 报警
-    if ineffective_items:
-        if len(ineffective_items) == 1:
-            # 只有 1 条，不合并，直接输出原始报警
-            effective_issues.append(ineffective_items[0])
+        key = _issue_key(issue)
+        entry = seen.get(key)
+        if entry:
+            last_ts = _parse_ts(entry.get('ts', ''))
+            last_level = entry.get('level', 0)
+            recent = last_ts and (now - last_ts) < DEDUP_WINDOW
+            if recent and level <= last_level:
+                continue  # 24h 内已报过且未升级，跳过
+
+        seen[key] = {'level': level, 'ts': now.isoformat(timespec='seconds')}
+        output.append(issue)
+
+    # 🔴 合并为一条摘要（最高等级，每次都报，不去重）
+    if critical_items:
+        if len(critical_items) == 1:
+            output.append(critical_items[0])
         else:
-            # 多条合并为一条摘要
             game_list = []
-            for item in ineffective_items:
+            for item in critical_items:
                 game = item.get('game', '?')
                 region = item.get('region', '')
                 country = item.get('country', '')
                 location = f" [{country}]" if country else (f" [{region}]" if region and region != 'Global' else '')
-                
+
                 # 从 issue 文本中提取简短原因（去掉标签前缀）
                 text = item.get('issue', '').replace('🔴 [加速器无效] ', '')
                 first_line = text.split('\n')[0][:80]
                 game_list.append(f"{game}{location}: {first_line}")
 
-            summary = f"🔴 [加速器无效] 以下 {len(ineffective_items)} 项为官方维护/宕机，加速器无法解决:\n"
+            summary = f"🔴 [加速器无效] 以下 {len(critical_items)} 项为官方维护/宕机，加速器无法解决:\n"
             summary += '\n'.join(f"    - {g}" for g in game_list)
 
             merged_issue = {
@@ -100,12 +132,9 @@ def process_alerts(issues):
                 'source_url': '',
             }
             # 复制第一条的 alert_type（如有）
-            if ineffective_items[0].get('alert_type'):
-                merged_issue['alert_type'] = ineffective_items[0]['alert_type']
+            if critical_items[0].get('alert_type'):
+                merged_issue['alert_type'] = critical_items[0]['alert_type']
+            output.append(merged_issue)
 
-            effective_issues.append(merged_issue)
-
-    # 保存去重快照
-    _save_seen_ineffective(seen)
-
-    return effective_issues
+    _save_alert_levels(seen)
+    return output
