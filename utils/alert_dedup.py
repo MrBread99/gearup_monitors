@@ -6,8 +6,8 @@ from datetime import datetime, timezone, timedelta
 # 报警分级去重与合并
 # ==========================================
 # 等级定义：
-# - L3 最高等级：🔴 加速器无效 / detector404 严重·大规模投诉
-#   → 每次都报（持续故障保持可见）；🔴 多条合并为一条摘要
+# - 「🔴 加速器无效」：官方宕机/维护类问题，不推送
+# - 其他 L3：detector404 严重·大规模投诉 → 每次都报（持续故障保持可见）
 # - L2 🟢 加速器可解决 / 🔶 detector404 大量投诉
 # - L1 🟡 待确认 及其他
 #   → L2/L1 同一（游戏+渠道）24h 内只报一次；等级升级（如 🟡→🟢）时再报一次
@@ -67,8 +67,9 @@ def _parse_ts(value):
 
 def process_alerts(issues):
     """
-    1. L3 最高等级报警：每次都报；🔴 多条合并为一条摘要
-    2. L2/L1 报警：同一（游戏+渠道）24h 内只报一次，等级升级时再报一次
+    1. 过滤所有「🔴 [加速器无效]」报警
+    2. 其余 L3 报警：每次都报
+    3. L2/L1 报警：同一（游戏+渠道）24h 内只报一次，等级升级时再报一次
 
     返回处理后的 issues 列表。
     """
@@ -76,19 +77,20 @@ def process_alerts(issues):
     now = datetime.now(timezone.utc)
 
     output = []
-    critical_items = []  # 🔴 待合并
 
     for issue in issues:
         text = issue.get('issue', '')
+
+        # 官方宕机/维护类问题无法通过加速器解决，按产品策略不推送。
+        if '🔴 [加速器无效]' in text:
+            continue
+
         level = _alert_level(issue)
 
         if level == 3:
-            if '🔴 [加速器无效]' in text:
-                critical_items.append(issue)
-            else:
-                # 无「加速器无效」前缀的最高等级（如 detector404 严重/大规模投诉）：
-                # 直接放行每次都报，不参与「加速器无效」合并（避免文案语义失真）
-                output.append(issue)
+            # 无「加速器无效」前缀的最高等级（如 detector404 严重/大规模投诉）：
+            # 直接放行每次都报。
+            output.append(issue)
             continue
 
         key = _issue_key(issue)
@@ -102,39 +104,6 @@ def process_alerts(issues):
 
         seen[key] = {'level': level, 'ts': now.isoformat(timespec='seconds')}
         output.append(issue)
-
-    # 🔴 合并为一条摘要（最高等级，每次都报，不去重）
-    if critical_items:
-        if len(critical_items) == 1:
-            output.append(critical_items[0])
-        else:
-            game_list = []
-            for item in critical_items:
-                game = item.get('game', '?')
-                region = item.get('region', '')
-                country = item.get('country', '')
-                location = f" [{country}]" if country else (f" [{region}]" if region and region != 'Global' else '')
-
-                # 从 issue 文本中提取简短原因（去掉标签前缀）
-                text = item.get('issue', '').replace('🔴 [加速器无效] ', '')
-                first_line = text.split('\n')[0][:80]
-                game_list.append(f"{game}{location}: {first_line}")
-
-            summary = f"🔴 [加速器无效] 以下 {len(critical_items)} 项为官方维护/宕机，加速器无法解决:\n"
-            summary += '\n'.join(f"    - {g}" for g in game_list)
-
-            merged_issue = {
-                'game': '汇总',
-                'region': 'Global',
-                'country': '',
-                'issue': summary,
-                'source_name': '多来源',
-                'source_url': '',
-            }
-            # 复制第一条的 alert_type（如有）
-            if critical_items[0].get('alert_type'):
-                merged_issue['alert_type'] = critical_items[0]['alert_type']
-            output.append(merged_issue)
 
     _save_alert_levels(seen)
     return output
