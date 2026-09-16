@@ -1,52 +1,52 @@
 # 品牌舆情监控详细报告
 
-> 生成时间: 2026-09-15 10:08 (UTC+8)
+> 生成时间: 2026-09-16 10:00 (UTC+8)
 > 本报告每 24 小时更新一次
 
 ---
 
 <a id="global-youtube-gearup-booster"></a>
 ## Global (YouTube) - GearUP Booster
-> 共 39 篇讨论
+> 共 40 篇讨论
 
 ### AI 分析
 ```
-正面评价: 多数视频强调GearUP Booster能有效降低延迟、解决高ping和丢包问题，尤其在低端PC和亚洲服务器场景下表现获肯定，含免费试用和优惠码推广 [1][2][4][6][7][12][13][14]  
-负面评价: 暂无  
-中性讨论: 纯直播/实况类内容（如PUBG亚洲服对战、Brawl Stars直播），仅展示使用场景，未评价效果或体验 [5][8][15]  
-涉及竞品: 无  
-商业洞察: 当前舆情高度聚焦性能验证与促销转化，建议强化多语言实测对比（尤其vs ExitLag/wtfast）以提升可信度。
+正面评价: 多数帖子强调GearUP Booster有效降低延迟、解决高ping问题，尤其适配低配设备和亚洲服务器，用户反馈“无lag”“飞升般流畅”[2][3][5][11][12][13][14][15]。  
+负面评价: 暂无。  
+中性讨论: 多条视频为促销导向内容，聚焦优惠码“RAIYA”免费试用及6折购课，属典型带货/引流性质，未提供实际体验评价[6][7][8][9][10]；另有一条为纯测评标题提问，未见结论性判断[1]。  
+涉及竞品: 无。  
+商业洞察: 当前Global YouTube舆情高度正向且无竞品对比声量，建议加大真实场景（如PUBG Mobile/CS2低延迟实测）的UGC激励，强化与ExitLag、wtfast等国际竞品的差异化功能传播。
 ```
 ### AI 引用来源（编号对应）
 - [1] GearUP Booster Review — Does It Actually Lower Ping? (2026) (https://www.youtube.com/watch?v=iVZuHvxNb-k)
-- [2] GearUP Booster em PC Fraco Vale a Pena? (Teste Grátis) (https://www.youtube.com/watch?v=a3nhuk35COc)
-- [3] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 3 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=-y5nRJUQ62o)
-- [4] ΤΕΛΟΣ ΤΟ LAG ΣΤΑ ΠΑΙΧΝΙΔΙΑ!!! #gearupbooster #jimakoslr #sponsored link στην περιγραφή!! (https://www.youtube.com/watch?v=43EaKhJgNwQ)
-- [5] PUBG LIVE 🔴 | One Day in AsiaServer | GearUp Booster- ( Newbie vs new,old,hacker ) #14 (https://www.youtube.com/watch?v=y2dEj98a8vI)
-- [6] GearUP Booster pour PC Portable &amp; Bas de Gamme (Gratuit) (https://www.youtube.com/watch?v=_UikbnYo4_A)
-- [7] GearUP Booster for Low End PCs (Free Trial 2026) (https://www.youtube.com/watch?v=abxeoYB7xEo)
-- [8] Use Code:TECH #brawlstars #gearupbooster #proplayer #livestream  #yttechgear (https://www.youtube.com/watch?v=ashwi-sahOA)
-- [9] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 5 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=sAmMzlRppnI)
-- [10] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=FJx0ltGASLw)
-- [11] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 2 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=YXRgubYsPWo)
-- [12] العب ببجي بطريقه اسرع باستخدامGearup Booster كود لسبع ايام فري في نهايه الفيديو (https://www.youtube.com/watch?v=XzzSwUcpEbg)
-- [13] Naprawa Wysokiego Pingu z GearUP Booster (Darmowy Trial) (https://www.youtube.com/watch?v=KwvFJKKY7b4)
-- [14] (مجانًا) Booster GearUP حل البينج المرتفع وفقدان الحزم مع (https://www.youtube.com/watch?v=T4qpBYIGAbQ)
-- [15] #gearupbooster #fenerbahçe #brawlstars #keşfetamk (https://www.youtube.com/watch?v=gIWa0EfkAVE)
+- [2] Avec cette appli, plus de lag, plus de ragbeat (https://www.youtube.com/watch?v=wVK6uPIVP9w)
+- [3] Gearup l&#39;appli qui fait envoler les lags (https://www.youtube.com/watch?v=7H2xBkMPA4o)
+- [4] كود لتفعيل برنامج gearup Booster مجانا لتحسين البنج في ببجي موبايل #pubgmobile #ببجي #vpn (https://www.youtube.com/watch?v=AtrqrHUbKUs)
+- [5] حل مشكلة البنج العالي#ميراج_سيتي #gangstarmiragecity #gearupbooster #ping (https://www.youtube.com/watch?v=aPwGrx0PDMw)
+- [6] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 4 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=L7usHbJecb4)
+- [7] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠3 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=x-upMGFQkH8)
+- [8] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 5 #csgo #cs2overpass #fps #lifeisbutadream (https://www.youtube.com/watch?v=kuRAb6GL5K4)
+- [9] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 1 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=-avQG9lqt2k)
+- [10] PUBG LIVE 🔴 | One Day in AsiaServer | GearUp Booster- ( Newbie vs new,old,hacker ) # 15 (https://www.youtube.com/watch?v=7JT2FbFtipM)
+- [11] GearUP Booster for Low End PC/Laptop (Free Trial 2026) (https://www.youtube.com/watch?v=G7YKAc9gWvc)
+- [12] 🎮 GearUP Booster – Better Gaming Connection Worldwide🧡 #bastgamingsetup #bastpc #techuniverofficial (https://www.youtube.com/watch?v=m2cQHgEbpqk)
+- [13] 低スペックPC向け GearUP Booster (無料体験 2026) (https://www.youtube.com/watch?v=Exb0fzYdeNo)
+- [14] ﺑﺮﻧﺎﻣﺞ GearUP Booster (ﺗﺠﺮﺑﺔ ﻣﺠﺎﻧﻴﺔ) ﻟ (https://www.youtube.com/watch?v=ynRaN9cQUWs)
+- [15] GearUP Booster em PC Fraco Vale a Pena? (Teste Grátis) (https://www.youtube.com/watch?v=a3nhuk35COc)
 
 ---
 
 <a id="south-korea-gearup-booster"></a>
 ## South Korea - GearUP Booster
-> 共 13 篇讨论
+> 共 14 篇讨论
 
 ### AI 分析
 ```
-正面评价: 用户分享GearUP Booster兑换码供他人使用，体现主动推广和社区互助意愿 [1]。  
-负面评价: 帖子含明显辱骂性用语（“기어업부스터시벌꺼”），表达对产品的强烈反感或使用挫折 [3]；另有用户抱怨连接异常、游戏无法启动等基础功能问题 [9]。  
-中性讨论: 多篇帖子围绕GearUP Booster与其他工具（如ExitLag、LagoFast）的对比、替代方案探讨、区域可用性（如澳洲可行）、配置尝试及价格询问展开，属信息寻求或经验交流，无明确情感倾向 [2][4][5][6][7][8][10][11][12][13]。  
-涉及竞品: ExitLag, LagoFast  
-商业洞察: 需强化韩国本地化技术支持与故障响应，并在社区主动澄清GearUP与ExitLag等竞品的功能差异，降低混淆导致的负面情绪。
+正面评价: 暂无  
+负面评价: 用户抱怨 GearUP Booster 与游戏（如《绝地求生》《魔兽世界》）联动失败、无法启动游戏或连接异常，表达 frustration 和质疑 [2][3][9][11]  
+中性讨论: 多数帖子为技术咨询或对比提问，包括询问 GearUP 是否支持特定地区（如澳洲）、是否兼容 MapleStory 等游戏、如何配置 VPN 模式，或分享自行解决连接问题的经验 [1][4][7][8][10][12][13][14]  
+涉及竞品: ExitLag, LagoFast, NoPing, wtfast, Mudfish, UU加速器, 迅游, 雷神, Hone.gg  
+商业洞察: 需重点优化韩服主流游戏（如 MapleStory、PUBG、WoT）的自动匹配与客户端兼容性，并在社区主动提供韩语版 ExitLag/LagoFast 对比指南以强化差异化认知。
 ```
 ### AI 引用来源（编号对应）
 - [1] 내가 보려고 적은 리딤코드 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=oncehumankor&no=295640)
@@ -61,7 +61,8 @@
 - [10] 완미 질문점... [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=source2&no=316007)
 - [11] 야이개씨발련들아 오늘 픽스핑 6개월치 삿는데 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=heroic&no=370408)
 - [12] 님드라 오늘엑싯랙상태 어떰? [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=heroic&no=369648)
-- [13] 라고패스트LagoFast사용 후기 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=apexlegends&no=828089)
+- [13] poe2 공홈말고 바로실행못하나요 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=poe2&no=433068)
+- [14] 라고패스트LagoFast사용 후기 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=apexlegends&no=828089)
 
 ---
 
