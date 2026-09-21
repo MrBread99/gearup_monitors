@@ -1,6 +1,6 @@
 # 品牌舆情监控详细报告
 
-> 生成时间: 2026-09-20 09:59 (UTC+8)
+> 生成时间: 2026-09-21 10:00 (UTC+8)
 > 本报告每 24 小时更新一次
 
 ---
@@ -11,42 +11,42 @@
 
 ### AI 分析
 ```
-正面评价: 多数帖子为优惠码推广和免费试用宣传，强调GearUP Booster能改善游戏延迟、提升流畅度，尤其针对eFootball、CS2、PUBG等热门游戏 [1][4][5][6][7][8][9][10][11][12][13][14][15]。  
-负面评价: 暂无。  
-中性讨论: 包含教程类内容（如完整使用指南、2026新版试用说明）及客观评测向标题（如“是否值得购买”），未体现明确倾向性，侧重功能介绍与实操引导 [2][3]。  
-涉及竞品: 无。  
-商业洞察: 当前海外YouTube舆情以促销驱动为主，建议加强真实用户效果对比视频（如加速前后Ping/丢包率数据），并主动覆盖竞品提及场景以抢占心智。
+正面评价: 多条视频推广GearUP Booster优惠码（如RAIYA、RAGEUP），强调免费试用和折扣福利，属典型营销宣传内容 [2][3][6][11][12][13][14][15]  
+负面评价: 暂无  
+中性讨论: 包含游戏实况（PUBG、Free Fire、Roblox、Valorant）、技术对比（AION 2 VPN测评）、功能疑问（“Is Gear UP worth Buying it”）及无关内容（如搞笑剪辑），未明确褒贬 [1][4][5][7][8][9][10]  
+涉及竞品: ExitLag, LagoFast, NoPing, Hone.gg, wtfast, Mudfish, UU加速器, 迅游, 雷神  
+商业洞察: 优惠码集中投放CS2/CSGO相关内容，但存在大量重复模板化推广（编号6/11-15），建议优化内容多样性并加强与真实玩家体验结合。
 ```
 ### AI 引用来源（编号对应）
-- [1] 【イーフト】ラグい人必見！快適にプレイする方法‼️#efootball  #efootball2026 #efootball2027  #イーフト #ガチャ #shorts pr (https://www.youtube.com/watch?v=9DR70KTg1Oo)
-- [2] Complete GearUP Booster Tutorial 2026 (Free Trial Inside) (https://www.youtube.com/watch?v=5lsFx10rYZY)
-- [3] Is Gear UP worth Buying it (https://www.youtube.com/watch?v=MwzOoLEPumU)
-- [4] use my code:EHYMP for 24 hours experience #codm #efootball #shorts (https://www.youtube.com/watch?v=G0M13wOMhaw)
-- [5] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 6 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=91u8FNkZbME)
-- [6] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 3 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=BR4XhZ5C2BM)
-- [7] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 4 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=90qJByPNIIw)
-- [8] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 1 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=TKwN4Xhn0Kw)
-- [9] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 5 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=boj61IuOGGY)
-- [10] كود جير اب بوستر #gearupbooster (https://www.youtube.com/watch?v=7kq12hFx__o)
-- [11] PUBG LIVE 🔴 | One Day in AsiaServer | GearUp Booster- ( Newbie vs new,old,hacker ) # 18 (https://www.youtube.com/watch?v=StM2r4_mKqs)
-- [12] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 2 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=wvqkODnD-jQ)
-- [13] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 3 #counterstrike2 #csgo #cs2overpass #cs2 #fps (https://www.youtube.com/watch?v=sSxUfAdYjG8)
-- [14] Реальная тема вась. #пабг #пабгмобайл #геарапбустер #gearupbooster #gearup #popular #millionlikes (https://www.youtube.com/watch?v=K7OZE0SX4Jg)
-- [15] GearUP Booster Komplett-Anleitung (Free Trial 2026) (https://www.youtube.com/watch?v=Fg3k8C95Brk)
+- [1] Are you facing lag, high ping, or frame drops in Free Fire after the new OB55 Naruto update (https://www.youtube.com/watch?v=nyG1HvdC1Rg)
+- [2] GearUP Booster Code: RAGEUP #gearupbooster #gearupvn (https://www.youtube.com/watch?v=6-4j4VC_Q_c)
+- [3] كود جير اب بوستر garupbooster #اكواد_Gear UP gearup# #اكواد_جير_آب_وستر vpn  5 أيام (https://www.youtube.com/watch?v=YItPhfuhnlw)
+- [4] Did I do good? 👀  #roblox #mm2 #tmisalah #funny (https://www.youtube.com/watch?v=PuEeBCngPUQ)
+- [5] THE SECRET SAUCE 💀🔥 (https://www.youtube.com/watch?v=DtQLIMJbRkY)
+- [6] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 4 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=8fDIbgQI-yU)
+- [7] PUBG LIVE 🔴 | One Day in AsiaServer | GearUp Booster- ( Newbie vs new,old,hacker ) # 20.1 (https://www.youtube.com/watch?v=z--oRH1-Hbg)
+- [8] 4殺還說自己泡？累到在遊戲裡看到髒東西...｜特戰英豪【Crazyface】 (https://www.youtube.com/watch?v=UYrNg1BAqvM)
+- [9] Probé las 3 MEJORES VPN para AION 2 y esta es la MÁS BARATA (Precios y Ping) (https://www.youtube.com/watch?v=AEJ7vuPajy4)
+- [10] Is Gear UP worth Buying it (https://www.youtube.com/watch?v=MwzOoLEPumU)
+- [11] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 6 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=91u8FNkZbME)
+- [12] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 3 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=BR4XhZ5C2BM)
+- [13] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 2 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=pH9yF6Let1A)
+- [14] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 1 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=TKwN4Xhn0Kw)
+- [15] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 5 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=boj61IuOGGY)
 
 ---
 
 <a id="south-korea-gearup-booster"></a>
 ## South Korea - GearUP Booster
-> 共 18 篇讨论
+> 共 17 篇讨论
 
 ### AI 分析
 ```
-正面评价: 用户分享 GearUP Booster 兑换码供他人使用，体现社区互助和品牌认可 [1]。  
-负面评价: 暂无。  
-中性讨论: 多篇帖子将 GearUP Booster 作为“VPN/加速器实现DropS（游戏内奖励）获取”的技术手段讨论，属中性用法；另有帖子提及“GearUP Booster VPN”但未评价效果，仅作方法介绍 [2][3][4][7][12]。  
-涉及竞品: ExitLag, FixPing, LagoFast, NoPing, Hone.gg, wtfast, Mudfish, UU加速器, 迅游, 雷神  
-商业洞察: 应强化韩国社区对 GearUP Booster 合规性与反误封能力的教育，避免用户因“刷DropS”等高风险行为引发账号安全疑虑。
+正面评价: 用户分享GearUP Booster用于获取游戏内奖励（如Drrops）的实操方法，体现其被用作有效工具 [2][3][4]  
+负面评价: 暂无  
+中性讨论: 多篇帖子提及GearUP Booster作为VPN类加速方案，但未明确评价效果，仅作为技术手段讨论或与其他工具混提；部分帖子含疑似广告但未展开评价 [1][5][6][7][8][9][10][11][12][13][14][15]  
+涉及竞品: ExitLag  
+商业洞察: 需强化韩国社区对GearUP Booster区别于ExitLag等竞品的技术优势传播，尤其在Drrops等福利场景中建立正向口碑。
 ```
 ### AI 引用来源（编号对应）
 - [1] 내가 보려고 적은 리딤코드 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=oncehumankor&no=295640)
@@ -61,9 +61,9 @@
 - [10] 레스타) 한글패치 및 모드 관련 모음집 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=wots&no=1077)
 - [11] FixPing관련 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=mapleclassic&no=4286)
 - [12] 호주에서하면되는걸 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=wowclassic&no=1327956)
-- [13] ExitLagVPN 사용법 기본 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=mapleclassic&no=4107)
-- [14] 오늘 ㅈ뺑이 굴려서 해냈다 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=mapleclassic&no=3075)
-- [15] 야이개씨발련들아 오늘 픽스핑 6개월치 삿는데 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=heroic&no=370408)
+- [13] 오늘 ㅈ뺑이 굴려서 해냈다 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=mapleclassic&no=3075)
+- [14] 야이개씨발련들아 오늘 픽스핑 6개월치 삿는데 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=heroic&no=370408)
+- [15] 님드라 오늘엑싯랙상태 어떰? [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=heroic&no=369648)
 
 ---
 
