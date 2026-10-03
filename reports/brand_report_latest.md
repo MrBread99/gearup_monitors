@@ -1,38 +1,38 @@
 # 品牌舆情监控详细报告
 
-> 生成时间: 2026-10-02 10:49 (UTC+8)
+> 生成时间: 2026-10-03 10:36 (UTC+8)
 > 本报告每 24 小时更新一次
 
 ---
 
 <a id="global-youtube-gearup-booster"></a>
 ## Global (YouTube) - GearUP Booster
-> 共 31 篇讨论
+> 共 29 篇讨论
 
 ### AI 分析
 ```
-正面评价: 多数视频以教程、实测或优惠推广形式呈现，强调GearUP Booster提升游戏流畅度、降低延迟，部分用户反馈效果明显 [2][7][8][12]。  
+正面评价: 多篇视频推广GearUP Booster优惠活动，强调免费试用和折扣福利，带有明确转化引导 [2][5][13][15]。  
 负面评价: 暂无。  
-中性讨论: 大量视频为纯促销内容，仅展示优惠码和折扣信息，无实际使用体验或技术分析 [1][3][4][5][6][11][13][14][15][9]。  
+中性讨论: 多条视频仅展示优惠码或标题含品牌名，无实质评价内容；另有视频以GearUP Booster为直播工具或背景提及，未涉及效果评估 [1][3][4][6][7][8][9][11][12][14]。  
 涉及竞品: wtfast  
-商业洞察: 应加强真实场景下的性能对比评测（尤其与wtfast），减少同质化优惠宣传，提升内容可信度与用户决策参考价值。
+商业洞察: 应加强对比类内容（如[11]）的正向实测引导，突出GearUP在延迟降低、节点稳定性上的差异化优势。
 ```
 ### AI 引用来源（编号对应）
 - [1] How To Master Perfect AIMING in CODM (PRO Tips &amp; Tricks) (https://www.youtube.com/watch?v=4M4YfodBFUQ)
-- [2] The secret to smoother gameplay 🤫 #gaming #gearup #tutorial (https://www.youtube.com/watch?v=fPcaqF72Q58)
-- [3] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 2 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=xQ08eEIWRrM)
-- [4] GearUP Booster Code:RAGEUP #gearupbooster #gearupvn (https://www.youtube.com/watch?v=fxuiwi5c9Ck)
-- [5] GearUP Booster Code (https://www.youtube.com/watch?v=srRsc9gehcI)
-- [6] GearUP Booster Code #gearupbooster (https://www.youtube.com/watch?v=_vbmlpcALLk)
-- [7] PUBG LIVE 🔴 | One Day in AsiaServer | GearUp Booster- ( Newbie vs new,old,hacker ) #1 (https://www.youtube.com/watch?v=5eIBhEA52ec)
-- [8] Lag Cost You the Round? Try a Game Booster #shorts (https://www.youtube.com/watch?v=YBuCZXkj8-c)
-- [9] GearUP Booster vs WTFast – Which One Is Better for Gaming? (https://www.youtube.com/watch?v=AuCEWBimbrc)
-- [10] Охотник на вертолеты снова в деле😄#wardogs #вардогс #gaming #игры #gearupbooster (https://www.youtube.com/watch?v=di4n04LyvZc)
-- [11] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 1 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=ocPjodkKYUQ)
-- [12] GearUP Booster for Fortnite – Does It Improve Connection? (https://www.youtube.com/watch?v=gnW2486N5aY)
-- [13] GearUP Promo Code 2026 – Get 10% OFF with Code GAMEBOOST (https://www.youtube.com/watch?v=Cneh0w32rwU)
-- [14] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 4 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=Q2lCnU1bJdQ)
-- [15] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 5 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=9MVsdZVgGYY)
+- [2] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 2 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=lNd9lmPMJx8)
+- [3] GearUP Booster Code #gearupbooster #gearupvn (https://www.youtube.com/watch?v=4vn2yNeVawo)
+- [4] PUBG LIVE 🔴 | One Day in AsiaServer | GearUp Booster- ( Newbie vs new,old,hacker ) #2 (https://www.youtube.com/watch?v=6cqz_NLVXNs)
+- [5] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 4 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=Q2lCnU1bJdQ)
+- [6] GearUP Booster Code:RAGEUP #gearupbooster #gearupvn (https://www.youtube.com/watch?v=fxuiwi5c9Ck)
+- [7] GearUP Booster Code (https://www.youtube.com/watch?v=srRsc9gehcI)
+- [8] GearUP Booster Code #gearupbooster (https://www.youtube.com/watch?v=_vbmlpcALLk)
+- [9] Lag Cost You the Round? Try a Game Booster #shorts (https://www.youtube.com/watch?v=YBuCZXkj8-c)
+- [10] The Cenobite นักบวชแห่งนรก | Dead by Daylight (https://www.youtube.com/watch?v=Vb0wqtFb954)
+- [11] GearUP Booster vs WTFast – Which One Is Better for Gaming? (https://www.youtube.com/watch?v=AuCEWBimbrc)
+- [12] Охотник на вертолеты снова в деле😄#wardogs #вардогс #gaming #игры #gearupbooster (https://www.youtube.com/watch?v=di4n04LyvZc)
+- [13] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 1 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=ocPjodkKYUQ)
+- [14] GearUP Booster for Fortnite – Does It Improve Connection? (https://www.youtube.com/watch?v=gnW2486N5aY)
+- [15] 【GearUP遊戲加速器】輸入優惠碼「RAIYA」免費試用！購買再享6折優惠 3 #csgo #cs2overpass #fps #lifeisbutadream #gaming (https://www.youtube.com/watch?v=uExsgM50wvw)
 
 ---
 
@@ -43,10 +43,10 @@
 ### AI 分析
 ```
 正面评价: 暂无  
-负面评价: 用户抱怨 GearUP Booster 在《AION2》中加速效果差、响应慢 [1]；质疑其与DropS服务联动异常，称应正常接收8个兑换码但未实现 [4]；用户用强烈情绪词“야이개씨발련들아”表达对6个月FixPing套餐购买后体验不满 [9]  
-中性讨论: 多篇帖子将GearUP Booster作为全球服务器/高延迟场景下的备选方案提及，未评价效果，仅作工具型参考 [2][6][7][10]；另有帖子涉及Steam账号绑定、兑换码发放等操作咨询，属中性使用问题 [3][5][12]；一篇为纯竞品LagoFast的使用反馈帖，未提GearUP [13]  
-涉及竞品: ExitLag, LagoFast, NoPing, wtfast, Mudfish, UU加速器, 迅游, 雷神, Hone.gg  
-商业洞察: 需重点优化AION2及DropS生态的兼容性，并在韩服社区主动澄清FixPing套餐权益，降低情绪化投诉风险。
+负面评价: 用户抱怨 GearUP Booster 在《AION2》中加速异常卡顿，体验差 [1]；用户质疑其与DropS联动失效，称应每日领取8个但实际未到账 [4]；用户吐槽购买6个月FixPing服务后遭遇问题，情绪激烈 [9]  
+中性讨论: 多篇帖子将GearUP Booster作为全球服务器/高延迟场景下的备选方案提及，未评价优劣，仅作技术咨询或对比背景 [2][6][7][10]；部分帖子在讨论Steam账号绑定、兑换码、跨平台兼容等中性操作问题 [3][5][12]；一篇为纯竞品LagoFast的使用反馈，GearUP仅被间接关联 [13]  
+涉及竞品: ExitLag, LagoFast, NoPing, wtfast, Mudfish  
+商业洞察: 需重点排查AION2和DropS联动的技术故障，并在韩区社区主动澄清FixPing服务条款以降低客诉。
 ```
 ### AI 引用来源（编号对应）
 - [1] 아 아이온2 떄문에gearup개쳐느리네 [DC Inside](https://gall.dcinside.com/mgallery/board/view/?id=tl&no=395939)
