@@ -335,6 +335,9 @@ def check_exitlag_linkedin() -> list:
                 f"    发布时间: {post['date']}\n"
                 f"    内容: {content}"
             ),
+            "title": post["content"].split("\n")[0].strip()[:80],
+            "summary": content,
+            "published_at": post["date"],
             "alert_type": "competitor_radar",
             "source_name": "ExitLag LinkedIn",
             "source_url": post["url"],

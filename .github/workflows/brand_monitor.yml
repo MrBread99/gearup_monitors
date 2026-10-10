@@ -1,8 +1,7 @@
 name: Brand Sentiment Monitor
 
 on:
-  schedule:
-    - cron: '0 0 * * *' # 每天 UTC 00:00 运行一次（北京时间 08:00）
+  # 品牌舆情监控已停用（2026-10），仅保留手动触发入口
   workflow_dispatch:
 
 permissions:

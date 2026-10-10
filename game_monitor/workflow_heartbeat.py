@@ -52,25 +52,23 @@ def main() -> None:
     outcomes = {
         "monitor.py": os.environ.get("GAME_MONITOR_OUTCOME", ""),
         "russia_event_monitor.py": os.environ.get("RUSSIA_EVENT_OUTCOME", ""),
-        "game_calendar_monitor.py": os.environ.get("GAME_CALENDAR_OUTCOME", ""),
     }
 
-    failed = {name: outcome for name, outcome in outcomes.items() if outcome != "success"}
-    if failed:
-        print(f"[WorkflowHeartbeat] 存在非成功步骤，跳过正常心跳: {failed}")
+    failed = {name: outcome or "unknown" for name, outcome in outcomes.items() if outcome != "success"}
+    if not failed:
+        print("[WorkflowHeartbeat] 全部步骤正常执行，按策略不发送心跳。")
         return
 
     if not should_send_heartbeat():
-        print("[WorkflowHeartbeat] 今日已发送过 monitor.yml 心跳，跳过。")
+        print("[WorkflowHeartbeat] 今日已发送过 monitor.yml 异常告警，跳过。")
         return
 
+    failed_desc = "、".join(f"{name}({outcome})" for name, outcome in failed.items())
     send_system_heartbeat(
         POPO_WEBHOOK_URL,
         "Game Server Monitor",
-        (
-            "monitor.py、russia_event_monitor.py、game_calendar_monitor.py 均已正常执行；"
-            "若本群没有其他游戏报警，表示本日暂未发现有效游戏故障、俄罗斯活动风险或新游/热游更新。"
-        ),
+        f"以下步骤未正常完成: {failed_desc}\n请查看 GitHub Actions 运行日志排查。",
+        status="存在失败步骤",
     )
 
 

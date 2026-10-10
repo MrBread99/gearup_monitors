@@ -63,25 +63,12 @@ jobs:
           STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
         run: python game_monitor/russia_event_monitor.py
 
-      # ===== 新游上线 + 热游更新（每 2 小时）=====
-      - name: Run Game Calendar Monitor
-        id: game_calendar
-        continue-on-error: true
-        env:
-          POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
-          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
-          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
-          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
-          STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
-        run: python game_monitor/game_calendar_monitor.py
-
       - name: Send monitor workflow heartbeat
         if: always()
         env:
           POPO_WEBHOOK_URL: ${{ secrets.POPO_WEBHOOK_URL }}
           GAME_MONITOR_OUTCOME: ${{ steps.game_monitor.outcome }}
           RUSSIA_EVENT_OUTCOME: ${{ steps.russia_event.outcome }}
-          GAME_CALENDAR_OUTCOME: ${{ steps.game_calendar.outcome }}
         run: python game_monitor/workflow_heartbeat.py
 
       - name: Append run summary
@@ -90,7 +77,6 @@ jobs:
           echo "Workflow: monitor.yml" >> $GITHUB_STEP_SUMMARY
           echo "Game Monitor step: ${{ steps.game_monitor.outcome }}" >> $GITHUB_STEP_SUMMARY
           echo "Russia Event step: ${{ steps.russia_event.outcome }}" >> $GITHUB_STEP_SUMMARY
-          echo "Game Calendar step: ${{ steps.game_calendar.outcome }}" >> $GITHUB_STEP_SUMMARY
           echo "Completed at (UTC): $(date -u '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
           echo "Completed at (Asia/Shanghai): $(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
 

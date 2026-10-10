@@ -6,7 +6,7 @@ import sys
 import re
 import time
 import random
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import send_popo_alert, flush_scrape_block_alerts, POPO_WEBHOOK_URL
@@ -728,6 +728,9 @@ def check_competitor_pricing(competitor_name):
                     'region': region_name,
                     'country': '',
                     'issue': f"⚡ 竞品定价变动检测: {'; '.join(changes)}",
+                    'title': '竞品定价变动',
+                    'summary': f"{region_name}: {'; '.join(changes)}",
+                    'published_at': datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d %H:%M'),
                     'alert_type': 'competitor_radar',
                     'source_name': (
                         f'{competitor_name} Pricing Page'

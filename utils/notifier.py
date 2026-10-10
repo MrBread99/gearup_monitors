@@ -657,6 +657,18 @@ def send_popo_alert(webhook_url, issues_list):
             # 去掉 issue 中可能包含的粗体和红灯 emoji
             clean_issue = item['issue'].replace('**', '').replace('__', '')
 
+            # 竞品情报：仅输出 竞品名称 + 标题 + 摘要 + 发布时间（无结构化字段的旧数据回退原格式）
+            if alert_type == 'competitor_radar' and (item.get('title') or item.get('summary')):
+                plain_content += f"[{item['game']}]\n"
+                if item.get('title'):
+                    plain_content += f"标题: {item['title']}\n"
+                if item.get('summary'):
+                    plain_content += f"摘要: {item['summary']}\n"
+                if item.get('published_at'):
+                    plain_content += f"发布时间: {item['published_at']}\n"
+                plain_content += "-" * 30 + "\n"
+                continue
+
             if alert_type != 'holiday_monitor':
                 plain_content += f"[{item['game']}]\n"
 
@@ -752,7 +764,7 @@ def has_scrape_block_alerts() -> bool:
     return bool(_scrape_block_registry)
 
 
-def send_system_heartbeat(webhook_url: str, task_name: str, summary: str):
+def send_system_heartbeat(webhook_url: str, task_name: str, summary: str, status: str = "本次定时任务已正常执行"):
     """
     发送低噪音系统心跳，用于确认定时任务确实执行过。
     仅建议给每天 1 次的聚合任务使用，避免高频刷屏。
@@ -762,7 +774,7 @@ def send_system_heartbeat(webhook_url: str, task_name: str, summary: str):
         f"【监控系统心跳】\n"
         f"时间: {current_time} (UTC+8)\n\n"
         f"任务: {task_name}\n"
-        f"状态: 本次定时任务已正常执行\n"
+        f"状态: {status}\n"
         f"结果: {summary}\n"
     )
 

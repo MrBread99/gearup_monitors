@@ -12,8 +12,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.notifier import (
     send_popo_alert,
     flush_scrape_block_alerts,
-    has_scrape_block_alerts,
-    send_system_heartbeat,
     report_monitor_crash,
     flush_monitor_crash_alerts,
     POPO_WEBHOOK_URL,
@@ -122,9 +120,7 @@ def _summarize_discord_msg(content, author_name):
         f"你是一个全球游戏加速器（GPN）的资深商业情报分析师。\n"
         f"我们刚从竞品【{author_name}】的官方 Discord 拦截到最新公告。\n\n"
         f"【公告原文】: {content}\n\n"
-        f"请分析并输出:\n"
-        f"1. 【核心情报】: 用一句中文高度概括（如：修复节点、版本更新、搞促销等）\n"
-        f"2. 【商业建议】: 我们应如何应对？(1-2句即可)\n"
+        f"请用一句中文高度概括这条公告的核心内容（如：修复节点、版本更新、促销活动等）。\n"
         f"(输出纯文本，不要使用 Markdown 加粗或特殊符号)"
     )
     try:
@@ -199,11 +195,15 @@ def collect_discord_issues():
         guild_id = msg.get("guild_id", "@me")
         jump_url = f"https://discord.com/channels/{guild_id}/{TARGET_CHANNEL_ID}/{msg['id']}"
 
+        summary = ai_analysis.replace("**", "").replace("__", "")
         issues.append({
-            "game": f"竞品Discord ({author_name})",
+            "game": author_name,
             "region": "Global",
             "country": "",
-            "issue": ai_analysis.replace("**", "").replace("__", ""),
+            "issue": summary,
+            "title": content.split("\n")[0].strip()[:80] or author_name,
+            "summary": summary,
+            "published_at": msg_time.astimezone(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M"),
             "alert_type": "competitor_radar",
             "source_name": "竞品 Discord 情报频道",
             "source_url": jump_url,
@@ -239,24 +239,6 @@ def collect_linkedin_issues():
     results = check_exitlag_linkedin()
     print(f"[LinkedIn] 检测到 {len(results)} 条新动态。")
     return results
-
-
-def _get_blog_status():
-    """获取博客监控状态摘要（用于心跳消息）。"""
-    try:
-        from competitor_radar.competitor_blog_monitor import get_blog_status_summary
-        return get_blog_status_summary()
-    except Exception:
-        return ""
-
-
-def _get_linkedin_status():
-    """获取 LinkedIn 当前最新动态摘要（用于心跳消息）。"""
-    try:
-        from competitor_radar.linkedin_monitor import get_linkedin_status_summary
-        return get_linkedin_status_summary()
-    except Exception:
-        return ""
 
 
 # ==================== 主入口 ====================
@@ -307,19 +289,6 @@ def main():
         send_popo_alert(POPO_WEBHOOK_URL, all_issues)
     else:
         print("过去 24 小时内无竞品情报变动，静默退出。")
-        if not has_scrape_block_alerts():
-            blog_status = _get_blog_status()
-            linkedin_status = _get_linkedin_status()
-            summary = "过去 24 小时无新增竞品情报，且未检测到数据源异常。"
-            if blog_status:
-                summary += f"\n\n当前各竞品最新博客:\n{blog_status}"
-            if linkedin_status:
-                summary += f"\n\n当前 LinkedIn 最新动态:\n{linkedin_status}"
-            send_system_heartbeat(
-                POPO_WEBHOOK_URL,
-                "竞品情报聚合",
-                summary,
-            )
 
     # 数据源异常汇总（如有）
     flush_scrape_block_alerts(POPO_WEBHOOK_URL)

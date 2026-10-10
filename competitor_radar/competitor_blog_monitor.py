@@ -276,11 +276,7 @@ def _summarize_blog_post(competitor: str, title: str, content: str) -> str:
         f"竞品【{competitor}】刚发布了一篇新博客文章。\n\n"
         f"【文章标题】: {title}\n"
         f"【文章内容】: {content}\n\n"
-        f"请用中文分析并输出:\n"
-        f"1. 【文章摘要】: 用 2-3 句话概括文章核心内容\n"
-        f"2. 【商业情报】: 从加速器竞争角度分析这篇文章的意图"
-        f"（如：SEO 抢流量、推广新功能、蹭热门游戏热度等）\n"
-        f"3. 【应对建议】: 我们应该如何回应？(1-2 句)\n"
+        f"请用中文输出【文章摘要】: 用 2-3 句话概括文章核心内容。\n"
         f"(输出纯文本，不要使用 Markdown 加粗或特殊符号)"
     )
     try:
@@ -1126,6 +1122,9 @@ def check_competitor_blogs() -> list:
                 "region": "Global",
                 "country": "",
                 "issue": issue_text,
+                "title": post["title"],
+                "summary": ai_summary,
+                "published_at": post.get("date", "未知"),
                 "alert_type": "competitor_radar",
                 "source_name": (
                     f"{name} 官方博客"
