@@ -157,6 +157,9 @@ def build_brand_monitor_message(items, max_items=3, update_snapshot=True):
     for item in items:
         candidate = _candidate_from_item(item)
         if candidate:
+            insight = _extract_insight(item.get("issue") or "")
+            if insight and candidate["suggestion"] == insight:
+                candidate["specific_suggestion"] = insight
             candidates.append(candidate)
 
     candidates.sort(key=lambda c: c["score"], reverse=True)
@@ -167,18 +170,20 @@ def build_brand_monitor_message(items, max_items=3, update_snapshot=True):
     if update_snapshot:
         _save_snapshot(candidates[:20])
 
-    lines = ["【品牌舆情监控】", ""]
+    lines = []
 
     if selected:
         for index, item in enumerate(selected, 1):
             if index > 1:
                 lines.append("")
-            lines.append(f"{index}. {item['title']}")
-            lines.append(f"   证据: {item['evidence']}")
-            lines.append(f"   建议: {item['suggestion']}")
+            title = item['title'].replace("负面舆情需要关注", "负面讨论")
+            lines.append(title)
+            lines.append(item['evidence'])
+            if item.get("specific_suggestion"):
+                lines.append(item["specific_suggestion"])
     else:
         lines.append("本次无新增重点品牌舆情。")
 
     lines.append("")
-    lines.append(f"*详细报告链接: {GITHUB_REPORT_URL}*")
+    lines.append(f"报告: {GITHUB_REPORT_URL}")
     return "\n".join(lines)

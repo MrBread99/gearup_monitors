@@ -1,6 +1,5 @@
 import requests
 import os
-import json
 from datetime import datetime, timezone, timedelta
 
 # 这里的 sys.path 处理和 monitor 类似，以便能引入 utils 和 openai
@@ -35,7 +34,7 @@ def summarize_with_qwen(content, author_name):
     
     请分析这段情报，输出格式如下：
     1. 【核心情报】: 用一句中文高度概括（如：修复了某某节点、更新了版本、搞促销等）。
-    2. 【商业建议】: 我们应该如何应对？(简短1-2句即可)
+    不输出泛化商业建议。
     (请注意：输出纯文本，绝对不要使用任何 Markdown 加粗或者特殊符号)
     """
     
@@ -125,33 +124,24 @@ def main():
         
         ai_analysis = summarize_with_qwen(content, author_name)
         
-        # 构造纯文本推流格式
-        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        plain_content = f"【竞品 Discord 情报雷达】\n"
-        plain_content += f"时间: {current_time}\n"
-        plain_content += f"来源: {author_name}\n\n"
-        
         clean_ai = ai_analysis.replace('**', '').replace('__', '')
-        plain_content += f"{clean_ai}\n\n"
         
         # 尝试拼凑消息的跳转链接
         guild_id = msg.get('guild_id', '@me') # 有些 webhook 抓不到 guild_id
         jump_url = f"https://discord.com/channels/{guild_id}/{TARGET_CHANNEL_ID}/{msg['id']}"
-        plain_content += f"跳转至原文: {jump_url}"
-        
-        headers = {'Content-Type': 'application/json'}
-        payload = {"message": plain_content}
-        
-        # 发送给 POPO
-        if not POPO_WEBHOOK_URL:
-            print("未配置 POPO_WEBHOOK_URL，控制台输出如下：\n" + plain_content)
-        else:
-            try:
-                r = requests.post(POPO_WEBHOOK_URL, headers=headers, data=json.dumps(payload), timeout=10)
-                r.raise_for_status()
-                print("成功推送至 POPO！")
-            except Exception as e:
-                print(f"发送 POPO 警报失败: {e}")
+        published_at = datetime.fromisoformat(msg['timestamp']).astimezone(
+            timezone(timedelta(hours=8))
+        ).strftime('%Y-%m-%d %H:%M')
+        send_popo_alert(POPO_WEBHOOK_URL, [{
+            'alert_type': 'competitor_radar',
+            'game': author_name,
+            'region': 'Global',
+            'issue': clean_ai,
+            'summary': clean_ai,
+            'published_at': published_at,
+            'source_name': 'Discord',
+            'source_url': jump_url,
+        }])
 
 if __name__ == "__main__":
     main()

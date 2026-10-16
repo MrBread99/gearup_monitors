@@ -1,6 +1,7 @@
 import requests
 import json
 import os
+import re
 from datetime import datetime, timezone, timedelta
 
 # 从环境变量中获取 POPO Webhook URL
@@ -135,28 +136,20 @@ def flush_monitor_crash_alerts(webhook_url=None):
     effective_url = webhook_url or POPO_WEBHOOK_URL
     current_time = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
 
-    lines = [
-        f"【监控系统警告 — 内部崩溃】\n"
-        f"时间: {current_time} (UTC+8)\n"
-        f"本次运行共 {len(_crash_registry)} 个步骤发生异常:\n"
-    ]
-
-    for i, crash in enumerate(_crash_registry, 1):
-        block = (
-            f"[{i}] {crash['step']}\n"
-            f"    异常: {crash['error']}\n"
-            f"    堆栈:\n"
+    blocks = [
+        (
+            f"⚠️ {_notification_line(crash['step'], 24)}异常，本轮该步骤数据缺失",
+            f"⚠️ {_notification_line(crash['step'], 24)}异常，本轮该步骤数据缺失\n"
+            f"{crash['error']}",
         )
-        for tb_line in crash['traceback'].split('\n'):
-            block += f"      {tb_line}\n"
-        block += f"{'─' * 35}\n"
-        lines.append(block)
-
-    lines.append(
-        "以上步骤在本次运行中被 try/except 捕获后跳过，未影响其他步骤，但该步骤的监控数据本次缺失。\n"
-        "请尽快排查修复，避免监控盲区持续扩大。"
+        for crash in _crash_registry
+    ]
+    for crash in _crash_registry:
+        print(f"[内部崩溃详情] {crash['step']}\n{crash['traceback']}")
+    chunks = _build_notification_chunks(
+        blocks, f'{current_time[:16]} 北京时间'
     )
-    content = '\n'.join(lines)
+    content = '\n\n'.join(chunks)
 
     print(f"\n[内部崩溃汇总] 本次运行共 {len(_crash_registry)} 个步骤崩溃，正在发送 POPO 监控...")
 
@@ -169,25 +162,7 @@ def flush_monitor_crash_alerts(webhook_url=None):
     import time as _time
     headers = {'Content-Type': 'application/json'}
 
-    # 分片发送（复用现有逻辑）
-    MAX_LEN = 4000
-    if len(content) <= MAX_LEN:
-        chunks = [content]
-    else:
-        chunks = []
-        current = ""
-        for line in content.split('\n'):
-            if len(current) + len(line) + 1 > MAX_LEN:
-                chunks.append(current)
-                current = line + "\n"
-            else:
-                current += line + "\n"
-        if current:
-            chunks.append(current)
-
     for ci, chunk in enumerate(chunks):
-        if len(chunks) > 1:
-            chunk = f"({ci+1}/{len(chunks)})\n{chunk}"
         payload = {"message": chunk}
         for attempt in range(3):
             try:
@@ -501,7 +476,7 @@ def _compact_detector404_issues(issues_list):
     compact_items = []
 
     if high_items:
-        high_lines = [f"🚨 detector404.ru 高等级故障：共 {len(high_items)} 项"]
+        high_lines = [f"🚨 俄罗斯高等级投诉：{len(high_items)} 项"]
         for item in high_items[:10]:
             issue_first_line = str(item.get('issue', '')).splitlines()[0]
             high_lines.append(f"{item.get('game', '?')}: {issue_first_line}")
@@ -524,13 +499,16 @@ def _compact_detector404_issues(issues_list):
         platforms = [name for name in names if name in DETECTOR404_PLATFORM_NAMES]
         games = [name for name in names if name not in DETECTOR404_PLATFORM_NAMES]
         priority_hits = [name for name in DETECTOR404_PRIORITY_NAMES if name in item_by_name]
-        medium_lines = [
-            f"🟡 [待确认] detector404.ru 俄罗斯区中等投诉：共 {len(medium_items)} 项",
-            f"重点清单命中: {_join_limited(priority_hits, 12)}",
-            f"游戏: {_join_limited(games, 12)}",
-            f"平台/通讯: {_join_limited(platforms, 8)}",
-            "完整 detector404 列表见本次 GitHub Actions 日志的 [detector404 ALERT] / [POPO待发送]。",
-        ]
+        medium_lines = [f"🟡 [待确认] 俄罗斯中等投诉：{len(medium_items)} 项"]
+        if priority_hits:
+            medium_lines.append(f"重点: {_join_limited(priority_hits, 12)}")
+        other_games = [name for name in games if name not in priority_hits[:12]]
+        other_platforms = [name for name in platforms if name not in priority_hits[:12]]
+        if other_games:
+            medium_lines.append(f"其他游戏: {_join_limited(other_games, 12)}")
+        if other_platforms:
+            medium_lines.append(f"其他平台: {_join_limited(other_platforms, 8)}")
+        medium_lines.append("完整清单见本次 Actions 日志 [detector404 ALERT]。")
 
         compact_items.append({
             'game': 'detector404.ru 中等投诉摘要',
@@ -558,13 +536,10 @@ def _split_text_by_utf8_bytes(text, max_bytes):
         line_bytes = len(line.encode('utf-8'))
 
         if line_bytes > max_bytes:
-            if current_lines:
-                chunks.append(''.join(current_lines))
-                current_lines = []
-                current_bytes = 0
-
-            piece = ''
-            piece_bytes = 0
+            piece = ''.join(current_lines)
+            piece_bytes = current_bytes
+            current_lines = []
+            current_bytes = 0
             for char in line:
                 char_bytes = len(char.encode('utf-8'))
                 if piece and piece_bytes + char_bytes > max_bytes:
@@ -575,7 +550,8 @@ def _split_text_by_utf8_bytes(text, max_bytes):
                     piece += char
                     piece_bytes += char_bytes
             if piece:
-                chunks.append(piece)
+                current_lines = [piece]
+                current_bytes = piece_bytes
             continue
 
         if current_lines and current_bytes + line_bytes > max_bytes:
@@ -590,6 +566,102 @@ def _split_text_by_utf8_bytes(text, max_bytes):
         chunks.append(''.join(current_lines))
 
     return chunks or ['']
+
+
+def _notification_line(text, limit=48):
+    text = re.sub(r'https?://\S+', '', str(text or ''))
+    text = re.sub(r'\s+', ' ', text.replace('**', '').replace('__', '')).strip()
+    return text if len(text) <= limit else text[:limit - 1] + '…'
+
+
+def _notification_priority(item):
+    text = str(item.get('issue', ''))
+    if any(token in text for token in ('内部崩溃', '数据缺失', '认证失败', '🔴', '🚨')):
+        return 0
+    if any(token in text for token in ('定价变动', '负面', '退款', '🔶', '🟠')):
+        return 1
+    if any(token in text for token in ('🟡', '待确认', '🟢')):
+        return 2
+    return 3
+
+
+def _notification_preview(item):
+    alert_type = item.get('alert_type', 'game_monitor')
+    issue_lines = _notification_text(item.get('issue', '')).splitlines()
+    detail = issue_lines[0] if issue_lines else ''
+    if alert_type == 'competitor_radar':
+        detail = item.get('summary') or item.get('title') or detail
+        detail = _notification_text(detail).splitlines()[0] if detail else ''
+    detail = re.sub(r'^\s*[🟢🟡🔴🔶🟠🚨⚡📢🎮🆕📅]\s*', '', detail)
+    if item.get('source_name') == 'detector404.ru' and '摘要' in item.get('game', ''):
+        return detail
+    if item.get('game') == 'detector404.ru 高等级故障':
+        return detail
+    object_name = str(item.get('game', '')).strip()
+    region = str(item.get('region', '')).strip()
+    if region and region.lower() != 'global':
+        object_name += f'·{region}'
+    country = str(item.get('country', '')).strip()
+    if country and country.lower() not in region.lower():
+        object_name += f'·{country}'
+    if object_name:
+        return f"{object_name}：{detail}" if detail else object_name
+    return detail
+
+
+def _notification_text(text):
+    lines = []
+    for raw_line in str(text or '').replace('**', '').replace('__', '').splitlines():
+        line = raw_line.strip()
+        line = re.sub(r'⭐⭐⭐\s*绝佳营销时机\s*', '', line)
+        line = line.replace('[加速器可解决]', '[疑似可优化]')
+        line = re.sub(r'^(?:摘要|文章摘要|【文章摘要】|情报)\s*[:：]\s*', '', line)
+        if line in (
+            '建议: 提前准备俄罗斯区加速节点扩容和营销推送',
+            '建议: 密切关注 detector404.ru 和 VK 社区的俄罗斯区故障报告',
+        ):
+            continue
+        if line and line not in lines:
+            lines.append(line)
+    return '\n'.join(lines)
+
+
+def _build_notification_chunks(blocks, context, max_bytes=2500):
+    body_limit = max_bytes - 450
+    pages = []
+    current = []
+    current_bytes = 0
+    for preview, body in blocks:
+        pieces = _split_text_by_utf8_bytes(body.strip(), body_limit)
+        for piece_index, piece in enumerate(pieces):
+            piece_preview = preview
+            piece_bytes = len(piece.encode('utf-8')) + 2
+            if current and current_bytes + piece_bytes > body_limit:
+                pages.append(current)
+                current = []
+                current_bytes = 0
+            current.append((piece_preview, piece))
+            current_bytes += piece_bytes
+    if current:
+        pages.append(current)
+
+    chunks = []
+    for page_index, page in enumerate(pages, 1):
+        first_line = _notification_line(page[0][0])
+        if len(page) > 1:
+            first_line += f'｜另{len(page) - 1}项'
+        page_label = f' · {page_index}/{len(pages)}' if len(pages) > 1 else ''
+        bodies = []
+        for item_index, (preview, piece) in enumerate(page):
+            piece_lines = piece.splitlines()
+            if item_index == 0 and piece_lines and piece_lines[0] == _notification_line(preview):
+                piece_lines = piece_lines[1:]
+            body = '\n'.join(piece_lines).strip()
+            if body:
+                bodies.append(body)
+        body = '\n\n'.join(bodies)
+        chunks.append(f'{first_line}\n{context}{page_label}' + (f'\n\n{body}' if body else ''))
+    return chunks
 
 
 def send_popo_alert(webhook_url, issues_list):
@@ -611,7 +683,7 @@ def send_popo_alert(webhook_url, issues_list):
 
     # 按 alert_type 分组
     ALERT_TITLES = {
-        'game_monitor': '【全球监控商机雷达监控】',
+        'game_monitor': '【游戏网络监控】',
         'new_game_release': '【新游上线监控】',
         'game_update': '【热游版本更新监控】',
         'game_calendar': '【新游上线/热游更新监控】',
@@ -633,82 +705,51 @@ def send_popo_alert(webhook_url, issues_list):
         title = ALERT_TITLES.get(alert_type, '【监控】')
         print(f"[POPO待发送] {title} {len(items)} 条")
         for index, item in enumerate(items, start=1):
-            issue_first_line = str(item.get('issue', '')).splitlines()[0][:160]
+            issue_first_line = next(iter(str(item.get('issue', '')).splitlines()), '')[:160]
             print(
                 f"[POPO待发送]   {index}. "
                 f"{item.get('game', '?')} | {item.get('source_name', '?')} | {issue_first_line}"
             )
 
-    # 构造极简纯文本格式
-    plain_content = ""
-    for alert_type, items in groups.items():
+    blocks = []
+    for alert_type, items in sorted(
+        groups.items(), key=lambda group: min(_notification_priority(item) for item in group[1])
+    ):
+        items = sorted(items, key=_notification_priority)
         if alert_type == 'brand_monitor':
             from utils.brand_digest import build_brand_monitor_message
-            plain_content += build_brand_monitor_message(items, update_snapshot=bool(webhook_url)) + "\n\n"
+            digest = build_brand_monitor_message(items, update_snapshot=bool(webhook_url))
+            preview = next(iter(digest.splitlines()), '本次无新增重点品牌舆情')
+            blocks.append((preview, digest))
             continue
 
-        title = ALERT_TITLES.get(alert_type, '【监控】')
-        if alert_type == 'holiday_monitor':
-            plain_content += f"{title}\n"
-        else:
-            plain_content += f"{title}\n时间: {current_time}\n\n"
-
         for index, item in enumerate(items):
-            # 去掉 issue 中可能包含的粗体和红灯 emoji
-            clean_issue = item['issue'].replace('**', '').replace('__', '')
-
-            # 竞品情报：仅输出 竞品名称 + 标题 + 摘要 + 发布时间（无结构化字段的旧数据回退原格式）
+            clean_issue = _notification_text(item.get('issue', ''))
+            headline = _notification_preview(item)
+            lines = [headline]
             if alert_type == 'competitor_radar' and (item.get('title') or item.get('summary')):
-                plain_content += f"[{item['game']}]\n"
-                if item.get('title'):
-                    plain_content += f"标题: {item['title']}\n"
-                if item.get('summary'):
-                    plain_content += f"摘要: {item['summary']}\n"
+                summary = _notification_text(item.get('summary') or item.get('title'))
+                lines.extend(summary.splitlines()[1:])
+                title = _notification_text(item.get('title'))
+                if title and title not in summary and summary not in title:
+                    lines.append(f"原题: {title}")
                 if item.get('published_at'):
-                    plain_content += f"发布时间: {item['published_at']}\n"
-                plain_content += "-" * 30 + "\n"
-                continue
-
-            if alert_type != 'holiday_monitor':
-                plain_content += f"[{item['game']}]\n"
-
-            # 新游上线/热游更新不显示"地区: Global"（issue 内已有头部地区信息）
-            if alert_type not in ('new_game_release', 'game_update'):
-                region_display = f"{item['region']} ({item['country']})" if item.get('country') else item['region']
-                plain_content += f"地区: {region_display}\n"
-
-            if alert_type == 'holiday_monitor':
-                plain_content += f"{clean_issue}\n"
+                    lines.append(f"发布: {item['published_at']}")
             else:
-                plain_content += f"情报: {clean_issue}\n"
-
+                lines.extend(clean_issue.splitlines()[1:])
             if item.get('source_url'):
-                plain_content += f"来源: {item['source_name']} ({item['source_url']})\n"
-            else:
-                plain_content += f"来源: {item['source_name']}\n"
+                lines.append(f"来源: {item.get('source_name', '')}\n{item['source_url']}")
+            elif item.get('source_name'):
+                lines.append(f"来源: {item.get('source_name', '')}")
+            blocks.append((headline, '\n'.join(lines)))
 
-            if alert_type == 'holiday_monitor':
-                if index < len(items) - 1:
-                    plain_content += "-" * 30 + "\n"
-            else:
-                plain_content += "-" * 30 + "\n"
-
-        if alert_type != 'holiday_monitor':
-            plain_content += "\n"
-
-    headers = {'Content-Type': 'application/json'}
-    payload = {
-        "message": plain_content
-    }
+    chunks = _build_notification_chunks(blocks, f'{current_time[:16]} 北京时间')
+    plain_content = '\n\n'.join(chunks)
     
     if not webhook_url:
         print("未配置 POPO_WEBHOOK_URL，控制台输出结果如下：\n")
         print(plain_content)
         return
-
-    # POPO 对中文/emoji 按字节计限更安全；保守控制单片 UTF-8 字节数。
-    MAX_BYTES = 2500
-    chunks = _split_text_by_utf8_bytes(plain_content, MAX_BYTES)
 
     print(
         f"[POPO待发送] 正文长度 {len(plain_content)} 字符 / "
@@ -731,9 +772,6 @@ def send_popo_alert(webhook_url, issues_list):
     headers = {'Content-Type': 'application/json'}
 
     for i, chunk in enumerate(chunks):
-        if len(chunks) > 1:
-            chunk = f"({i+1}/{len(chunks)})\n{chunk}"
-
         payload = {"message": chunk}
 
         # 重试 3 次，指数退避
@@ -771,12 +809,13 @@ def send_system_heartbeat(webhook_url: str, task_name: str, summary: str, status
     """
     current_time = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
     content = (
-        f"【监控系统心跳】\n"
-        f"时间: {current_time} (UTC+8)\n\n"
-        f"任务: {task_name}\n"
-        f"状态: {status}\n"
-        f"结果: {summary}\n"
+        f"{_notification_line(task_name, 20)}：{_notification_line(summary)}\n"
+        f"{current_time[:16]} 北京时间\n"
     )
+    if _notification_line(summary) != str(summary):
+        content += f"\n{summary}\n"
+    if status != "本次定时任务已正常执行" and status not in summary:
+        content += f"{status}\n"
 
     if not webhook_url:
         print("未配置 POPO_WEBHOOK_URL，系统心跳内容如下：\n")
@@ -849,7 +888,7 @@ def flush_scrape_block_alerts(webhook_url: str = None):
     effective_url = webhook_url or POPO_WEBHOOK_URL
     current_time = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
 
-    lines = [f"【数据源监控】{current_time} (UTC+8)\n"]
+    blocks = []
 
     for source_key, entry in _scrape_block_registry.items():
         advice = _SCRAPE_ADVICE.get(source_key, {})
@@ -912,18 +951,25 @@ def flush_scrape_block_alerts(webhook_url: str = None):
             url_display = ''
 
         url_part = f" | {url_display}" if url_display else ""
-        block = (
-            f"[{display_name}] {codes} ×{count}{url_part}\n"
-            f"  原因: {reason}\n"
-            f"  建议: {long_term}\n"
-            f"{'─' * 20}\n"
+        preview = f"⚠️ {_notification_line(display_name, 22)}请求/解析异常（{codes} ×{count}）"
+        block = f"{preview}\n覆盖影响及降级结果待核实。"
+        if any(code in actual_codes for code in (401, 404)):
+            block += "\n检查凭证。" if 401 in actual_codes else "\n检查源地址。"
+        if url_list:
+            block += f"\n{url_list[0]}"
+        print(
+            f"[数据源详情] {display_name}{url_part}\n"
+            f"原因: {reason}\n处置配置: {short_term}\n建议: {long_term}"
         )
-        lines.append(block)
+        blocks.append((preview, block))
 
-    if len(lines) == 1:
+    if not blocks:
         return
 
-    content = '\n'.join(lines)
+    chunks = _build_notification_chunks(
+        blocks, f'{current_time[:16]} 北京时间'
+    )
+    content = '\n\n'.join(chunks)
 
     print(f"\n[数据源监控汇总] 本次运行共检测到 {len(_scrape_block_registry)} 个数据源事件，正在发送 POPO 监控...")
 
@@ -935,25 +981,8 @@ def flush_scrape_block_alerts(webhook_url: str = None):
 
     # 复用现有的分片+重试逻辑
     import time as _time
-    MAX_LEN = 4000
-    chunks = []
-    if len(content) <= MAX_LEN:
-        chunks = [content]
-    else:
-        current = ""
-        for line in content.split('\n'):
-            if len(current) + len(line) + 1 > MAX_LEN:
-                chunks.append(current)
-                current = line + "\n"
-            else:
-                current += line + "\n"
-        if current:
-            chunks.append(current)
-
     headers = {'Content-Type': 'application/json'}
     for i, chunk in enumerate(chunks):
-        if len(chunks) > 1:
-            chunk = f"({i+1}/{len(chunks)})\n{chunk}"
         payload = {"message": chunk}
         for attempt in range(3):
             try:
