@@ -329,7 +329,7 @@ def build_issue(country: dict, window: dict, stage: str, days_until: int) -> dic
         names += f" 等 {len(window['names'])} 个假期"
 
     date_span = format_date_range(window["start"], window["end"])
-    issue = f"📅 {country['name_zh']}｜{names} | {window['span_days']}天（{date_span}）"
+    issue = f"{country['name_zh']}｜{names} | {window['span_days']}天（{date_span}）"
 
     return {
         "game": "地区节假日监控",

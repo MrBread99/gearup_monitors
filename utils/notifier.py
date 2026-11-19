@@ -723,13 +723,13 @@ def send_popo_alert(webhook_url, issues_list):
             blocks.append((preview, digest))
             continue
         if alert_type == 'holiday_monitor':
-            holiday_lines = ['明日假期监控']
+            holiday_lines = ['📅 明日假期监控']
             for item in items:
                 clean_line = next(iter(_notification_text(item.get('issue', '')).splitlines()), '')
                 if clean_line:
                     holiday_lines.append(clean_line)
             digest = '\n'.join(holiday_lines)
-            blocks.append(('明日假期监控', digest))
+            blocks.append(('📅 明日假期监控', digest))
             continue
 
         for index, item in enumerate(items):
