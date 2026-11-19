@@ -36,10 +36,7 @@ SNAPSHOT_FILE = os.environ.get(
 
 LOOKAHEAD_DAYS = int(os.environ.get("HOLIDAY_LOOKAHEAD_DAYS", "45"))
 ALERT_STAGES = {
-    7: "T-7",
-    3: "T-3",
     1: "T-1",
-    0: "当天",
 }
 
 COUNTRIES = [
@@ -322,29 +319,8 @@ def build_holiday_windows(holidays: list[dict], window_start: date, window_end: 
 
 def format_date_range(start: date, end: date) -> str:
     if start == end:
-        return start.isoformat()
-    return f"{start.isoformat()} - {end.isoformat()}"
-
-
-def describe_scope(window: dict) -> str:
-    counties = window.get("counties") or []
-    holiday_types = set(window.get("types") or [])
-
-    if counties:
-        return f"地区性假期（{', '.join(counties[:3])}{' 等' if len(counties) > 3 else ''}）"
-    if "Public" in holiday_types or "National" in holiday_types:
-        return "全国性公共假期"
-    if "Bank" in holiday_types:
-        return "银行/金融机构假期"
-    if "School" in holiday_types:
-        return "学校假期"
-    if "Authorities" in holiday_types:
-        return "政府机构假期"
-    if "Optional" in holiday_types:
-        return "可选假期"
-    if window.get("is_global"):
-        return "全国性假期"
-    return "范围未明确"
+        return start.strftime("%m-%d")
+    return f"{start.strftime('%m-%d')}~{end.strftime('%m-%d')}"
 
 
 def build_issue(country: dict, window: dict, stage: str, days_until: int) -> dict:
@@ -352,11 +328,8 @@ def build_issue(country: dict, window: dict, stage: str, days_until: int) -> dic
     if len(window["names"]) > 4:
         names += f" 等 {len(window['names'])} 个假期"
 
-    issue = (
-        f"假期: {names}，{describe_scope(window)}\n"
-        f"时间: {format_date_range(window['start'], window['end'])}"
-        f"（{window['span_days']} 天）"
-    )
+    date_span = format_date_range(window["start"], window["end"])
+    issue = f"📅 {country['name_zh']}｜{names} | {window['span_days']}天（{date_span}）"
 
     return {
         "game": "地区节假日监控",

@@ -722,6 +722,15 @@ def send_popo_alert(webhook_url, issues_list):
             preview = next(iter(digest.splitlines()), '本次无新增重点品牌舆情')
             blocks.append((preview, digest))
             continue
+        if alert_type == 'holiday_monitor':
+            holiday_lines = ['明天开始假期：']
+            for item in items:
+                clean_line = next(iter(_notification_text(item.get('issue', '')).splitlines()), '')
+                if clean_line:
+                    holiday_lines.append(clean_line)
+            digest = '\n'.join(holiday_lines)
+            blocks.append(('明天开始假期：', digest))
+            continue
 
         for index, item in enumerate(items):
             clean_issue = _notification_text(item.get('issue', ''))
@@ -743,7 +752,10 @@ def send_popo_alert(webhook_url, issues_list):
                 lines.append(f"来源: {item.get('source_name', '')}")
             blocks.append((headline, '\n'.join(lines)))
 
-    chunks = _build_notification_chunks(blocks, f'{current_time[:16]} 北京时间')
+    if list(groups.keys()) == ['holiday_monitor']:
+        chunks = _split_text_by_utf8_bytes(blocks[0][1], 2500)
+    else:
+        chunks = _build_notification_chunks(blocks, f'{current_time[:16]} 北京时间')
     plain_content = '\n\n'.join(chunks)
     
     if not webhook_url:
