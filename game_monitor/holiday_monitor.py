@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 from datetime import date, datetime, timedelta, timezone
 
@@ -45,18 +46,18 @@ ALERT_STAGES = {
 }
 
 COUNTRIES = [
-    {"name_zh": "俄罗斯", "name_en": "Russia", "code": "RU", "source": "nager"},
-    {"name_zh": "越南", "name_en": "Vietnam", "code": "VN", "source": "nager"},
+    {"name_zh": "俄罗斯", "name_en": "Russia", "code": "RU", "source": "nager", "google_ics": "en.russian%23holiday%40group.v.calendar.google.com"},
+    {"name_zh": "越南", "name_en": "Vietnam", "code": "VN", "source": "nager", "google_ics": "en.vietnamese%23holiday%40group.v.calendar.google.com"},
     {"name_zh": "台湾", "name_en": "Taiwan", "code": "TW", "source": "taiwan"},
-    {"name_zh": "美国", "name_en": "United States", "code": "US", "source": "nager"},
-    {"name_zh": "印度尼西亚", "name_en": "Indonesia", "code": "ID", "source": "nager"},
-    {"name_zh": "韩国", "name_en": "South Korea", "code": "KR", "source": "nager"},
-    {"name_zh": "菲律宾", "name_en": "Philippines", "code": "PH", "source": "nager"},
-    {"name_zh": "巴西", "name_en": "Brazil", "code": "BR", "source": "nager"},
-    {"name_zh": "日本", "name_en": "Japan", "code": "JP", "source": "nager"},
-    {"name_zh": "澳大利亚", "name_en": "Australia", "code": "AU", "source": "nager"},
-    {"name_zh": "加拿大", "name_en": "Canada", "code": "CA", "source": "nager"},
-    {"name_zh": "墨西哥", "name_en": "Mexico", "code": "MX", "source": "nager"},
+    {"name_zh": "美国", "name_en": "United States", "code": "US", "source": "nager", "google_ics": "en.usa%23holiday%40group.v.calendar.google.com"},
+    {"name_zh": "印度尼西亚", "name_en": "Indonesia", "code": "ID", "source": "nager", "google_ics": "en.indonesian%23holiday%40group.v.calendar.google.com"},
+    {"name_zh": "韩国", "name_en": "South Korea", "code": "KR", "source": "nager", "google_ics": "en.south_korea%23holiday%40group.v.calendar.google.com"},
+    {"name_zh": "菲律宾", "name_en": "Philippines", "code": "PH", "source": "nager", "google_ics": "en.philippines%23holiday%40group.v.calendar.google.com"},
+    {"name_zh": "巴西", "name_en": "Brazil", "code": "BR", "source": "nager", "google_ics": "en.brazilian%23holiday%40group.v.calendar.google.com"},
+    {"name_zh": "日本", "name_en": "Japan", "code": "JP", "source": "nager", "google_ics": "en.japanese%23holiday%40group.v.calendar.google.com"},
+    {"name_zh": "澳大利亚", "name_en": "Australia", "code": "AU", "source": "nager", "google_ics": "en.australian%23holiday%40group.v.calendar.google.com"},
+    {"name_zh": "加拿大", "name_en": "Canada", "code": "CA", "source": "nager", "google_ics": "en.canadian%23holiday%40group.v.calendar.google.com"},
+    {"name_zh": "墨西哥", "name_en": "Mexico", "code": "MX", "source": "nager", "google_ics": "en.mexican%23holiday%40group.v.calendar.google.com"},
 ]
 
 SPECIAL_KEYWORDS = {
@@ -212,6 +213,56 @@ def taiwan_fallback_holidays(year: int) -> list[dict]:
     return holidays
 
 
+def _unfold_ics(text: str) -> str:
+    return re.sub(r"\r?\n[ \t]", "", text)
+
+
+def fetch_google_ics_holidays(country_code: str, calendar_id: str, years: set[int]) -> list[dict]:
+    if not calendar_id:
+        return []
+    url = f"https://calendar.google.com/calendar/ical/{calendar_id}/public/basic.ics"
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=20)
+        if resp.status_code != 200:
+            report_scrape_block("google_holiday_ics", url, resp.status_code)
+            return []
+        text = _unfold_ics(resp.text)
+        holidays = []
+        for event in re.findall(r"BEGIN:VEVENT(.*?)END:VEVENT", text, re.S):
+            dt_match = re.search(r"DTSTART;VALUE=DATE:(\d{8})", event)
+            summary_match = re.search(r"SUMMARY:(.*)", event)
+            desc_match = re.search(r"DESCRIPTION:(.*)", event)
+            if not dt_match or not summary_match or not desc_match:
+                continue
+            raw_date = dt_match.group(1)
+            year = int(raw_date[:4])
+            if year not in years:
+                continue
+            desc_first_line = desc_match.group(1).strip().split("\\n")[0].strip()
+            if desc_first_line != "Public holiday":
+                continue
+            name = summary_match.group(1).strip().replace("\\,", ",")
+            if "Public Service Holiday" in name:
+                continue
+            holidays.append(
+                {
+                    "date": date(year, int(raw_date[4:6]), int(raw_date[6:8])),
+                    "name": name,
+                    "local_name": name,
+                    "country_code": country_code,
+                    "global": True,
+                    "counties": [],
+                    "types": ["Public"],
+                    "source_name": "Google Calendar ICS",
+                    "source_url": url,
+                }
+            )
+        return holidays
+    except Exception as e:
+        report_monitor_crash(f"Google ICS {country_code}", e)
+        return []
+
+
 def fetch_country_holidays(country: dict, years: set[int]) -> list[dict]:
     holidays = []
     for year in sorted(years):
@@ -220,6 +271,11 @@ def fetch_country_holidays(country: dict, years: set[int]) -> list[dict]:
             holidays.extend(fetched if fetched else taiwan_fallback_holidays(year))
         else:
             holidays.extend(fetch_nager_holidays(year, country["code"]))
+    if country.get("google_ics"):
+        existing_dates = {item["date"] for item in holidays}
+        for item in fetch_google_ics_holidays(country["code"], country["google_ics"], years):
+            if item["date"] not in existing_dates:
+                holidays.append(item)
     return holidays
 
 

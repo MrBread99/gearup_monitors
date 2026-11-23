@@ -351,6 +351,12 @@ _SCRAPE_ADVICE = {
         'short_term': '本次台湾地区会尝试使用内置静态兜底数据',
         'long_term': '检查 GitHub Secrets 中 CALENDARIFIC_API_KEY 是否有效，并关注免费额度使用量',
     },
+    'google_holiday_ics': {
+        'display_name': 'Google Calendar ICS（地区节假日补充源）',
+        'reason': 'Google 公开节假日 ICS 返回非 200，本次无法补充 Nager.Date 缺失的农历/新增假日',
+        'short_term': '本次仅使用 Nager.Date 数据，其他地区不受影响',
+        'long_term': '若持续出现，检查 Google 公开节假日 ICS 地址格式是否变更',
+    },
     'youtube_quota': {
         'display_name': 'YouTube Data API v3（配额耗尽）',
         'reason': 'YouTube API 返回 403 quotaExceeded，当日 10,000 单位免费配额已耗尽（search 操作每次消耗 100 单位）',
