@@ -263,7 +263,7 @@ gearup_monitors/
 | `brand_monitor.yml` | 每天北京 08:00 | `brand_monitor/run_all.py`，自动 push 舆情报告到 `reports/` | `permissions: contents: write` + 运行摘要 |
 | `competitor_radar.yml` | 每天北京 09:00 | `competitor_radar/run_all.py` | `playwright install chromium` + `requirements-ci.txt` + 运行摘要 |
 |                        |                 | Discord + 定价 + 博客 + LinkedIn 监控 | 博客/LinkedIn/健康状态快照文件加入 cache |
-| `holiday_monitor.yml` | 每天北京 14:00 | `game_monitor/holiday_monitor.py` | `holiday_monitor_snapshot.json` 加入 cache；`CALENDARIFIC_API_KEY` 为台湾兜底可选 Secret |
+| `holiday_monitor.yml` | 每天北京 14:00 | `game_monitor/holiday_monitor.py` | `holiday_monitor_snapshot.json` 加入 cache；`HOLIDAY_EXTRA_POPO_WEBHOOK_URLS` 同步推送群配置；`CALENDARIFIC_API_KEY` 为台湾兜底可选 Secret |
 
 ---
 
@@ -272,6 +272,7 @@ gearup_monitors/
 | Secret | 必填 | 用途 |
 |--------|------|------|
 | `POPO_WEBHOOK_URL` | ✅ | 所有报警发送目标（网易 POPO 机器人） |
+| `HOLIDAY_EXTRA_POPO_WEBHOOK_URLS` | 可选 | 地区节假日监控额外同步推送的 POPO 机器人列表（逗号分隔） |
 | `QWEN_API_KEY` | ✅ | Qwen AI 摘要（玩家反馈/更新内容/加速需求/新游介绍/竞品公告翻译/俄罗斯风险评估） |
 | `REDDIT_CLIENT_ID` | 推荐 | Reddit OAuth2（未配置时降级为匿名，4s 间隔 + 熔断器保护） |
 | `REDDIT_CLIENT_SECRET` | 推荐 | Reddit OAuth2（当前无法申请，匿名模式运行中） |

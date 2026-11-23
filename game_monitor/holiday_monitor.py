@@ -33,6 +33,11 @@ SNAPSHOT_FILE = os.environ.get(
     "HOLIDAY_MONITOR_SNAPSHOT",
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "holiday_monitor_snapshot.json"),
 )
+EXTRA_WEBHOOK_URLS = [
+    url.strip()
+    for url in os.environ.get("HOLIDAY_EXTRA_POPO_WEBHOOK_URLS", "").split(",")
+    if url.strip()
+]
 
 LOOKAHEAD_DAYS = int(os.environ.get("HOLIDAY_LOOKAHEAD_DAYS", "45"))
 ALERT_STAGES = {
@@ -392,6 +397,16 @@ def check_holidays() -> list[dict]:
     return filter_new_alerts(candidates)
 
 
+def get_target_webhook_urls() -> list[str | None]:
+    urls: list[str | None] = []
+    if POPO_WEBHOOK_URL:
+        urls.append(POPO_WEBHOOK_URL)
+    for url in EXTRA_WEBHOOK_URLS:
+        if url not in urls:
+            urls.append(url)
+    return urls or [None]
+
+
 if __name__ == "__main__":
     if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
         try:
@@ -405,7 +420,8 @@ if __name__ == "__main__":
         if results:
             for result in results:
                 print(f"[{result['region']}] {result['issue']}")
-            send_popo_alert(POPO_WEBHOOK_URL, results)
+            for webhook_url in get_target_webhook_urls():
+                send_popo_alert(webhook_url, results)
         else:
             print("近期无需要发送的地区节假日预警。")
     except Exception as e:
