@@ -58,6 +58,10 @@ COUNTRIES = [
     {"name_zh": "澳大利亚", "name_en": "Australia", "code": "AU", "source": "nager", "google_ics": "en.australian%23holiday%40group.v.calendar.google.com"},
     {"name_zh": "加拿大", "name_en": "Canada", "code": "CA", "source": "nager", "google_ics": "en.canadian%23holiday%40group.v.calendar.google.com"},
     {"name_zh": "墨西哥", "name_en": "Mexico", "code": "MX", "source": "nager", "google_ics": "en.mexican%23holiday%40group.v.calendar.google.com"},
+    {"name_zh": "泰国", "name_en": "Thailand", "code": "TH", "source": "google_ics", "google_ics": "en.th%23holiday%40group.v.calendar.google.com"},
+    {"name_zh": "沙特阿拉伯", "name_en": "Saudi Arabia", "code": "SA", "source": "google_ics", "google_ics": "en.saudiarabian%23holiday%40group.v.calendar.google.com"},
+    {"name_zh": "阿联酋", "name_en": "United Arab Emirates", "code": "AE", "source": "google_ics", "google_ics": "en.ae%23holiday%40group.v.calendar.google.com"},
+    {"name_zh": "土耳其", "name_en": "Turkey", "code": "TR", "source": "nager", "google_ics": "en.turkish%23holiday%40group.v.calendar.google.com"},
 ]
 
 SPECIAL_KEYWORDS = {
@@ -73,6 +77,10 @@ SPECIAL_KEYWORDS = {
     "AU": ["Australia Day", "Anzac", "Good Friday", "Easter", "Christmas", "Boxing Day"],
     "CA": ["Canada Day", "Thanksgiving", "Remembrance", "Christmas", "Boxing Day"],
     "MX": ["Constitution", "Benito Juarez", "Independence", "Revolution", "Christmas"],
+    "TH": ["Songkran", "New Year", "Chakri", "Coronation", "Makha Bucha", "Visakha Bucha", "Asalha Bucha"],
+    "SA": ["Founding Day", "Eid", "Arafat", "National Day"],
+    "AE": ["Eid", "Arafat", "Al-Hijra", "National Day", "New Year"],
+    "TR": ["Ramadan", "Sacrifice", "Republic Day", "Victory Day", "Atatürk", "National Sovereignty"],
 }
 
 TAIWAN_FALLBACK_HOLIDAYS = {
@@ -93,6 +101,27 @@ TAIWAN_FALLBACK_HOLIDAYS = {
         ("2026-10-09", "National Day", "台湾双十节补假"),
         ("2026-10-26", "Retrocession Day", "台湾光复节补假"),
         ("2026-12-25", "Constitution Day", "行宪纪念日"),
+    ],
+    2027: [
+        ("2027-01-01", "New Year's Day", "元旦"),
+        ("2027-02-04", "Chinese New Year", "农历春节小年夜"),
+        ("2027-02-05", "Chinese New Year", "农历除夕"),
+        ("2027-02-06", "Chinese New Year", "农历春节"),
+        ("2027-02-07", "Chinese New Year", "农历春节"),
+        ("2027-02-08", "Chinese New Year", "农历春节"),
+        ("2027-02-09", "Chinese New Year", "农历春节补假"),
+        ("2027-02-10", "Chinese New Year", "农历春节补假"),
+        ("2027-03-01", "Peace Memorial Day", "和平纪念日补假"),
+        ("2027-04-05", "Tomb Sweeping Day", "清明节"),
+        ("2027-04-06", "Children's Day", "儿童节补假"),
+        ("2027-04-30", "Labour Day", "劳动节补假"),
+        ("2027-06-09", "Dragon Boat Festival", "端午节"),
+        ("2027-09-15", "Mid-Autumn Festival", "中秋节"),
+        ("2027-09-28", "Confucius' Birthday", "孔子诞辰纪念日"),
+        ("2027-10-11", "National Day", "台湾双十节补假"),
+        ("2027-10-25", "Retrocession Day", "台湾光复节"),
+        ("2027-12-24", "Constitution Day", "行宪纪念日补假"),
+        ("2027-12-31", "New Year's Day Observed", "2028元旦补假"),
     ],
 }
 
@@ -265,11 +294,12 @@ def fetch_google_ics_holidays(country_code: str, calendar_id: str, years: set[in
 
 def fetch_country_holidays(country: dict, years: set[int]) -> list[dict]:
     holidays = []
-    for year in sorted(years):
-        if country["source"] == "taiwan":
+    if country["source"] == "taiwan":
+        for year in sorted(years):
             fetched = fetch_calendarific_taiwan(year)
             holidays.extend(fetched if fetched else taiwan_fallback_holidays(year))
-        else:
+    elif country["source"] == "nager":
+        for year in sorted(years):
             holidays.extend(fetch_nager_holidays(year, country["code"]))
     if country.get("google_ics"):
         existing_dates = {item["date"] for item in holidays}

@@ -34,7 +34,7 @@ gearup_monitors/
 │   │                                #   Steam News 连续 5 次 403 后静默 3 天
 │   ├── workflow_heartbeat.py        # monitor.yml 三段任务成功后的每日一次 POPO 心跳
 │   ├── russia_event_monitor.py      # 俄罗斯大型活动日历 + 网络管控预警（AI 不可用时仍报警）
-│   └── holiday_monitor.py           # 12 个重点地区法定节假日/长假/特殊假期监控（每天 1 次）
+│   └── holiday_monitor.py           # 16 个重点地区法定节假日/长假/特殊假期监控（每天 1 次）
 │
 ├── competitor_radar/
 │   ├── run_all.py                   # ★ 聚合入口（Discord 24h + 定价 + 博客 + LinkedIn），合并为一条消息；含 Discord 健康状态
@@ -185,9 +185,9 @@ gearup_monitors/
 
 | 维度 | 数据 |
 |------|------|
-| 覆盖地区 | 俄罗斯、越南、台湾、美国、印度尼西亚、韩国、菲律宾、巴西、日本、澳大利亚、加拿大、墨西哥 |
+| 覆盖地区 | 俄罗斯、越南、台湾、美国、印度尼西亚、韩国、菲律宾、巴西、日本、澳大利亚、加拿大、墨西哥、泰国、沙特阿拉伯、阿联酋、土耳其 |
 | 主数据源 | Nager.Date 公共节假日 API + Google Calendar 公开节假日 ICS（按日期补充全国性 Public holiday，解决越南/印尼等农历及新增假日缺失） |
-| 台湾兜底 | Calendarific（需 `CALENDARIFIC_API_KEY`）；未配置时使用 2026 年静态兜底 |
+| 台湾兜底 | Calendarific（需 `CALENDARIFIC_API_KEY`）；未配置时使用 2026–2027 年静态兜底 |
 | 预警阶段 | T-1（仅前一天上午报警明天开始的假期/长假） |
 | 长假识别 | 法定假日 + 周末连续 ≥3 天，自动合并为连续天数区间 |
 | 范围识别 | 仅抓取全国/公共/银行假期（已过滤分地区 `counties` 假期） |
