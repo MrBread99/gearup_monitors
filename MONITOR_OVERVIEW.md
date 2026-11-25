@@ -88,7 +88,7 @@ gearup_monitors/
     ├── competitor_radar.yml         # 每天 UTC 01:00（北京 09:00）：竞品情报聚合 + 运行摘要
     │                                #   pip install -r competitor_radar/requirements-ci.txt
     │                                #   包含 playwright install chromium 步骤
-    └── holiday_monitor.yml          # 每天 UTC 06:00（北京 14:00）：地区节假日监控 + 运行摘要
+    └── holiday_monitor.yml          # 每天 UTC 23:23（北京 07:23 触发，实跑约当天下午）：地区节假日监控 + 运行摘要
 ```
 
 ---
@@ -192,7 +192,7 @@ gearup_monitors/
 | 长假识别 | 法定假日 + 周末连续 ≥3 天，自动合并为连续天数区间 |
 | 范围识别 | 仅抓取全国/公共/银行假期（已过滤分地区 `counties` 假期） |
 | 去重 | `holiday_monitor_snapshot.json`，同一地区同一假期窗口只报一次 |
-| 运行频率 | 每天北京时间 14:00 |
+| 运行频率 | 每天北京时间 07:23 触发（计入 GitHub Actions 排队延迟后约当天 13:20–16:20 发出） |
 | 报警标题 | 【地区节假日监控】 |
 | 消息格式 | `📅 明日假期监控` 首行 + 逐行展示，不附带报警时间和来源链接 |
 
@@ -263,7 +263,7 @@ gearup_monitors/
 | `brand_monitor.yml` | 每天北京 08:00 | `brand_monitor/run_all.py`，自动 push 舆情报告到 `reports/` | `permissions: contents: write` + 运行摘要 |
 | `competitor_radar.yml` | 每天北京 09:00 | `competitor_radar/run_all.py` | `playwright install chromium` + `requirements-ci.txt` + 运行摘要 |
 |                        |                 | Discord + 定价 + 博客 + LinkedIn 监控 | 博客/LinkedIn/健康状态快照文件加入 cache |
-| `holiday_monitor.yml` | 每天北京 14:00 | `game_monitor/holiday_monitor.py` | `holiday_monitor_snapshot.json` 加入 cache；`HOLIDAY_EXTRA_POPO_WEBHOOK_URLS` 同步推送群配置；`CALENDARIFIC_API_KEY` 为台湾兜底可选 Secret |
+| `holiday_monitor.yml` | 每天北京 07:23 触发（约下午发出） | `game_monitor/holiday_monitor.py` | `holiday_monitor_snapshot.json` 加入 cache；`HOLIDAY_EXTRA_POPO_WEBHOOK_URLS` 同步推送群配置；`CALENDARIFIC_API_KEY` 为台湾兜底可选 Secret |
 
 ---
 
@@ -304,7 +304,7 @@ gearup_monitors/
 15. **内部崩溃感知** — 所有 try/except 捕获的异常通过 `report_monitor_crash()` 登记，脚本末尾由 `flush_monitor_crash_alerts()` 统一发 POPO。新增模块时应遵循此模式
 16. **品牌报告格式** — `brand_report.py` 只展示 AI 分析 + 引用来源，不展示关键词预分类结果（避免和 AI 分类矛盾）；POPO 只由 `brand_digest.py` 输出重点条目和详细报告链接
 17. **游戏监控心跳** — `workflow_heartbeat.py` 只在 `monitor.py`、`russia_event_monitor.py`、`game_calendar_monitor.py` 三段 outcome 均为 `success` 时发送每日一次心跳；若任一步骤非成功，不发送“正常”心跳，避免误导
-18. **地区节假日监控独立运行** — `holiday_monitor.yml` 每天 14:00 单独运行，不接入每 2 小时的 `monitor.yml`，避免节假日数据刷频
+18. **地区节假日监控独立运行** — `holiday_monitor.yml` 每天独立运行 1 次（北京时间 07:23 错峰触发，实跑约下午时段），不接入每 2 小时的 `monitor.yml`，避免节假日数据刷频
 
 ---
 
